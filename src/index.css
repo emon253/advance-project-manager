@@ -1,0 +1,248 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Source+Code+Pro:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Brand palette — use `primary` utilities (bg-primary, text-primary, border-primary/20, …)
+     instead of hardcoded hex values. */
+  --color-primary: #533afd;
+  --color-primary-hover: #4430e0;
+  --color-primary-active: #3a28c4;
+  --color-accent: #ea2261;
+
+  /* Elevation */
+  --shadow-elevated: 0px 24px 40px -24px rgba(50, 50, 93, 0.22), 0px 12px 24px -14px rgba(0, 0, 0, 0.1);
+  --shadow-soft: 0px 2px 6px rgba(23, 23, 23, 0.05), 0px 1px 2px rgba(23, 23, 23, 0.04);
+
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ---------- Safe-area utilities (mobile notches / home indicator) ---------- */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@utility px-safe {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+/* Content padding that clears the fixed mobile bottom nav */
+@utility pb-nav {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+/* Minimum comfortable touch target */
+@utility tap {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* ---------- Enter animations ----------
+   Lightweight equivalent of tailwindcss-animate's `animate-in` API.
+   Compose: `animate-in fade-in slide-in-from-bottom-4`. */
+@keyframes enter {
+  from {
+    opacity: var(--enter-opacity, 1);
+    transform: translate3d(var(--enter-translate-x, 0), var(--enter-translate-y, 0), 0) scale(var(--enter-scale, 1));
+  }
+}
+@utility animate-in {
+  animation: enter 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@utility fade-in {
+  --enter-opacity: 0;
+}
+@utility zoom-in-95 {
+  --enter-scale: 0.96;
+}
+@utility slide-in-from-top-1 {
+  --enter-translate-y: -0.25rem;
+}
+@utility slide-in-from-top-2 {
+  --enter-translate-y: -0.5rem;
+}
+@utility slide-in-from-bottom-2 {
+  --enter-translate-y: 0.5rem;
+}
+@utility slide-in-from-bottom-4 {
+  --enter-translate-y: 1rem;
+}
+@utility slide-in-from-bottom-0 {
+  --enter-translate-y: 0;
+}
+@utility slide-in-from-bottom {
+  --enter-translate-y: 100%;
+}
+@utility slide-in-from-left {
+  --enter-translate-x: -100%;
+}
+@utility slide-in-from-right {
+  --enter-translate-x: 100%;
+}
+
+@layer base {
+  * {
+    font-feature-settings: "ss01" on, "cv02" on, "cv03" on, "cv04" on;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+    background-color: var(--color-zinc-50);
+    color: var(--color-zinc-800);
+    overscroll-behavior-y: none;
+  }
+  .dark body {
+    background-color: var(--color-zinc-950);
+    color: var(--color-zinc-100);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
+
+  code, pre {
+    font-family: var(--font-mono);
+  }
+
+  /* Consistent visible keyboard focus */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .font-tnum {
+    font-feature-settings: "tnum" on;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ---------- Reusable UI primitives ---------- */
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-semibold whitespace-nowrap select-none cursor-pointer transition-colors disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-sm {
+    @apply h-8 px-3 text-xs;
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-hover active:bg-primary-active shadow-soft;
+  }
+  .btn-secondary {
+    @apply bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300 dark:bg-zinc-900 dark:text-zinc-200 dark:border-zinc-700 dark:hover:bg-zinc-800;
+  }
+  .btn-ghost {
+    @apply text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100;
+  }
+  .btn-danger {
+    @apply bg-rose-600 text-white hover:bg-rose-700;
+  }
+  .btn-danger-soft {
+    @apply text-rose-600 bg-rose-50 hover:bg-rose-100 dark:text-rose-400 dark:bg-rose-500/10 dark:hover:bg-rose-500/20;
+  }
+  /* Square icon-only button */
+  .btn-icon {
+    @apply inline-flex items-center justify-center h-9 w-9 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100 cursor-pointer transition-colors shrink-0;
+  }
+
+  /* Form fields */
+  .field {
+    @apply w-full h-9 px-3 rounded-lg text-sm font-medium bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15;
+  }
+  textarea.field {
+    @apply h-auto py-2 resize-none leading-relaxed;
+  }
+  select.field {
+    @apply cursor-pointer pr-8 appearance-none bg-no-repeat;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-position: right 0.6rem center;
+  }
+  .label {
+    @apply block text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1.5;
+  }
+
+  /* Surfaces */
+  .card {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-xl shadow-soft;
+  }
+  .menu-panel {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-elevated;
+  }
+
+  /* Badges / chips */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-semibold whitespace-nowrap;
+  }
+
+  /* Modal scaffolding: bottom sheet on mobile, centered dialog on ≥sm */
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-zinc-950/55 backdrop-blur-[2px] p-0 sm:p-4;
+  }
+  .modal-panel {
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 w-full rounded-t-2xl sm:rounded-2xl shadow-elevated relative z-10 flex flex-col max-h-[92dvh] sm:max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 fade-in duration-200;
+  }
+  /* Small drag affordance for mobile bottom sheets */
+  .sheet-grabber {
+    @apply sm:hidden mx-auto mt-2 mb-1 h-1 w-9 rounded-full bg-zinc-300 dark:bg-zinc-700 shrink-0;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #e4e4e7;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #27272a;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}

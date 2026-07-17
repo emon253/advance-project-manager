@@ -1,0 +1,8 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Workspace module custom styles.
+   Shared primitives (.card, .btn, .field, .modal-*) and the .no-scrollbar
+   helper live in src/index.css — nothing module-specific is needed here. */

@@ -1,0 +1,10 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/* Tasks module custom styles */
+.task-row-checkbox:checked + label {
+  text-decoration: line-through;
+  opacity: 0.6;
+}

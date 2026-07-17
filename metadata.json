@@ -1,0 +1,8 @@
+{
+  "name": "Advanced Task Manager",
+  "description": "A high-fidelity project management app designed like a native mobile PWA and full desktop suite.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
