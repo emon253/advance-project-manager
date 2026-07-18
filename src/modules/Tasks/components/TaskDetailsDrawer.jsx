@@ -18,9 +18,18 @@ import {
   Send,
   AlertTriangle,
   PlaySquare,
-  Eye
+  Eye,
+  Download,
+  FileText,
+  Image as ImageIcon
 } from "lucide-react";
 import { formatDateTime } from "../util/tasksUtils";
+
+const isImageType = (t) => {
+  const type = (t || "").toLowerCase();
+  return type.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "gif"].includes(type);
+};
+const isPdfType = (t) => (t || "").toLowerCase().includes("pdf");
 import { AIEnhanceButton } from "../../../components/common/AIEnhanceButton";
 
 export function TaskDetailsDrawer() {
@@ -165,6 +174,14 @@ export function TaskDetailsDrawer() {
 
     attachFile(task.id, file);
     e.target.value = ""; // reset
+  };
+
+  /** Compact label for the meta line: extension, else MIME subtype ("JPEG", "PDF"). */
+  const shortFileType = (file) => {
+    const ext = file.name?.includes(".") ? file.name.split(".").pop() : null;
+    if (ext && ext.length <= 5) return ext.toUpperCase();
+    const sub = (file.type || "").split("/").pop();
+    return sub ? sub.toUpperCase().slice(0, 6) : "FILE";
   };
 
   const handleDownloadFile = (file) => {
@@ -438,34 +455,35 @@ export function TaskDetailsDrawer() {
                   ) : (
                     <div className="space-y-2">
                       {task.attachments.map((file) => {
-                        const isImage = /(^image\/)|(^(png|jpg|jpeg|webp|gif)$)/.test(file.type?.toLowerCase() || "");
-                        const isPDF = file.type?.toLowerCase().includes("pdf");
+                        const isImage = isImageType(file.type);
+                        const isPDF = isPdfType(file.type);
                         return (
-                          <div key={file.id} className="flex flex-wrap items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs gap-2">
-                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                              {isImage && file.base64 ? (
-                                <img
-                                  src={file.base64}
-                                  alt=""
-                                  className="w-10 h-10 rounded-lg object-cover cursor-pointer hover:opacity-85 shrink-0 border border-zinc-200 dark:border-zinc-800"
-                                  onClick={() => setPreviewFile(file)}
-                                  referrerPolicy="no-referrer"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 shrink-0 border border-zinc-200 dark:border-zinc-800">
-                                  {file.type?.toUpperCase() || "FILE"}
-                                </div>
-                              )}
-                              <div className="truncate flex-1 min-w-0">
-                                <p className="truncate font-semibold text-zinc-800 dark:text-zinc-200 leading-tight">
-                                  {file.name}
-                                </p>
-                                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">
-                                  {file.size} • {file.type?.toUpperCase()}
-                                </span>
-                              </div>
+                          <div key={file.id} className="flex items-center p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs gap-2.5">
+                            {isImage && file.base64 ? (
+                              <img
+                                src={file.base64}
+                                alt=""
+                                className="w-9 h-9 rounded-lg object-cover cursor-pointer hover:opacity-85 shrink-0 border border-zinc-200 dark:border-zinc-800"
+                                onClick={() => setPreviewFile(file)}
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <span
+                                className="w-9 h-9 rounded-lg bg-primary/8 dark:bg-primary/15 text-primary flex items-center justify-center shrink-0"
+                                aria-hidden="true"
+                              >
+                                {isImage ? <ImageIcon className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                              </span>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="truncate font-semibold text-zinc-800 dark:text-zinc-200 leading-tight">
+                                {file.name}
+                              </p>
+                              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">
+                                {file.size} • {shortFileType(file)}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                            <div className="flex items-center gap-1 shrink-0">
                               {(isImage || isPDF) && (
                                 <button
                                   type="button"
@@ -477,26 +495,30 @@ export function TaskDetailsDrawer() {
                                     const url = await getAttachmentBlobUrl(file);
                                     if (url) setPreviewFile({ ...file, base64: url });
                                   }}
-                                  className="btn btn-sm btn-secondary"
+                                  className="btn-icon"
+                                  title="Preview"
                                   aria-label={`Preview ${file.name}`}
                                 >
-                                  <Eye className="w-3.5 h-3.5" />
-                                  <span className="hidden sm:inline">Preview</span>
+                                  <Eye className="w-4 h-4" />
                                 </button>
                               )}
                               <button
                                 type="button"
                                 onClick={() => handleDownloadFile(file)}
-                                className="btn btn-sm btn-secondary"
+                                className="btn-icon"
+                                title="Download"
+                                aria-label={`Download ${file.name}`}
                               >
-                                Download
+                                <Download className="w-4 h-4" />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => removeAttachment(task.id, file.id)}
-                                className="btn btn-sm btn-danger-soft"
+                                className="btn-icon text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                                title="Delete"
+                                aria-label={`Delete ${file.name}`}
                               >
-                                Delete
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </div>
@@ -706,14 +728,14 @@ export function TaskDetailsDrawer() {
             </div>
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <div className="flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 rounded-xl p-2 min-h-[300px]">
-                {["png", "jpg", "jpeg", "webp"].includes(previewFile.type?.toLowerCase()) ? (
+                {isImageType(previewFile.type) ? (
                   <img
                     src={previewFile.base64}
                     alt=""
                     className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-soft"
                     referrerPolicy="no-referrer"
                   />
-                ) : previewFile.type?.toLowerCase() === "pdf" ? (
+                ) : isPdfType(previewFile.type) ? (
                   <iframe
                     src={previewFile.base64}
                     className="w-full h-[60vh] rounded-lg border-0 bg-white"
