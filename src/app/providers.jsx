@@ -297,7 +297,7 @@ export function AppStateProvider({ children }) {
             && typeof Notification !== "undefined"
             && Notification.permission === "granted") {
           try {
-            new Notification(notification.title || "Carbarn", {
+            new Notification(notification.title || "Junction", {
               body: notification.message,
               tag: `apm-notification-${notification.id}`,
             });

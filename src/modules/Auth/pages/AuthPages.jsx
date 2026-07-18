@@ -6,6 +6,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAppState } from "../../../app/providers";
+import { LogoTile } from "../../../components/common/Logo";
 import {
   Eye, EyeOff, ShieldAlert, CheckCircle2, Loader2,
   LayoutDashboard, BellRing, Users, User, Building2,
@@ -30,10 +31,8 @@ function BrandPanel() {
       />
 
       <div className="relative flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-primary font-display font-bold text-xl leading-none shadow-soft">
-          C
-        </span>
-        <span className="font-display font-bold text-lg tracking-[0.18em]">CARBARN</span>
+        <LogoTile size="h-10 w-10" rounded="rounded-xl" className="bg-white text-primary shadow-soft" />
+        <span className="font-display font-bold text-lg tracking-[0.18em]">JUNCTION</span>
       </div>
 
       <div className="relative max-w-md">
@@ -232,10 +231,8 @@ export function AuthPages() {
       <div className="flex-1 flex flex-col min-h-dvh overflow-y-auto pt-safe pb-safe">
         {/* Compact brand header (below lg the panel is hidden) */}
         <div className="lg:hidden flex items-center gap-2.5 px-6 pt-6">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-display font-bold text-base leading-none shadow-soft">
-            C
-          </span>
-          <span className="font-display font-bold text-sm tracking-[0.16em] text-zinc-900 dark:text-white">CARBARN</span>
+          <LogoTile size="h-8 w-8" rounded="rounded-lg" className="bg-primary text-white shadow-soft" markClassName="w-[60%] h-[60%]" />
+          <span className="font-display font-bold text-sm tracking-[0.16em] text-zinc-900 dark:text-white">JUNCTION</span>
         </div>
 
         <div className="flex-1 flex items-center justify-center px-6 py-10">
@@ -268,7 +265,7 @@ export function AuthPages() {
               <form onSubmit={handleFormSubmit} className="space-y-4">
                 {isRegister && (
                   <div>
-                    <span className="label" id="auth-account-type-label">How will you use Carbarn?</span>
+                    <span className="label" id="auth-account-type-label">How will you use Junction?</span>
                     <div className="grid grid-cols-2 gap-2.5 mb-4" role="radiogroup" aria-labelledby="auth-account-type-label">
                       {[
                         { id: "personal", Icon: User, title: "For myself", sub: "Personal projects & tasks" },
@@ -309,7 +306,7 @@ export function AuthPages() {
                         <input
                           id="auth-company"
                           type="text"
-                          placeholder="e.g. Carbarn Auction Group"
+                          placeholder="e.g. Junction Labs"
                           value={companyName}
                           onChange={(e) => setCompanyName(e.target.value)}
                           className="field"
@@ -418,7 +415,7 @@ export function AuthPages() {
               <div className="mt-7 text-center text-sm text-zinc-500 dark:text-zinc-400 font-medium">
                 {isLogin && (
                   <p>
-                    New to Carbarn?{" "}
+                    New to Junction?{" "}
                     <Link to="/register" className="font-semibold text-primary hover:underline">
                       Create an account
                     </Link>

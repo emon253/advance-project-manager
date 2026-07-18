@@ -73,7 +73,7 @@ export function NotificationSettingsPanel({ notificationSettings, handleTogglePr
             description={
               browserPermission === "denied"
                 ? "Blocked in your browser settings — allow notifications for this site to receive them"
-                : "Desktop alerts when Carbarn is in the background"
+                : "Desktop alerts when Junction is in the background"
             }
             enabled={notificationSettings.pushMock}
             onToggle={handleToggleBrowserPush}

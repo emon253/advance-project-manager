@@ -22,7 +22,7 @@ export const mockUsers = [
 ];
 
 export const mockWorkspaces = [
-  { id: "ws1", name: "Carbarn Auction Group", logo: "🏎️", ownerId: "u1", description: "All design & development for custom automotive bidding solutions." },
+  { id: "ws1", name: "Junction Auction Group", logo: "🏎️", ownerId: "u1", description: "All design & development for custom automotive bidding solutions." },
   { id: "ws2", name: "Personal Space", logo: "🏡", ownerId: "u1", description: "Individual tracks, learning, and private task boards." },
   { id: "ws3", name: "Innovate Labs", logo: "🧪", ownerId: "u2", description: "R&D workspace for greenfield experimental features." },
 ];
@@ -31,7 +31,7 @@ export const mockProjects = [
   {
     id: "p1",
     workspaceId: "ws1",
-    name: "Carbarn Auction Platform",
+    name: "Junction Auction Platform",
     description: "Developing the real-time online bidder portal & auction host screens.",
     icon: "🏎️",
     color: "#4f46e5", // Indigo

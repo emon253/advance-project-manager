@@ -10,6 +10,7 @@ import { InvitePage } from "../modules/Auth/pages/InvitePage";
 import { VerifyEmailPage } from "../modules/Auth/pages/VerifyEmailPage";
 import { OnboardingPage } from "../modules/Auth/pages/OnboardingPage";
 import { VerifyEmailBanner } from "../components/common/VerifyEmailBanner";
+import { LogoTile } from "../components/common/Logo";
 import { DashboardPage } from "../modules/Dashboard/pages/DashboardPage";
 import { TasksPage } from "../modules/Tasks/pages/TasksPage";
 import { ProjectsPage } from "../modules/Projects/pages/ProjectsPage";
@@ -55,7 +56,7 @@ function AppLayout({ children }) {
   if (bootLoading) {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center gap-3 bg-zinc-50 dark:bg-zinc-950">
-        <span className="flex items-center justify-center h-12 w-12 bg-primary text-white rounded-xl font-display font-bold text-2xl select-none">C</span>
+        <LogoTile size="h-12 w-12" rounded="rounded-xl" className="bg-primary text-white shadow-soft" />
         <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Loading your workspace…</p>
       </div>
     );

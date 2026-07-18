@@ -75,7 +75,7 @@ export function WorkspaceDetailsForm({
                 type="text"
                 required
                 disabled={!canEdit}
-                placeholder="e.g. Carbarn Sales Team"
+                placeholder="e.g. Junction Sales Team"
                 value={wsName}
                 onChange={(e) => setWsName(e.target.value)}
                 className="field disabled:opacity-60 disabled:cursor-not-allowed"
