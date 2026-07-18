@@ -17,7 +17,8 @@ import {
   Plus,
   Send,
   AlertTriangle,
-  PlaySquare
+  PlaySquare,
+  Eye
 } from "lucide-react";
 import { formatDateTime } from "../util/tasksUtils";
 import { AIEnhanceButton } from "../../../components/common/AIEnhanceButton";
@@ -41,10 +42,13 @@ export function TaskDetailsDrawer() {
     addComment,
     attachFile,
     removeAttachment,
+    downloadAttachment,
+    getAttachmentBlobUrl,
     addChecklistItem,
     toggleChecklistItem,
     deleteChecklistItem,
-    duplicateTask
+    duplicateTask,
+    can
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState("general"); // general, checklist, comments, advanced
@@ -66,6 +70,7 @@ export function TaskDetailsDrawer() {
 
   if (!task) return null;
 
+  const canEdit = can("editTasks");
   const project = activeWorkspaceProjects.find((p) => p.id === task.projectId);
   const assignee = users.find((u) => u.id === task.assigneeId);
   const projectMembers = project && project.members
@@ -110,30 +115,23 @@ export function TaskDetailsDrawer() {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Check size limit: 1.5MB = 1572864 bytes
-    const limit = 1.5 * 1024 * 1024;
+    // Server caps uploads at 10MB (400 VALIDATION beyond it).
+    const limit = 10 * 1024 * 1024;
     if (file.size > limit) {
-      setErrorMsg("Warning: File is larger than 1.5MB limit. Please choose a smaller file to preserve local storage.");
+      setErrorMsg("File is larger than the 10MB upload limit. Please choose a smaller file.");
       setTimeout(() => setErrorMsg(""), 6000);
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result;
-      const sizeStr = file.size > 1024 * 1024
-        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
-        : `${Math.round(file.size / 1024)} KB`;
-
-      const fileType = file.name.split(".").pop() || "pdf";
-      attachFile(task.id, file.name, sizeStr, fileType, base64);
-    };
-    reader.readAsDataURL(file);
+    attachFile(task.id, file);
     e.target.value = ""; // reset
   };
 
   const handleDownloadFile = (file) => {
-    if (!file.base64) return;
+    if (!file.base64) {
+      downloadAttachment(file);
+      return;
+    }
     const a = document.createElement("a");
     a.href = file.base64;
     a.download = file.name;
@@ -184,6 +182,16 @@ export function TaskDetailsDrawer() {
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-4 lg:px-5 py-3 sm:py-4 space-y-3 sm:space-y-5 text-left">
+
+          {/* Read-only notice for Viewers */}
+          {!canEdit && (
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700">
+              <Eye className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
+              <p className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                You have view-only access in this workspace
+              </p>
+            </div>
+          )}
 
           {/* Editable Title */}
           <div>
@@ -360,13 +368,13 @@ export function TaskDetailsDrawer() {
                     <div className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/30">
                       <Paperclip className="w-6 h-6 text-zinc-300 dark:text-zinc-600 mb-1.5" />
                       <p className="text-xs text-zinc-600 dark:text-zinc-300 font-semibold">No documents uploaded yet</p>
-                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium">Supports PNG, JPEG, WEBP and PDF assets up to 1.5MB</p>
+                      <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium">Any file type up to 10MB</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {task.attachments.map((file) => {
-                        const isImage = ["png", "jpg", "jpeg", "webp"].includes(file.type?.toLowerCase());
-                        const isPDF = file.type?.toLowerCase() === "pdf";
+                        const isImage = /(^image\/)|(^(png|jpg|jpeg|webp|gif)$)/.test(file.type?.toLowerCase() || "");
+                        const isPDF = file.type?.toLowerCase().includes("pdf");
                         return (
                           <div key={file.id} className="flex flex-wrap items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs gap-2">
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -393,24 +401,29 @@ export function TaskDetailsDrawer() {
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                              {(isImage || isPDF) && file.base64 && (
+                              {(isImage || isPDF) && (
                                 <button
                                   type="button"
-                                  onClick={() => setPreviewFile(file)}
+                                  onClick={async () => {
+                                    if (file.base64) {
+                                      setPreviewFile(file);
+                                      return;
+                                    }
+                                    const url = await getAttachmentBlobUrl(file);
+                                    if (url) setPreviewFile({ ...file, base64: url });
+                                  }}
                                   className="btn btn-sm btn-secondary"
                                 >
                                   Preview
                                 </button>
                               )}
-                              {file.base64 && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDownloadFile(file)}
-                                  className="btn btn-sm btn-secondary"
-                                >
-                                  Download
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadFile(file)}
+                                className="btn btn-sm btn-secondary"
+                              >
+                                Download
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => removeAttachment(task.id, file.id)}
@@ -561,29 +574,33 @@ export function TaskDetailsDrawer() {
 
         {/* Sticky action bar */}
         <div className="flex items-center gap-2 px-4 lg:px-5 py-3 border-t border-zinc-200 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-950 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <button
-            type="button"
-            onClick={() => {
-              const dup = duplicateTask(task.id);
-              if (dup) {
-                setActiveTaskId(dup.id);
-              }
-            }}
-            className="btn btn-secondary btn-sm"
-            title="Duplicate task record"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Duplicate
-          </button>
-          <button
-            type="button"
-            onClick={handleDeleteSelf}
-            className="btn btn-danger-soft btn-sm"
-            title="Delete this task record"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Delete
-          </button>
+          {canEdit && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  const dup = duplicateTask(task.id);
+                  if (dup) {
+                    setActiveTaskId(dup.id);
+                  }
+                }}
+                className="btn btn-secondary btn-sm"
+                title="Duplicate task record"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Duplicate
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteSelf}
+                className="btn btn-danger-soft btn-sm"
+                title="Delete this task record"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </button>
+            </>
+          )}
           <button
             type="button"
             onClick={() => setActiveTaskId(null)}

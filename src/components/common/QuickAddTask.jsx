@@ -13,7 +13,8 @@ export function QuickAddTask({ isOpen, onClose }) {
     activeWorkspaceProjects,
     users,
     addTask,
-    tags
+    tags,
+    can
   } = useAppState();
 
   const [title, setTitle] = useState("");
@@ -38,6 +39,9 @@ export function QuickAddTask({ isOpen, onClose }) {
   }, [projectId, activeWorkspaceProjects, assigneeId]);
 
   if (!isOpen) return null;
+
+  // Defensive: viewers can't create tasks even if the modal is triggered
+  if (!can("editTasks")) return null;
 
   const selectedProject = activeWorkspaceProjects.find((p) => p.id === projectId);
   const projectMembers = selectedProject && selectedProject.members

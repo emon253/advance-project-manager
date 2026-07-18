@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import { Sliders, Save } from "lucide-react";
+import { Sliders, Save, Lock } from "lucide-react";
 import { ICON_OPTIONS, getIconComponent } from "../../../components/common/IconHelper";
 
 export function WorkspaceDetailsForm({
@@ -15,7 +15,8 @@ export function WorkspaceDetailsForm({
   setWsName,
   wsDescription,
   setWsDescription,
-  handleUpdateDetails
+  handleUpdateDetails,
+  canEdit
 }) {
   return (
     <div className="card p-3 sm:p-4 text-left space-y-2.5 sm:space-y-4" id="ws-details-form-card">
@@ -47,11 +48,12 @@ export function WorkspaceDetailsForm({
                     key={key}
                     type="button"
                     onClick={() => setWsLogo(key)}
+                    disabled={!canEdit}
                     role="radio"
                     aria-checked={wsLogo === key}
                     title={label}
                     aria-label={`Use ${label} as logo`}
-                    className={`w-8 h-8 flex items-center justify-center rounded-md border shrink-0 cursor-pointer transition-colors ${
+                    className={`w-8 h-8 flex items-center justify-center rounded-md border shrink-0 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                       wsLogo === key
                         ? "bg-primary/8 border-primary/40 text-primary"
                         : "border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
@@ -72,10 +74,11 @@ export function WorkspaceDetailsForm({
                 id="ws-details-name"
                 type="text"
                 required
+                disabled={!canEdit}
                 placeholder="e.g. Carbarn Sales Team"
                 value={wsName}
                 onChange={(e) => setWsName(e.target.value)}
-                className="field"
+                className="field disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -84,20 +87,28 @@ export function WorkspaceDetailsForm({
               <textarea
                 id="ws-details-desc"
                 rows={2}
+                disabled={!canEdit}
                 placeholder="Describe the workspace activities, objectives, or scope..."
                 value={wsDescription}
                 onChange={(e) => setWsDescription(e.target.value)}
-                className="field"
+                className="field disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
           </div>
         </div>
 
         <div className="flex justify-end pt-2 border-t border-zinc-100 dark:border-zinc-800">
-          <button type="submit" className="btn btn-primary">
-            <Save className="w-4 h-4 shrink-0" />
-            <span>Save changes</span>
-          </button>
+          {canEdit ? (
+            <button type="submit" className="btn btn-primary">
+              <Save className="w-4 h-4 shrink-0" />
+              <span>Save changes</span>
+            </button>
+          ) : (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium flex items-center gap-1.5" id="ws-details-view-only">
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              <span>View only — admin access required</span>
+            </p>
+          )}
         </div>
       </form>
     </div>

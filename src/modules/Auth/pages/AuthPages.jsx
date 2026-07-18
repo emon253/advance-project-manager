@@ -9,7 +9,7 @@ import { useAppState } from "../../../app/providers";
 import { Eye, EyeOff, ShieldAlert, CheckCircle2 } from "lucide-react";
 
 export function AuthPages() {
-  const { login, isAuthenticated, addWorkspace } = useAppState();
+  const { login, register, forgotPassword, resetPassword, isAuthenticated } = useAppState();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -18,18 +18,20 @@ export function AuthPages() {
   const isForgot = location.pathname === "/forgot-password";
   const isReset = location.pathname === "/reset-password";
   const isLogin = location.pathname === "/login" || (!isRegister && !isForgot && !isReset);
+  const sessionExpired = isLogin && new URLSearchParams(location.search).get("expired") === "1";
 
   // States
-  const [email, setEmail] = useState("yasin@company.com");
-  const [password, setPassword] = useState("yasin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [accountType, setAccountType] = useState("personal"); // personal | company
   const [companyName, setCompanyName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -40,37 +42,59 @@ export function AuthPages() {
     }
 
     if (isLogin) {
-      const res = login(email, password);
+      setSubmitting(true);
+      const res = await login(email, password);
+      setSubmitting(false);
       if (res.success) {
         navigate("/dashboard");
       } else {
-        setError("Invalid credentials. Try using yasin@company.com with any password.");
+        setError(res.error || "Invalid email or password.");
       }
     } else if (isRegister) {
       if (!name) {
-        setError("Please clarify your name.");
+        setError("Please enter your name.");
         return;
       }
       if (accountType === "company" && !companyName.trim()) {
         setError("Please enter your company name.");
         return;
       }
-      setSuccess("Account created successfully! Redirecting...");
-      setTimeout(() => {
-        login(email, "password123");
-        // Provision the right workspace for the chosen account type
-        if (accountType === "company") {
-          addWorkspace(companyName.trim(), "💼", `${companyName.trim()} team workspace.`, "company");
-        } else {
-          addWorkspace(`${name.split(" ")[0]}'s Space`, "🏡", "Personal projects and tasks.", "personal");
-        }
-        navigate("/dashboard");
-      }, 1000);
+      setSubmitting(true);
+      const res = await register({
+        name,
+        email,
+        password,
+        accountType,
+        companyName: accountType === "company" ? companyName.trim() : null,
+      });
+      setSubmitting(false);
+      if (!res.success) {
+        setError(res.error || "Could not create the account.");
+        return;
+      }
+      const next = accountType === "company" ? "/welcome" : "/dashboard";
+      navigate(`/verify-email?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`);
     } else if (isForgot) {
-      setSuccess("Reset instructions have been sent to your inbox.");
+      setSubmitting(true);
+      try { await forgotPassword(email); } catch { /* always succeed: no user enumeration */ }
+      setSubmitting(false);
+      setSuccess("If that email exists, reset instructions are on their way.");
     } else if (isReset) {
-      setSuccess("Password changed successfully. Redirecting back to login...");
-      setTimeout(() => navigate("/login"), 1200);
+      const token = new URLSearchParams(location.search).get("token");
+      if (!token) {
+        setError("This reset link is missing its token. Use the link from your email.");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        await resetPassword(token, password);
+        setSuccess("Password changed successfully. Redirecting back to login...");
+        setTimeout(() => navigate("/login"), 1200);
+      } catch (err) {
+        setError(err.message || "This reset link is invalid or expired.");
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -99,6 +123,13 @@ export function AuthPages() {
             {isForgot && "Reset your password"}
             {isReset && "Choose a new password"}
           </h2>
+
+          {sessionExpired && !error && !success && (
+            <div className="mb-4 p-3 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-400 text-xs font-medium flex items-center gap-2 border border-amber-200 dark:border-amber-500/20">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-amber-500" />
+              <span>Your session expired. Please sign in again.</span>
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 text-xs font-medium flex items-center gap-2 border border-rose-100 dark:border-rose-900/30">
@@ -226,7 +257,7 @@ export function AuthPages() {
               </div>
             )}
 
-            <button type="submit" className="btn btn-primary w-full">
+            <button type="submit" className="btn btn-primary w-full" disabled={submitting}>
               {isLogin && "Sign in"}
               {isRegister && "Create account"}
               {isForgot && "Send reset link"}
@@ -247,11 +278,7 @@ export function AuthPages() {
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setEmail("yasin@company.com");
-                    setSuccess("SSO connected! Loading secure workspace...");
-                    setTimeout(() => { login("yasin@company.com", ""); navigate("/dashboard"); }, 800);
-                  }}
+                  onClick={() => setError("Social sign-in arrives with the SSO rollout — use email and password for now.")}
                   className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
                   title="Google SSO"
                 >
@@ -265,11 +292,7 @@ export function AuthPages() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setEmail("nadia@company.com");
-                    setSuccess("SSO connected! Loading workspace...");
-                    setTimeout(() => { login("nadia@company.com", ""); navigate("/dashboard"); }, 800);
-                  }}
+                  onClick={() => setError("Social sign-in arrives with the SSO rollout — use email and password for now.")}
                   className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
                   title="Apple SSO"
                 >
@@ -280,11 +303,7 @@ export function AuthPages() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setEmail("rakib@company.com");
-                    setSuccess("SSO connected! Loading workspace...");
-                    setTimeout(() => { login("rakib@company.com", ""); navigate("/dashboard"); }, 800);
-                  }}
+                  onClick={() => setError("Social sign-in arrives with the SSO rollout — use email and password for now.")}
                   className="flex flex-col items-center justify-center py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
                   title="Microsoft SSO"
                 >

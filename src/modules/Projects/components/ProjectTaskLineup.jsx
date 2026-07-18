@@ -19,11 +19,12 @@ export function ProjectTaskLineup({
   updateTask,
   setActiveTaskId
 }) {
-  const { activeWorkspaceProjects } = useAppState();
+  const { activeWorkspaceProjects, can } = useAppState();
 
   return (
     <div className="space-y-2.5 sm:space-y-4 text-left animate-in fade-in duration-150">
-      {/* Inline creation form */}
+      {/* Inline creation form — hidden for view-only roles */}
+      {can("editTasks") && (
       <form onSubmit={handleInlineAddTask} className="card flex items-center gap-2 p-2">
         <div className="flex items-center gap-2 flex-1 min-w-0 px-2">
           <Plus className="w-4 h-4 text-zinc-400 shrink-0" />
@@ -44,6 +45,7 @@ export function ProjectTaskLineup({
           Add
         </button>
       </form>
+      )}
 
       {projectTasks.length === 0 ? (
         <EmptyState

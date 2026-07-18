@@ -3,9 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { useAppState } from "../../../app/providers";
+import { useMockQuery } from "../../../hooks/useMockQuery";
+import { ListSkeleton } from "../../../components/common/Skeleton";
+import { ErrorState } from "../../../components/common/ErrorState";
 
 // Modular imports
 import { useNotificationFilters } from "../hooks/useNotificationFilters";
@@ -18,10 +22,15 @@ import { NotificationSettingsPanel } from "../components/NotificationSettingsPan
 
 import "../style/notifications.css";
 
+const PAGE_SIZE = 8;
+
 export function InboxPage() {
   const {
     notifications,
-    setNotifications,
+    setNotificationRead,
+    markAllNotificationsRead,
+    clearReadNotifications,
+    deleteNotification,
     notificationSettings,
     setNotificationSettings,
     projects,
@@ -44,24 +53,44 @@ export function InboxPage() {
     filteredNotifications,
   } = useNotificationFilters(notifications);
 
-  // Action: Mark single read/unread toggle
+  // Simulated fetch lifecycle for the inbox feed (loading / error / retry)
+  const { isLoading, isError, retry } = useMockQuery();
+
+  // Pagination over the FILTERED notification list
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Reset pagination whenever the tab or any filter changes
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [activeTab, selectedType, searchQuery]);
+
+  const visibleNotifications = filteredNotifications.slice(0, visibleCount);
+  const remainingCount = filteredNotifications.length - visibleNotifications.length;
+
+  const handleLoadMore = () => {
+    if (isLoadingMore) return;
+    setIsLoadingMore(true);
+    setTimeout(() => {
+      setVisibleCount((count) => count + PAGE_SIZE);
+      setIsLoadingMore(false);
+    }, 400);
+  };
+
+  // Action: Mark single read/unread toggle (provider persists via the API)
   const handleToggleRead = (id, forceRead = null) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: forceRead !== null ? forceRead : !n.read } : n))
-    );
+    const current = notifications.find((n) => n.id === id);
+    const nextRead = forceRead !== null ? forceRead : !(current?.read);
+    setNotificationRead(id, nextRead);
     if (selectedNotif && selectedNotif.id === id) {
-      setSelectedNotif((prev) => ({
-        ...prev,
-        read: forceRead !== null ? forceRead : !prev.read
-      }));
+      setSelectedNotif((prev) => ({ ...prev, read: nextRead }));
     }
   };
 
   // Action: Mark single read only
   const handleMarkRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+    const current = notifications.find((n) => n.id === id);
+    if (current && !current.read) setNotificationRead(id, true);
     if (selectedNotif && selectedNotif.id === id) {
       setSelectedNotif((prev) => ({ ...prev, read: true }));
     }
@@ -69,7 +98,7 @@ export function InboxPage() {
 
   // Action: Mark all read
   const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    markAllNotificationsRead();
     if (selectedNotif) {
       setSelectedNotif((prev) => ({ ...prev, read: true }));
     }
@@ -77,7 +106,7 @@ export function InboxPage() {
 
   // Action: Clear all read notifications
   const handleClearRead = () => {
-    setNotifications((prev) => prev.filter((n) => !n.read));
+    clearReadNotifications();
     if (selectedNotif && selectedNotif.read) {
       setSelectedNotif(null);
     }
@@ -85,7 +114,7 @@ export function InboxPage() {
 
   // Action: Delete notification
   const handleDeleteNotification = (id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    deleteNotification(id);
     if (selectedNotif && selectedNotif.id === id) {
       setSelectedNotif(null);
     }
@@ -157,27 +186,55 @@ export function InboxPage() {
               setSelectedType={setSelectedType}
             />
 
-            {/* Notification items container */}
-            <div
-              id="inbox-alert-cards-container"
-              className="sm:bg-white sm:dark:bg-zinc-900 sm:border sm:border-zinc-200/80 sm:dark:border-zinc-800 sm:rounded-xl sm:shadow-soft sm:p-2"
-            >
-              <NotificationList
-                notifications={filteredNotifications}
-                selectedNotif={selectedNotif}
-                getTaskInfo={getTaskInfo}
-                getProjectInfo={getProjectInfo}
-                handleNotificationClick={handleNotificationClick}
-                handleToggleRead={handleToggleRead}
-                handleDeleteNotification={handleDeleteNotification}
-                setActiveTaskId={setActiveTaskId}
-                navigate={navigate}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                setSelectedType={setSelectedType}
-                activeTab={activeTab}
-              />
-            </div>
+            {/* Notification items container (loading / error / paginated list) */}
+            {isLoading ? (
+              <ListSkeleton rows={5} />
+            ) : isError ? (
+              <ErrorState onRetry={retry} title="Couldn't load your inbox" />
+            ) : (
+              <>
+                <div
+                  id="inbox-alert-cards-container"
+                  className="sm:bg-white sm:dark:bg-zinc-900 sm:border sm:border-zinc-200/80 sm:dark:border-zinc-800 sm:rounded-xl sm:shadow-soft sm:p-2"
+                >
+                  <NotificationList
+                    notifications={visibleNotifications}
+                    selectedNotif={selectedNotif}
+                    getTaskInfo={getTaskInfo}
+                    getProjectInfo={getProjectInfo}
+                    handleNotificationClick={handleNotificationClick}
+                    handleToggleRead={handleToggleRead}
+                    handleDeleteNotification={handleDeleteNotification}
+                    setActiveTaskId={setActiveTaskId}
+                    navigate={navigate}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    setSelectedType={setSelectedType}
+                    activeTab={activeTab}
+                  />
+                </div>
+
+                {remainingCount > 0 && (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={handleLoadMore}
+                      disabled={isLoadingMore}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Loading…</span>
+                        </>
+                      ) : (
+                        <span>Load more ({remainingCount} remaining)</span>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* 4. Elegant responsive Slide drawer detail side panel */}

@@ -35,7 +35,9 @@ export function DesktopSidebar({ onOpenQuickAdd, onOpenAISuggest, onClose = () =
     logout,
     addWorkspace,
     activeSubscription,
-    activePlanId
+    activePlanId,
+    can,
+    currentRole
   } = useAppState();
 
   const location = useLocation();
@@ -57,7 +59,7 @@ export function DesktopSidebar({ onOpenQuickAdd, onOpenAISuggest, onClose = () =
   ];
 
   const secondaryNavItems = [
-    { label: "Plans & Billing", icon: CreditCard, path: "/billing" },
+    ...(can("manageBilling") ? [{ label: "Plans & Billing", icon: CreditCard, path: "/billing" }] : []),
     { label: "Settings", icon: Settings, path: "/settings" },
     { label: "My Profile", icon: User, path: "/profile" },
   ];
@@ -282,7 +284,7 @@ export function DesktopSidebar({ onOpenQuickAdd, onOpenAISuggest, onClose = () =
           <UserAvatar user={currentUser} size="sm" />
           <div className="min-w-0 text-left">
             <h4 className="font-semibold text-sm text-zinc-900 dark:text-white truncate leading-tight">{currentUser.name}</h4>
-            <p className="text-[11px] text-zinc-500 truncate">{currentUser.role || "Member"}</p>
+            <p className="text-[11px] text-zinc-500 truncate">{currentRole || "Member"}</p>
           </div>
         </Link>
         <button

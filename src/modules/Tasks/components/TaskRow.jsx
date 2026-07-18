@@ -8,6 +8,7 @@ import { MessageSquare, Calendar, ChevronRight, CheckCircle2, Paperclip } from "
 import { PriorityBadge } from "../../../components/common/PriorityBadge";
 import { StatusBadge } from "../../../components/common/StatusBadge";
 import { UserAvatar } from "../../../components/common/UserAvatar";
+import { useAppState } from "../../../app/providers";
 
 export function TaskRow({
   task,
@@ -16,6 +17,7 @@ export function TaskRow({
   setActiveTaskId,
   updateTask
 }) {
+  const { can } = useAppState();
   const isCompleted = task.status === "Completed";
   const checklistItems = task.checklist || [];
   const completedCLCount = checklistItems.filter((i) => i.completed).length;
@@ -108,9 +110,10 @@ export function TaskRow({
         <input
           type="checkbox"
           checked={isCompleted}
+          disabled={!can("editTasks")}
           onChange={() => updateTask(task.id, { status: isCompleted ? "To Do" : "Completed" })}
           aria-label={isCompleted ? "Mark task as not completed" : "Mark task as completed"}
-          className="w-5 h-5 rounded-md border-zinc-300 dark:border-zinc-600 text-primary focus:ring-primary/30 cursor-pointer shrink-0 bg-transparent"
+          className="w-5 h-5 rounded-md border-zinc-300 dark:border-zinc-600 text-primary focus:ring-primary/30 cursor-pointer shrink-0 bg-transparent disabled:opacity-40 disabled:cursor-not-allowed"
         />
       </div>
 

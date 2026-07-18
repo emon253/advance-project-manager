@@ -3,36 +3,48 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAppState } from "../../../app/providers";
 
-export function useTeamInvite(users, setUsers) {
+export function useTeamInvite() {
+  const { activeWorkspace, createInvite } = useAppState();
+
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
-  const [inviteRole, setInviteRole] = useState("Developer");
+  const [inviteRole, setInviteRole] = useState("Member");
   const [successBanner, setSuccessBanner] = useState("");
+  const [inviteError, setInviteError] = useState("");
+
+  // Clear any stale inline error each time the invite dialog opens
+  useEffect(() => {
+    if (showInviteForm) setInviteError("");
+  }, [showInviteForm]);
 
   const handleInviteUser = (e) => {
     e.preventDefault();
+    setInviteError("");
     if (!inviteName.trim() || !inviteEmail.trim()) return;
 
-    // Add mock user
-    const newUser = {
-      id: "u" + (users.length + 1),
+    // Create a pending invitation — the invitee joins once they accept their link
+    const result = createInvite(activeWorkspace.id, {
       name: inviteName.trim(),
-      email: inviteEmail.trim(),
-      role: inviteRole,
-      avatar: null, // fallback
-    };
+      email: inviteEmail.trim().toLowerCase(),
+      role: inviteRole
+    });
 
-    setUsers((prev) => [...prev, newUser]);
-    setSuccessBanner(`Successfully sent workspace authorization code to ${inviteEmail}!`);
+    if (result?.error) {
+      setInviteError(result.error);
+      return;
+    }
+
+    setSuccessBanner(`Invitation sent to ${result.invite.email} — they'll appear here once they accept (pending until then).`);
     setTimeout(() => setSuccessBanner(""), 5000);
-    
+
     // Clear
     setInviteName("");
     setInviteEmail("");
-    setInviteRole("Developer");
+    setInviteRole("Member");
     setShowInviteForm(false);
   };
 
@@ -46,6 +58,7 @@ export function useTeamInvite(users, setUsers) {
     inviteRole,
     setInviteRole,
     successBanner,
+    inviteError,
     handleInviteUser
   };
 }

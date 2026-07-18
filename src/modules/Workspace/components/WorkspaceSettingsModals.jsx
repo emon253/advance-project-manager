@@ -16,6 +16,7 @@ export function WorkspaceSettingsModals({
   setInviteEmail,
   inviteRole,
   setInviteRole,
+  inviteError,
   handleInviteMember,
   showArchiveConfirm,
   setShowArchiveConfirm,
@@ -89,6 +90,14 @@ export function WorkspaceSettingsModals({
                     <option value="Viewer">Viewer (Read-Only Access)</option>
                   </select>
                 </div>
+
+                {/* Inline invitation error (dedupe, seat limits, validation) */}
+                {inviteError && (
+                  <div className="p-2.5 bg-rose-50 dark:bg-rose-950/20 border border-rose-200/70 dark:border-rose-900/40 text-rose-700 dark:text-rose-400 text-xs font-semibold rounded-lg flex items-center gap-1.5 animate-in fade-in" id="ws-invite-inline-error">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{inviteError}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2 px-5 pt-3.5 border-t border-zinc-100 dark:border-zinc-800 pb-[max(0.875rem,env(safe-area-inset-bottom))]">

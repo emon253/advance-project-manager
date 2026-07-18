@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import { Mail, X } from "lucide-react";
+import { Mail, X, AlertTriangle } from "lucide-react";
 
 export function InviteUserDialog({
   handleInviteUser,
@@ -14,6 +14,7 @@ export function InviteUserDialog({
   setInviteEmail,
   inviteRole,
   setInviteRole,
+  inviteError,
   setShowInviteForm
 }) {
   return (
@@ -75,13 +76,20 @@ export function InviteUserDialog({
                 onChange={(e) => setInviteRole(e.target.value)}
                 className="field"
               >
-                <option value="Lead Architect">Lead Architect</option>
-                <option value="Designer">UI/UX Designer</option>
-                <option value="Developer">Systems Developer</option>
-                <option value="Manager">Product Scrum Manager</option>
-                <option value="Analyst">Business Security Analyst</option>
+                <option value="Admin">Admin (Full Access &amp; Settings)</option>
+                <option value="Manager">Manager (Track &amp; Edit Projects)</option>
+                <option value="Member">Member (Task Assignment &amp; Edits)</option>
+                <option value="Viewer">Viewer (Read-Only Access)</option>
               </select>
             </div>
+
+            {/* Inline invitation error (dedupe, existing member, etc.) */}
+            {inviteError && (
+              <div className="p-2.5 bg-rose-50 dark:bg-rose-950/20 border border-rose-200/70 dark:border-rose-900/40 text-rose-700 dark:text-rose-400 text-xs font-semibold rounded-lg flex items-center gap-1.5 animate-in fade-in" id="team-invite-inline-error">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>{inviteError}</span>
+              </div>
+            )}
           </div>
 
           {/* Footer */}

@@ -5,6 +5,9 @@
 
 import React, { useState } from "react";
 import { useAppState } from "../../../app/providers";
+import { useMockQuery } from "../../../hooks/useMockQuery";
+import { CardGridSkeleton } from "../../../components/common/Skeleton";
+import { ErrorState } from "../../../components/common/ErrorState";
 
 // Modular Imports
 import { ProjectHeader } from "../components/ProjectHeader";
@@ -18,6 +21,9 @@ import "../style/projects.css";
 
 export function ProjectsPage() {
   const { activeWorkspaceProjects, activeWorkspaceTasks, addProject, canAddProject, activePlanId } = useAppState();
+
+  // Simulated fetch lifecycle for the portfolio grid (loading / error / retry)
+  const { isLoading, isError, retry } = useMockQuery();
 
   const [filterTab, setFilterTab] = useState("active"); // active, archived
   const [showAddForm, setShowAddFormRaw] = useState(false);
@@ -100,11 +106,17 @@ export function ProjectsPage() {
         archivedCount={archivedCount}
       />
 
-      {/* 4. Project listings grid component */}
-      <ProjectList
-        displayedProjects={displayedProjects}
-        tasks={activeWorkspaceTasks}
-      />
+      {/* 4. Project listings grid component (loading / error / grid) */}
+      {isLoading ? (
+        <CardGridSkeleton cards={3} />
+      ) : isError ? (
+        <ErrorState onRetry={retry} title="Couldn't load projects" />
+      ) : (
+        <ProjectList
+          displayedProjects={displayedProjects}
+          tasks={activeWorkspaceTasks}
+        />
+      )}
 
       {/* Plan limit paywall */}
       <UpgradeModal

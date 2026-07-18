@@ -40,12 +40,12 @@ export function ProjectPortfolioTabs({ filterTab, setFilterTab, activeCount, arc
   );
 }
 
-export function ProjectDetailsTabs({ activeTab, setActiveTab, pendingTasksCount }) {
+export function ProjectDetailsTabs({ activeTab, setActiveTab, pendingTasksCount, showAdminTab = true }) {
   const tabs = [
     { id: "overview", label: "Executive Summary" },
     { id: "tasks", label: `Tasks Lineup (${pendingTasksCount})` },
     { id: "files", label: `File Cabinet` },
-    { id: "settings", label: "Administrative Controls" }
+    ...(showAdminTab ? [{ id: "settings", label: "Administrative Controls" }] : [])
   ];
 
   return (

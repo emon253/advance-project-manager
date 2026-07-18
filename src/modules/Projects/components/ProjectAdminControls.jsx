@@ -5,6 +5,7 @@
 
 import React from "react";
 import { Plus, Archive, Trash2, AlertTriangle } from "lucide-react";
+import { useAppState } from "../../../app/providers";
 
 export function ProjectAdminControls({
   project,
@@ -13,6 +14,10 @@ export function ProjectAdminControls({
   setShowDeleteConfirm,
   handleDeleteProject
 }) {
+  const { can } = useAppState();
+
+  if (!can("manageProjects")) return null;
+
   return (
     <div className="card p-3 sm:p-4 text-left space-y-4 sm:space-y-6">
       <div>

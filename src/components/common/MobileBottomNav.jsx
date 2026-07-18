@@ -9,7 +9,7 @@ import { useAppState } from "../../app/providers";
 import { CheckSquare, Folder, Inbox, Plus, Layers } from "lucide-react";
 
 export function MobileBottomNav({ onOpenQuickAdd }) {
-  const { notifications } = useAppState();
+  const { notifications, can } = useAppState();
   const location = useLocation();
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -30,6 +30,10 @@ export function MobileBottomNav({ onOpenQuickAdd }) {
       <div className="flex items-stretch justify-around h-16 max-w-md mx-auto px-2">
         {tabs.map((tab) => {
           if (tab.isFab) {
+            if (!can("editTasks")) {
+              // Viewers can't add tasks — keep the tab layout balanced with an empty spacer
+              return <div key={tab.label} className="w-16" aria-hidden="true" />;
+            }
             return (
               <div key={tab.label} className="relative flex items-center justify-center w-16">
                 <button

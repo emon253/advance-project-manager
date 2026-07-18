@@ -7,28 +7,53 @@ import React, { useState } from "react";
 import { useAppState } from "../../../app/providers";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { UserAvatar } from "../../../components/common/UserAvatar";
-import { Key, UserCheck, Check } from "lucide-react";
+import { Key, UserCheck, Check, AlertTriangle, Trash2, X } from "lucide-react";
 
 export function ProfilePage() {
-  const { currentUser, setCurrentUser } = useAppState();
+  const { currentUser, updateProfile, changePassword, deleteAccount } = useAppState();
 
-  const [name, setName] = useState(currentUser.name);
-  const [email, setEmail] = useState(currentUser.email);
-  const [role, setRole] = useState(currentUser.role || "Lead Architect");
-  const [phone, setPhone] = useState("+880 1712-345678");
+  const [name, setName] = useState(currentUser?.name || "");
+  const [email, setEmail] = useState(currentUser?.email || "");
+  const [role] = useState(currentUser?.role || "Member");
+  const [phone, setPhone] = useState(currentUser?.phone || "");
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [pwMsg, setPwMsg] = useState(null);
 
   // Status banner
   const [msg, setMsg] = useState("");
 
-  const handleUpdateProfile = (e) => {
+  // Account deletion confirm sheet
+  const [showDeleteSheet, setShowDeleteSheet] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const deleteConfirmed = deleteConfirmText === "DELETE";
+
+  const openDeleteSheet = () => {
+    setDeleteConfirmText("");
+    setShowDeleteSheet(true);
+  };
+
+  const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    setCurrentUser((prev) => ({
-      ...prev,
-      name: name.trim(),
-      email: email.trim(),
-    }));
-    setMsg("Profile updated successfully.");
+    const res = await updateProfile({ name: name.trim(), phone: phone.trim() || null });
+    setMsg(res.success ? "Profile updated successfully." : (res.error || "Could not update the profile."));
     setTimeout(() => setMsg(""), 3500);
+  };
+
+  const handleChangePassword = async () => {
+    if (!oldPassword || !newPassword) {
+      setPwMsg({ ok: false, text: "Fill in both password fields." });
+      return;
+    }
+    const res = await changePassword(oldPassword, newPassword);
+    if (res.success) {
+      setOldPassword("");
+      setNewPassword("");
+      setPwMsg({ ok: true, text: "Password updated." });
+    } else {
+      setPwMsg({ ok: false, text: res.error || "Could not change the password." });
+    }
+    setTimeout(() => setPwMsg(null), 4000);
   };
 
   return (
@@ -137,6 +162,8 @@ export function ProfilePage() {
                 id="profile-old-password"
                 type="password"
                 placeholder="Current password"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
                 className="field"
               />
             </div>
@@ -146,15 +173,100 @@ export function ProfilePage() {
                 id="profile-new-password"
                 type="password"
                 placeholder="New password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
                 className="field"
               />
             </div>
           </div>
-          <button type="button" className="btn btn-secondary">
+          {pwMsg && (
+            <p className={`text-xs font-medium ${pwMsg.ok ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+              {pwMsg.text}
+            </p>
+          )}
+          <button type="button" onClick={handleChangePassword} className="btn btn-secondary">
             Update Password
           </button>
         </div>
       </div>
+
+      {/* Danger zone: account deletion (mock — backend contract) */}
+      <div className="card border-rose-200 dark:border-rose-500/30 p-3 sm:p-5 text-left space-y-2.5 sm:space-y-3">
+        <h3 className="font-display font-semibold text-sm text-rose-600 dark:text-rose-400 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" /> Danger zone
+        </h3>
+
+        <div>
+          <span className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200">Delete account</span>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-0.5 leading-relaxed">
+            Permanently deletes your account and removes you from all workspaces. This cannot be undone.
+          </p>
+        </div>
+
+        <button type="button" onClick={openDeleteSheet} className="btn btn-danger-soft">
+          <Trash2 className="w-4 h-4" />
+          <span>Delete my account…</span>
+        </button>
+      </div>
+
+      {/* Confirm sheet: type DELETE to enable the destructive action */}
+      {showDeleteSheet && (
+        <div className="modal-overlay">
+          <div className="absolute inset-0" onClick={() => setShowDeleteSheet(false)} aria-hidden="true" />
+
+          <div className="modal-panel sm:max-w-sm" role="dialog" aria-modal="true" aria-label="Delete account">
+            <div className="sheet-grabber" />
+
+            <div className="px-5 pt-4 pb-2 flex items-start justify-between gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <button type="button" onClick={() => setShowDeleteSheet(false)} className="btn-icon -mr-1.5" aria-label="Close">
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+
+            <div className="px-5 pb-4 space-y-3">
+              <div>
+                <h2 className="font-display font-semibold text-base text-zinc-900 dark:text-white">Delete account</h2>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-1 leading-relaxed">
+                  Permanently deletes your account and removes you from all workspaces. This cannot be undone.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="delete-account-confirm" className="label">
+                  Type DELETE to confirm
+                </label>
+                <input
+                  id="delete-account-confirm"
+                  type="text"
+                  autoComplete="off"
+                  placeholder="DELETE"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="field"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 px-5 py-3.5 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
+              <button type="button" onClick={() => setShowDeleteSheet(false)} className="btn btn-secondary flex-1">
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!deleteConfirmed}
+                onClick={deleteAccount}
+                className="btn btn-danger flex-1"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete account</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

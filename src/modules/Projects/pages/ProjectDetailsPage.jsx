@@ -52,6 +52,8 @@ export function ProjectDetailsPage() {
     setActiveTaskId,
     attachFileToProject,
     removeAttachmentFromProject,
+    projectFiles: useAppState_projectFiles,
+    can,
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState("overview"); // overview, tasks, files, settings
@@ -69,7 +71,7 @@ export function ProjectDetailsPage() {
   const [editStage, setEditStage] = useState("");
   const [inlineTaskTitle, setInlineTaskTitle] = useState("");
 
-  const project = projects.find((p) => p.id === projectId);
+  const project = projects.find((p) => String(p.id) === String(projectId));
   if (!project) {
     return (
       <div className="py-12 text-center max-w-md mx-auto space-y-4" id="project-not-found-state">
@@ -98,9 +100,8 @@ export function ProjectDetailsPage() {
     { id: "att_mock3", name: "api-contracts-v2.json", size: "244 KB", type: "json", timestamp: "Yesterday", author: "Rakib Hasan" },
   ];
 
-  const projectFiles = project.attachments && project.attachments.length > 0
-    ? project.attachments
-    : fallbackProjectFiles;
+  const storedProjectFiles = useAppState_projectFiles[project.id] || [];
+  const projectFiles = storedProjectFiles.length > 0 ? storedProjectFiles : fallbackProjectFiles;
 
   const handleRealFileUpload = (e) => {
     const file = e.target.files[0];
@@ -222,7 +223,8 @@ export function ProjectDetailsPage() {
           </div>
         </div>
 
-        {/* Templates quick deployment dropdown */}
+        {/* Templates quick deployment dropdown — managers only */}
+        {can("manageProjects") && (
         <div className="flex items-center gap-2 relative shrink-0">
           <button
             onClick={() => setShowTemplateMenu(!showTemplateMenu)}
@@ -266,6 +268,7 @@ export function ProjectDetailsPage() {
             <Settings className="w-4 h-4" />
           </button>
         </div>
+        )}
       </div>
 
       {/* Inline editing charter form */}
@@ -362,6 +365,7 @@ export function ProjectDetailsPage() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         pendingTasksCount={pendingTasks.length}
+        showAdminTab={can("manageProjects")}
       />
 
       {/* 4. Tab Content panes with motion transitions */}

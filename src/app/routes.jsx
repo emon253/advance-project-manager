@@ -6,6 +6,9 @@
 import React, { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthPages } from "../modules/Auth/pages/AuthPages";
+import { InvitePage } from "../modules/Auth/pages/InvitePage";
+import { VerifyEmailPage } from "../modules/Auth/pages/VerifyEmailPage";
+import { OnboardingPage } from "../modules/Auth/pages/OnboardingPage";
 import { DashboardPage } from "../modules/Dashboard/pages/DashboardPage";
 import { TasksPage } from "../modules/Tasks/pages/TasksPage";
 import { ProjectsPage } from "../modules/Projects/pages/ProjectsPage";
@@ -34,6 +37,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 function AppLayout({ children }) {
   const { 
     isAuthenticated, 
+    bootLoading,
     theme, 
     quickAddTaskOpen, 
     setQuickAddTaskOpen, 
@@ -44,6 +48,16 @@ function AppLayout({ children }) {
   } = useAppState();
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Session restore in flight — hold rendering instead of flashing /login.
+  if (bootLoading) {
+    return (
+      <div className="min-h-dvh flex flex-col items-center justify-center gap-3 bg-zinc-50 dark:bg-zinc-950">
+        <span className="flex items-center justify-center h-12 w-12 bg-primary text-white rounded-xl font-display font-bold text-2xl select-none">C</span>
+        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Loading your workspace…</p>
+      </div>
+    );
+  }
 
   // Guard routes
   if (!isAuthenticated) {
@@ -158,6 +172,9 @@ export function AppRoutes() {
       <Route path="/register" element={!isAuthenticated ? <AuthPages mode="register" /> : <Navigate to="/dashboard" replace />} />
       <Route path="/forgot-password" element={<AuthPages mode="forgot" />} />
       <Route path="/reset-password" element={<AuthPages mode="reset" />} />
+      <Route path="/invite/:token" element={<InvitePage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/welcome" element={<OnboardingPage />} />
 
       {/* Authenticated Application routes */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

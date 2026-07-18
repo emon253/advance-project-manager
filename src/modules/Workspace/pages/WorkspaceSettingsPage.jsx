@@ -21,6 +21,7 @@ import { Link } from "react-router-dom";
 import { CreditCard, ChevronRight } from "lucide-react";
 import { getPlan, isTrialActive, trialDaysLeft } from "../../Billing/util/billingUtils";
 import { WorkspaceOccupantsMatrix } from "../components/WorkspaceOccupantsMatrix";
+import { WorkspacePendingInvites } from "../components/WorkspacePendingInvites";
 import { CorporateTiersSelector } from "../components/CorporateTiersSelector";
 import { WorkspaceDangerZone } from "../components/WorkspaceDangerZone";
 import { WorkspaceSettingsModals } from "../components/WorkspaceSettingsModals";
@@ -39,7 +40,15 @@ export function WorkspaceSettingsPage() {
     currentUser,
     logActivity,
     pushNotification,
-    deleteWorkspace
+    deleteWorkspace,
+    can,
+    currentRole,
+    invites,
+    createInvite,
+    revokeInvite,
+    resendInvite,
+    transferOwnership,
+    leaveWorkspace
   } = useAppState();
 
   const {
@@ -66,6 +75,7 @@ export function WorkspaceSettingsPage() {
     setInviteEmail,
     inviteRole,
     setInviteRole,
+    inviteError,
     handleUpdateDetails,
     handleInviteMember,
     handleChangeMemberRole,
@@ -73,7 +83,9 @@ export function WorkspaceSettingsPage() {
     handleArchiveWorkspace,
     handleRestoreWorkspace,
     handleDeleteWorkspace,
-    handleQuickSwitch
+    handleQuickSwitch,
+    handleTransferOwnership,
+    handleLeaveWorkspace
   } = useWorkspaceSettings({
     workspaces,
     setWorkspaces,
@@ -83,7 +95,10 @@ export function WorkspaceSettingsPage() {
     currentUser,
     logActivity,
     pushNotification,
-    deleteWorkspace
+    deleteWorkspace,
+    createInvite,
+    transferOwnership,
+    leaveWorkspace
   });
 
   // Calculate summaries specific to this workspace
@@ -95,6 +110,7 @@ export function WorkspaceSettingsPage() {
   const activeWorkspaces = workspaces.filter(w => !w.isArchived);
   const archivedWorkspaces = workspaces.filter(w => w.isArchived);
   const currentMembers = ws.members || [];
+  const pendingInvites = invites.filter((i) => i.workspaceId === ws.id && i.status === "pending");
 
   return (
     <div className="text-left max-w-5xl" id="workspace-settings-root">
@@ -151,6 +167,7 @@ export function WorkspaceSettingsPage() {
               wsDescription={wsDescription}
               setWsDescription={setWsDescription}
               handleUpdateDetails={handleUpdateDetails}
+              canEdit={can("manageWorkspace")}
             />
 
             {/* Card 2: Workspace Occupants & Delegation Matrix */}
@@ -161,7 +178,19 @@ export function WorkspaceSettingsPage() {
               setShowInviteModal={setShowInviteModal}
               handleChangeMemberRole={handleChangeMemberRole}
               handleRemoveMember={handleRemoveMember}
+              canManageMembers={can("manageMembers")}
+              canTransferOwnership={can("transferOwnership")}
+              handleTransferOwnership={handleTransferOwnership}
             />
+
+            {/* Card 3: Pending invitations awaiting acceptance */}
+            {can("manageMembers") && (
+              <WorkspacePendingInvites
+                pendingInvites={pendingInvites}
+                revokeInvite={revokeInvite}
+                resendInvite={resendInvite}
+              />
+            )}
 
           </div>
 
@@ -180,12 +209,16 @@ export function WorkspaceSettingsPage() {
               handleRestoreWorkspace={handleRestoreWorkspace}
             />
 
-            {/* Box 4: Danger zone with Archive & Delete safe action commands */}
+            {/* Box 4: Danger zone with Archive, Delete & Leave commands */}
             <WorkspaceDangerZone
               ws={ws}
               setError={setError}
               setShowArchiveConfirm={setShowArchiveConfirm}
               setShowDeleteConfirm={setShowDeleteConfirm}
+              canArchive={can("archiveWorkspace")}
+              canDelete={can("deleteWorkspace")}
+              currentRole={currentRole}
+              handleLeaveWorkspace={handleLeaveWorkspace}
             />
 
           </div>
@@ -204,6 +237,7 @@ export function WorkspaceSettingsPage() {
         setInviteEmail={setInviteEmail}
         inviteRole={inviteRole}
         setInviteRole={setInviteRole}
+        inviteError={inviteError}
         handleInviteMember={handleInviteMember}
         showArchiveConfirm={showArchiveConfirm}
         setShowArchiveConfirm={setShowArchiveConfirm}

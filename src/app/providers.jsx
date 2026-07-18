@@ -3,1269 +3,1043 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { ApiError, setSessionExpiredHandler, tokenStore } from "../api/client";
 import {
-  mockUsers,
-  mockWorkspaces,
-  mockProjects,
-  mockTasks,
-  mockNotifications,
-  mockActivities,
-  mockTags,
-  mockTemplates,
-  mockAutomationRules,
-} from "../data/mockData";
-import { getPlan, getPlanLimits, effectivePlanId, calcPrice, TRIAL_DAYS } from "../modules/Billing/util/billingUtils";
+  authApi,
+  billingApi,
+  dashboardApi,
+  inviteApi,
+  meApi,
+  notificationApi,
+  projectApi,
+  searchApi,
+  tagApi,
+  taskApi,
+  taskStatusApi,
+  workspaceApi,
+} from "../api/endpoints";
+import { hasPermission, resolveRole } from "./permissions";
+import { effectivePlanId, getPlanLimits } from "../modules/Billing/util/billingUtils";
 
-// Default demo subscriptions, keyed by workspace id.
-const defaultSubscriptions = {
-  ws1: {
-    plan: "pro",
-    interval: "yearly",
-    seats: 5,
-    status: "active",
-    renewsAt: (() => { const d = new Date(); d.setFullYear(d.getFullYear() + 1); return d.toISOString(); })(),
-    trialEndsAt: null,
-    paymentMethod: { brand: "Visa", last4: "4242" },
-    invoices: [
-      { id: "inv_1001", date: new Date().toISOString(), description: "Pro plan — yearly, 5 seats", amount: 400, status: "Paid" },
-    ],
-  },
-  ws2: { plan: "free", interval: "monthly", seats: 1, status: "active", renewsAt: null, trialEndsAt: null, paymentMethod: null, invoices: [] },
-  ws3: {
-    plan: "pro",
-    interval: "monthly",
-    seats: 3,
-    status: "trialing",
-    renewsAt: null,
-    trialEndsAt: (() => { const d = new Date(); d.setDate(d.getDate() + 9); return d.toISOString(); })(),
-    paymentMethod: null,
-    invoices: [],
-  },
-};
+/**
+ * API-backed application state. The `useAppState()` contract is unchanged from
+ * the mock era — same names, same shapes (adapters normalize the wire format) —
+ * but every action now talks to the Spring backend and state is hydrated per
+ * workspace. Client-only state (theme, toast, timer, UI flags) stays local.
+ */
 
-const formatDate = (offsetDays = 0, hourOffset = 0) => {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  d.setHours(d.getHours() + hourOffset);
-  return d.toISOString();
-};
-
+// Kept for StatusBadge's out-of-provider fallback rendering.
 export const defaultTaskStatuses = [
   { id: "s1", name: "To Do", bg: "bg-zinc-100", text: "text-zinc-700", border: "border-zinc-200", darkBg: "dark:bg-zinc-800", darkText: "dark:text-zinc-300", darkBorder: "dark:border-zinc-700", icon: "FileEdit", isDefault: true, system: true },
-  { id: "s2", name: "In Progress", bg: "bg-[#533afd]/5", text: "text-[#533afd]", border: "border-[#533afd]/20", darkBg: "dark:bg-[#533afd]/10", darkText: "dark:text-[#533afd]", darkBorder: "dark:border-[#533afd]/20", icon: "Play", isStarted: true, system: true },
+  { id: "s2", name: "In Progress", bg: "bg-primary/8", text: "text-primary", border: "border-primary/20", darkBg: "dark:bg-primary/15", darkText: "dark:text-primary", darkBorder: "dark:border-primary/20", icon: "Play", isStarted: true, system: true },
   { id: "s3", name: "In Review", bg: "bg-amber-100", text: "text-amber-800", border: "border-amber-200", darkBg: "dark:bg-amber-500/10", darkText: "dark:text-amber-400", darkBorder: "dark:border-amber-500/20", icon: "Clock", system: true },
   { id: "s4", name: "Blocked", bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200", darkBg: "dark:bg-rose-500/10", darkText: "dark:text-rose-400", darkBorder: "dark:border-rose-500/20", icon: "AlertOctagon", system: true },
   { id: "s5", name: "Completed", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", darkBg: "dark:bg-emerald-500/10", darkText: "dark:text-emerald-400", darkBorder: "dark:border-emerald-500/20", icon: "CheckCircle2", isCompleted: true, system: true },
   { id: "s6", name: "Cancelled", bg: "bg-zinc-200", text: "text-zinc-500", border: "border-zinc-300", darkBg: "dark:bg-zinc-800", darkText: "dark:text-zinc-500", darkBorder: "dark:border-zinc-800", icon: "XCircle", isCancelled: true, system: true },
 ];
 
+// Backend seeds these two templates via Flyway; no list endpoint yet (§9 gap).
+const SEEDED_TEMPLATES = [
+  { id: 1, name: "Sprint kickoff", tasks: ["Define sprint goal", "Groom the backlog", "Plan capacity"] },
+  { id: 2, name: "Website launch", tasks: ["Configure DNS & SSL", "Run visual regression", "Publish sitemap", "Smoke-test checkout"] },
+];
+
+const ACTIVE_WS_KEY = "apm_active_workspace";
+const THEME_KEY = "apm_theme";
+const SIM_ERRORS_KEY = "apm_sim_errors";
+
 const AppStateContext = createContext(null);
 
 export function AppStateProvider({ children }) {
-  // 1. Core Persistent Databases
-  const [users, setUsers] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_users");
-      return saved ? JSON.parse(saved) : mockUsers;
-    } catch (e) {
-      console.error("Failed to parse atm_users", e);
-      return mockUsers;
-    }
+  // --- session ---------------------------------------------------------------
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(tokenStore.hasSession);
+  const [bootLoading, setBootLoading] = useState(tokenStore.hasSession);
+
+  // --- workspace-scoped data -------------------------------------------------
+  const [workspaces, setWorkspaces] = useState([]);
+  const [activeWorkspaceId, setActiveWorkspaceIdRaw] = useState(() => {
+    const saved = localStorage.getItem(ACTIVE_WS_KEY);
+    return saved ? Number(saved) : null;
+  });
+  const [users, setUsers] = useState([]); // active workspace members (user shape)
+  const [projects, setProjects] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [taskStatuses, setTaskStatuses] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [invites, setInvites] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [activeSubscription, setActiveSubscription] = useState(null);
+
+  // --- user-scoped data ------------------------------------------------------
+  const [notifications, setNotifications] = useState([]);
+  const [notificationSettings, setNotificationSettingsState] = useState({
+    inApp: true, pushMock: false, emailMock: true,
+    dailySummary: false, weeklySummary: true,
+    dueReminders: true, mentions: true, projectUpdates: true,
   });
 
-  const [workspaces, setWorkspaces] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_workspaces");
-      let list = saved ? JSON.parse(saved) : mockWorkspaces;
-      // Guarantee each workspace has essential workspace settings
-      return list.map((ws, index) => {
-        const defaultMembers = [
-          { id: "u1", name: "Yasin Chowdhury", email: "yasin@company.com", avatar: "YC", color: "bg-[#533afd] text-white", role: ws.ownerId === "u1" ? "Owner" : "Admin" },
-          { id: "u2", name: "Rakib Hasan", email: "rakib@company.com", avatar: "RH", color: "bg-emerald-600 text-white", role: ws.ownerId === "u2" ? "Owner" : "Admin" },
-          { id: "u3", name: "Nadia Islam", email: "nadia@company.com", avatar: "NI", color: "bg-amber-600 text-white", role: "Manager" },
-          { id: "u4", name: "Mehnaz Taj", email: "mehnaz@company.com", avatar: "MT", color: "bg-rose-600 text-white", role: "Member" },
-          { id: "u5", name: "Sohan Ahmed", email: "sohan@company.com", avatar: "SA", color: "bg-sky-600 text-white", role: "Viewer" }
-        ];
-
-        return {
-          logo: "💼",
-          description: ws.id === "ws1" ? "All design & development for custom automotive bidding solutions." : ws.id === "ws2" ? "Individual database metrics tracking, learning, and private task boards." : "R&D workspace for greenfield experimental features.",
-          isArchived: false,
-          members: defaultMembers,
-          type: ws.id === "ws2" ? "personal" : "company",
-          ...ws
-        };
-      });
-    } catch (e) {
-      console.error("Failed to parse atm_workspaces", e);
-      return mockWorkspaces.map(ws => ({
-        logo: "💼",
-        description: "",
-        isArchived: false,
-        members: [
-          { id: "u1", name: "Yasin Chowdhury", email: "yasin@company.com", avatar: "YC", color: "bg-[#533afd] text-white", role: ws.ownerId === "u1" ? "Owner" : "Admin" },
-          { id: "u2", name: "Rakib Hasan", email: "rakib@company.com", avatar: "RH", color: "bg-emerald-600 text-white", role: ws.ownerId === "u2" ? "Owner" : "Admin" }
-        ],
-        ...ws
-      }));
-    }
-  });
-
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState(() => {
-    const saved = localStorage.getItem("atm_active_ws");
-    return saved ? saved : "ws1";
-  });
-
-  const [projects, setProjects] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_projects");
-      return saved ? JSON.parse(saved) : mockProjects;
-    } catch (e) {
-      console.error("Failed to parse atm_projects", e);
-      return mockProjects;
-    }
-  });
-
-  const [tasks, setTasks] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_tasks");
-      return saved ? JSON.parse(saved) : mockTasks;
-    } catch (e) {
-      console.error("Failed to parse atm_tasks", e);
-      return mockTasks;
-    }
-  });
-
-  const [tags, setTags] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_tags");
-      return saved ? JSON.parse(saved) : mockTags;
-    } catch (e) {
-      console.error("Failed to parse atm_tags", e);
-      return mockTags;
-    }
-  });
-
-  const [notifications, setNotifications] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_notifications");
-      return saved ? JSON.parse(saved) : mockNotifications;
-    } catch (e) {
-      console.error("Failed to parse atm_notifications", e);
-      return mockNotifications;
-    }
-  });
-
-  const [activities, setActivities] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_activities");
-      return saved ? JSON.parse(saved) : mockActivities;
-    } catch (e) {
-      console.error("Failed to parse atm_activities", e);
-      return mockActivities;
-    }
-  });
-
-  const [templates, setTemplates] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_templates");
-      return saved ? JSON.parse(saved) : mockTemplates;
-    } catch (e) {
-      console.error("Failed to parse atm_templates", e);
-      return mockTemplates;
-    }
-  });
-
-  const [automationRules, setAutomationRules] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_automation");
-      return saved ? JSON.parse(saved) : mockAutomationRules;
-    } catch (e) {
-      console.error("Failed to parse atm_automation", e);
-      return mockAutomationRules;
-    }
-  });
-
-  const [taskStatuses, setTaskStatuses] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_task_statuses");
-      return saved ? JSON.parse(saved) : defaultTaskStatuses;
-    } catch (e) {
-      console.error("Failed to parse atm_task_statuses", e);
-      return defaultTaskStatuses;
-    }
-  });
-
-  // Per-workspace subscriptions (mock billing state)
-  const [subscriptions, setSubscriptions] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_subscriptions");
-      return saved ? { ...defaultSubscriptions, ...JSON.parse(saved) } : defaultSubscriptions;
-    } catch (e) {
-      console.error("Failed to parse atm_subscriptions", e);
-      return defaultSubscriptions;
-    }
-  });
-
-  // 2. Active User Sessions (Mock Auth State)
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_current_user");
-      return saved ? JSON.parse(saved) : mockUsers[0]; // Default to Yasin Chowdhury
-    } catch (e) {
-      console.error("Failed to parse atm_current_user", e);
-      return mockUsers[0];
-    }
-  });
-
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    const saved = localStorage.getItem("atm_is_auth");
-    return saved === null ? true : saved === "true"; // Default as logged-in for instant UX
-  });
-
-  // 3. App settings & UI State
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem("atm_theme");
-    return saved ? saved : "light";
-  });
-
+  // --- client-only state -----------------------------------------------------
+  const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "light");
   const [quickAddTaskOpen, setQuickAddTaskOpen] = useState(false);
   const [aiPlannerOpen, setAiPlannerOpen] = useState(false);
-
-  const [notificationSettings, setNotificationSettings] = useState(() => {
-    try {
-      const saved = localStorage.getItem("atm_notification_settings");
-      const defaultSettings = {
-        inApp: true,
-        pushMock: true,
-        emailMock: true,
-        dailySummary: true,
-        weeklySummary: false,
-        dueReminders: true,
-        mentions: true,
-        projectUpdates: true,
-      };
-      return saved ? JSON.parse(saved) : defaultSettings;
-    } catch (e) {
-      console.error("Failed to parse atm_notification_settings", e);
-      return {
-        inApp: true,
-        pushMock: true,
-        emailMock: true,
-        dailySummary: true,
-        weeklySummary: false,
-        dueReminders: true,
-        mentions: true,
-        projectUpdates: true,
-      };
-    }
-  });
-
+  const [activeTaskId, setActiveTaskId] = useState(null);
   const [activeToast, setActiveToast] = useState(null);
-
-  // Active timers
+  const [simulateErrors, setSimulateErrorsState] = useState(() => localStorage.getItem(SIM_ERRORS_KEY) === "true");
   const [activeTimerTaskId, setActiveTimerTaskId] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
-  const [activeTaskId, setActiveTaskId] = useState(null);
 
-  // Sync to LocalStorage on changes
-  useEffect(() => {
-    localStorage.setItem("atm_notification_settings", JSON.stringify(notificationSettings));
-  }, [notificationSettings]);
+  // Session-local leftovers kept for page compatibility.
+  const [templates, setTemplates] = useState(SEEDED_TEMPLATES);
+  const [automationRules, setAutomationRules] = useState([
+    { id: "ar1", name: "Clear tags & unassign when Completed", active: false },
+    { id: "ar2", name: "Alert the team on Urgent priority", active: false },
+  ]);
+  const [projectFiles, setProjectFiles] = useState({}); // §9 gap: project attachments API pending
 
-  useEffect(() => {
-    localStorage.setItem("atm_users", JSON.stringify(users));
-  }, [users]);
+  // --- async data lifecycle (useMockQuery contract) --------------------------
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataError, setDataError] = useState(false);
+  const loadSeq = useRef(0);
 
-  useEffect(() => {
-    localStorage.setItem("atm_workspaces", JSON.stringify(workspaces));
-  }, [workspaces]);
+  const setSimulateErrors = (v) => {
+    localStorage.setItem(SIM_ERRORS_KEY, String(v));
+    setSimulateErrorsState(v);
+  };
 
-  useEffect(() => {
-    localStorage.setItem("atm_active_ws", activeWorkspaceId);
+  // --- toast helper (client-side; the server persists the real notification) --
+  const pushNotification = useCallback((text, type = "update", taskId = null, projectId = null, customTitle = null, customMessage = null) => {
+    const toast = {
+      id: `toast_${Date.now()}`,
+      type,
+      title: customTitle || null,
+      message: customMessage || text,
+      text,
+      taskId,
+      projectId,
+    };
+    setActiveToast(toast);
+    setTimeout(() => {
+      setActiveToast((cur) => (cur && cur.id === toast.id ? null : cur));
+    }, 4000);
+  }, []);
+
+  const toastError = useCallback((err, fallback = "Something went wrong.") => {
+    const message = err instanceof ApiError ? err.message : fallback;
+    pushNotification(message, "update", null, null, "Request failed", message);
+  }, [pushNotification]);
+
+  // --- loaders ---------------------------------------------------------------
+
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const page = await notificationApi.list({ size: 100 });
+      setNotifications(page.content);
+    } catch {
+      /* inbox refresh is best-effort */
+    }
+  }, []);
+
+  const loadWorkspaceData = useCallback(async (wsId) => {
+    if (!wsId) return;
+    const seq = ++loadSeq.current;
+    setDataLoading(true);
+    setDataError(false);
+    try {
+      const [members, projectList, taskPage, statuses, tagList, activityPage] = await Promise.all([
+        workspaceApi.members(wsId),
+        projectApi.list(wsId, true),
+        taskApi.list(wsId, { size: 200 }),
+        taskStatusApi.list(wsId),
+        tagApi.list(wsId),
+        workspaceApi.activity(wsId, 0, 30),
+      ]);
+      if (seq !== loadSeq.current) return; // a newer load superseded this one
+      setUsers(members);
+      setProjects(projectList);
+      setTasks(taskPage.content);
+      setTaskStatuses(statuses);
+      setTags(tagList);
+      setActivities(activityPage.content);
+      setWorkspaces((prev) => prev.map((w) => (w.id === wsId ? { ...w, members } : w)));
+
+      // Admin-only extras — non-admins simply do without (server is authoritative).
+      inviteApi.listPending(wsId).then(setInvites).catch(() => setInvites([]));
+      billingApi.subscription(wsId).then(setActiveSubscription).catch(() => setActiveSubscription(null));
+    } catch {
+      if (seq === loadSeq.current) setDataError(true);
+    } finally {
+      if (seq === loadSeq.current) setDataLoading(false);
+    }
+  }, []);
+
+  const refreshWorkspaces = useCallback(async () => {
+    const list = await workspaceApi.list();
+    setWorkspaces(list);
+    return list;
+  }, []);
+
+  const refreshProjects = useCallback(async () => {
+    if (!activeWorkspaceId) return;
+    try { setProjects(await projectApi.list(activeWorkspaceId, true)); } catch { /* keep last */ }
   }, [activeWorkspaceId]);
 
-  useEffect(() => {
-    localStorage.setItem("atm_projects", JSON.stringify(projects));
-  }, [projects]);
+  const refreshTasks = useCallback(async () => {
+    if (!activeWorkspaceId) return;
+    try { setTasks((await taskApi.list(activeWorkspaceId, { size: 200 })).content); } catch { /* keep last */ }
+  }, [activeWorkspaceId]);
 
-  useEffect(() => {
-    localStorage.setItem("atm_tasks", JSON.stringify(tasks));
-  }, [tasks]);
+  const refreshActivities = useCallback(async () => {
+    if (!activeWorkspaceId) return;
+    try { setActivities((await workspaceApi.activity(activeWorkspaceId, 0, 30)).content); } catch { /* keep last */ }
+  }, [activeWorkspaceId]);
 
-  useEffect(() => {
-    localStorage.setItem("atm_tags", JSON.stringify(tags));
-  }, [tags]);
+  const refreshSubscription = useCallback(async () => {
+    if (!activeWorkspaceId) return;
+    try { setActiveSubscription(await billingApi.subscription(activeWorkspaceId)); } catch { /* non-admin */ }
+  }, [activeWorkspaceId]);
 
-  useEffect(() => {
-    localStorage.setItem("atm_notifications", JSON.stringify(notifications));
-  }, [notifications]);
+  const refreshInvites = useCallback(async () => {
+    if (!activeWorkspaceId) return;
+    try { setInvites(await inviteApi.listPending(activeWorkspaceId)); } catch { setInvites([]); }
+  }, [activeWorkspaceId]);
 
-  useEffect(() => {
-    localStorage.setItem("atm_activities", JSON.stringify(activities));
-  }, [activities]);
+  const refreshWorkspaceData = useCallback(() => loadWorkspaceData(activeWorkspaceId), [loadWorkspaceData, activeWorkspaceId]);
 
-  useEffect(() => {
-    localStorage.setItem("atm_templates", JSON.stringify(templates));
-  }, [templates]);
+  // --- boot ------------------------------------------------------------------
 
-  useEffect(() => {
-    localStorage.setItem("atm_automation", JSON.stringify(automationRules));
-  }, [automationRules]);
+  const bootSession = useCallback(async () => {
+    setBootLoading(true);
+    try {
+      const [user, wsList, prefs] = await Promise.all([
+        meApi.get(),
+        workspaceApi.list(),
+        notificationApi.getPreferences().catch(() => null),
+      ]);
+      setCurrentUser(user);
+      setWorkspaces(wsList);
+      if (prefs) setNotificationSettingsState(prefs);
+      setIsAuthenticated(true);
 
-  useEffect(() => {
-    localStorage.setItem("atm_task_statuses", JSON.stringify(taskStatuses));
-  }, [taskStatuses]);
-
-  useEffect(() => {
-    localStorage.setItem("atm_subscriptions", JSON.stringify(subscriptions));
-  }, [subscriptions]);
-
-  useEffect(() => {
-    localStorage.setItem("atm_current_user", JSON.stringify(currentUser));
-  }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem("atm_is_auth", isAuthenticated);
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    localStorage.setItem("atm_theme", theme);
-    // Apply styling class to body
-    const root = window.document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
+      const saved = Number(localStorage.getItem(ACTIVE_WS_KEY));
+      const target = wsList.find((w) => w.id === saved && !w.isArchived)
+        || wsList.find((w) => !w.isArchived)
+        || wsList[0];
+      if (target) {
+        setActiveWorkspaceIdRaw(target.id);
+        localStorage.setItem(ACTIVE_WS_KEY, String(target.id));
+        await loadWorkspaceData(target.id);
+      }
+      refreshNotifications();
+      return { success: true };
+    } catch {
+      tokenStore.clear();
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      return { success: false };
+    } finally {
+      setBootLoading(false);
     }
+  }, [loadWorkspaceData, refreshNotifications]);
+
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      window.location.assign("/login?expired=1");
+    });
+    if (tokenStore.hasSession) {
+      bootSession();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Theme side-effect (unchanged behavior).
+  useEffect(() => {
+    localStorage.setItem(THEME_KEY, theme);
+    const root = window.document.documentElement;
+    if (theme === "dark") root.classList.add("dark");
+    else root.classList.remove("dark");
   }, [theme]);
 
-  // Live Timer engine
+  // Timer engine (client-side; hours land via taskApi.logTime on stop).
   useEffect(() => {
     let interval = null;
     if (activeTimerTaskId) {
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => prev + 1);
-      }, 1000);
+      interval = setInterval(() => setTimerSeconds((prev) => prev + 1), 1000);
     } else {
       setTimerSeconds(0);
     }
     return () => clearInterval(interval);
   }, [activeTimerTaskId]);
 
-  // Dynamic values helper
-  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) || workspaces.find(w => !w.isArchived) || workspaces[0];
-  const activeWorkspaceProjects = projects.filter((p) => p.workspaceId === activeWorkspaceId);
-  const activeWorkspaceProjectIds = activeWorkspaceProjects.map((p) => p.id);
-  const activeWorkspaceTasks = tasks.filter((t) => activeWorkspaceProjectIds.includes(t.projectId));
+  // Light polling keeps the inbox badge honest without websockets (§9.10).
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    const t = setInterval(refreshNotifications, 60_000);
+    return () => clearInterval(t);
+  }, [isAuthenticated, refreshNotifications]);
 
-  // --- BILLING / SUBSCRIPTION HELPERS ---
+  // --- derived ---------------------------------------------------------------
 
-  const freeSubscription = { plan: "free", interval: "monthly", seats: 1, status: "active", renewsAt: null, trialEndsAt: null, paymentMethod: null, invoices: [] };
+  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId)
+    || workspaces.find((w) => !w.isArchived)
+    || workspaces[0]
+    || null;
+  const activeWorkspaceProjects = projects;
+  const activeWorkspaceTasks = tasks;
 
-  const getSubscription = (wsId = activeWorkspaceId) => subscriptions[wsId] || freeSubscription;
+  const currentRole = activeWorkspace?.currentUserRole
+    || resolveRole(activeWorkspace, currentUser?.id);
+  const can = (permission) => hasPermission(currentRole, permission);
 
-  const activeSubscription = getSubscription(activeWorkspaceId);
-  const activePlanId = effectivePlanId(activeSubscription);
+  const activePlanId = activeSubscription ? effectivePlanId(activeSubscription) : "free";
   const activePlanLimits = getPlanLimits(activePlanId);
+  const usage = activeSubscription?.usage;
+  // Optimistic client gates; the server answers 402 authoritatively either way.
+  const canAddProject = () => (usage ? usage.projects < usage.projectLimit
+    : projects.filter((p) => p.status !== "Archived").length < activePlanLimits.projects);
+  const canAddMember = () => (usage ? (usage.members + usage.pendingInvites) < usage.memberLimit
+    : (activeWorkspace?.members?.length || 0) < activePlanLimits.members);
 
-  // Gating helpers for the active workspace
-  const canAddProject = () => activeWorkspaceProjects.length < activePlanLimits.projects;
-  const canAddMember = () => (activeWorkspace?.members?.length || 0) < activePlanLimits.members;
+  // --- workspace actions -----------------------------------------------------
 
-  // --- ACTIONS ---
+  const setActiveWorkspaceId = (id) => {
+    const numeric = Number(id);
+    setActiveWorkspaceIdRaw(numeric);
+    localStorage.setItem(ACTIVE_WS_KEY, String(numeric));
+    loadWorkspaceData(numeric);
+  };
 
-  // Auth operations
-  const login = (email, password) => {
-    const foundUser = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (foundUser) {
-      setCurrentUser(foundUser);
-      setIsAuthenticated(true);
+  const addWorkspace = async (name, logo = "💼", description = "", type = "company") => {
+    try {
+      const ws = await workspaceApi.create({ name, logo, description, type });
+      await refreshWorkspaces();
+      setActiveWorkspaceId(ws.id);
+      pushNotification(`Workspace '${name}' created.`, "update", null, null, "Workspace Created");
+      return ws;
+    } catch (err) {
+      toastError(err, "Could not create the workspace.");
+      return null;
+    }
+  };
+
+  const updateWorkspace = async (id, fields) => {
+    try {
+      if (fields.isArchived === true) await workspaceApi.archive(id);
+      else if (fields.isArchived === false) await workspaceApi.restore(id);
+      if (fields.name !== undefined || fields.logo !== undefined || fields.description !== undefined) {
+        await workspaceApi.update(id, fields);
+      }
+      await refreshWorkspaces();
+      if (id === activeWorkspaceId) refreshActivities();
+    } catch (err) {
+      toastError(err, "Could not update the workspace.");
+    }
+  };
+
+  const deleteWorkspace = async (id) => {
+    try {
+      await workspaceApi.remove(id);
+      const list = await refreshWorkspaces();
+      if (id === activeWorkspaceId) {
+        const next = list.find((w) => !w.isArchived) || list[0];
+        if (next) setActiveWorkspaceId(next.id);
+      }
       return { success: true };
+    } catch (err) {
+      return { error: err.message };
     }
-    // Auto-create new user if not found to prevent blocking user testing
-    const nickname = email.split("@")[0];
-    const nameStr = nickname.charAt(0).toUpperCase() + nickname.slice(1) + " (Guest)";
-    const newUser = {
-      id: `u_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      name: nameStr,
-      email: email,
-      avatar: nickname.slice(0, 2).toUpperCase(),
-      color: "bg-[#533afd] text-white",
-      role: "Member",
-    };
-    setUsers((prev) => [...prev, newUser]);
-    setCurrentUser(newUser);
-    setIsAuthenticated(true);
-    logActivity(`authenticated as ${nameStr}`);
-    return { success: true };
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
+  const transferOwnership = async (wsId, newOwnerId) => {
+    try {
+      await workspaceApi.transferOwnership(wsId, newOwnerId);
+      await refreshWorkspaces();
+      await loadWorkspaceData(wsId);
+      pushNotification("Ownership transferred.", "update", null, null, "Ownership Transferred");
+    } catch (err) {
+      toastError(err, "Could not transfer ownership.");
+    }
+  };
+
+  const leaveWorkspace = async (wsId) => {
+    try {
+      await workspaceApi.leave(wsId);
+      const list = await refreshWorkspaces();
+      if (wsId === activeWorkspaceId) {
+        const next = list.find((w) => !w.isArchived && w.id !== wsId) || list.find((w) => w.id !== wsId);
+        if (next) setActiveWorkspaceId(next.id);
+      }
+      return { success: true };
+    } catch (err) {
+      return { error: err.message };
+    }
+  };
+
+  const changeMemberRole = async (wsId, userId, role) => {
+    try {
+      await workspaceApi.changeMemberRole(wsId, userId, role);
+      await loadWorkspaceData(wsId);
+    } catch (err) {
+      toastError(err, "Could not change the member's role.");
+    }
+  };
+
+  const removeMember = async (wsId, userId) => {
+    try {
+      await workspaceApi.removeMember(wsId, userId);
+      await loadWorkspaceData(wsId);
+    } catch (err) {
+      toastError(err, "Could not remove the member.");
+    }
+  };
+
+  // --- invites ---------------------------------------------------------------
+
+  const createInvite = async (wsId, { name, email, role = "Member" }) => {
+    try {
+      const invite = await inviteApi.create(wsId, { name, email, role });
+      refreshInvites();
+      refreshSubscription();
+      pushNotification(`Invitation sent to ${email}.`, "update", null, null, "Invitation Sent");
+      return { success: true, invite };
+    } catch (err) {
+      return { error: err.message };
+    }
+  };
+
+  const revokeInvite = async (inviteId) => {
+    try {
+      await inviteApi.revoke(inviteId);
+      refreshInvites();
+      refreshSubscription();
+    } catch (err) {
+      toastError(err, "Could not revoke the invitation.");
+    }
+  };
+
+  const resendInvite = async (inviteId) => {
+    try {
+      await inviteApi.resend(inviteId);
+      pushNotification("Invitation re-sent.", "update", null, null, "Invitation Re-sent");
+    } catch (err) {
+      toastError(err, "Could not resend the invitation.");
+    }
+  };
+
+  const acceptInvite = async (token, credentials) => {
+    try {
+      const { user, workspaceId } = await inviteApi.accept(token, credentials);
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      const list = await refreshWorkspaces();
+      const target = list.find((w) => w.id === workspaceId) || list[0];
+      if (target) setActiveWorkspaceId(target.id);
+      refreshNotifications();
+      return { success: true };
+    } catch (err) {
+      const code = err instanceof ApiError ? err.code : "invalid";
+      if (code === "INVITE_ACCEPTED") return { error: "accepted" };
+      if (code === "INVITE_REVOKED") return { error: "revoked" };
+      if (code === "INVITE_EXPIRED") return { error: "expired" };
+      if (err.status === 401 || err.status === 400) return { error: "credentials", message: err.message };
+      return { error: "invalid" };
+    }
+  };
+
+  // --- auth ------------------------------------------------------------------
+
+  const login = async (email, password) => {
+    try {
+      const { user } = await authApi.login(email, password);
+      setCurrentUser(user);
+      await bootSession();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  const register = async ({ name, email, password, accountType, companyName }) => {
+    try {
+      const { user } = await authApi.register({ name, email, password, accountType, companyName });
+      setCurrentUser(user);
+      await bootSession();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message, fieldErrors: err.fieldErrors };
+    }
+  };
+
+  const logout = async () => {
     setActiveTimerTaskId(null);
+    try { await authApi.logout(); } catch { /* clearing locally regardless */ }
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setWorkspaces([]);
+    setProjects([]);
+    setTasks([]);
+    setNotifications([]);
   };
 
-  // Activity Log helper
-  const logActivity = (text, userId = currentUser.id) => {
-    const user = users.find((u) => u.id === userId) || currentUser;
-    const newLog = {
-      id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      userId: user.id,
-      text: `${user.name} ${text}`,
-      time: "Just now",
-      timestamp: new Date().toISOString()
-    };
-    setActivities((prev) => [newLog, ...prev.slice(0, 49)]);
-  };
+  const verifyEmail = (token) => authApi.verifyEmail(token);
+  const resendVerification = (email) => authApi.resendVerification(email);
+  const forgotPassword = (email) => authApi.forgotPassword(email);
+  const resetPassword = (token, newPassword) => authApi.resetPassword(token, newPassword);
 
-  // Notification helper
-  const pushNotification = (text, type = "update", taskId = null, projectId = null, customTitle = null, customMessage = null) => {
-    // Map type to notificationSettings fields:
-    let isFilteredBySetting = true;
-    
-    if (type === "mention" && !notificationSettings.mentions) isFilteredBySetting = false;
-    if (type === "assigned" && !notificationSettings.mentions) isFilteredBySetting = false; 
-    if ((type === "reminder" || type === "due_soon" || type === "overdue") && !notificationSettings.dueReminders) isFilteredBySetting = false;
-    if ((type === "update" || type === "project_update" || type === "milestone_rescheduled" || type === "status_changed") && !notificationSettings.projectUpdates) isFilteredBySetting = false;
-
-    if (!isFilteredBySetting) return;
-
-    let title = customTitle;
-    let message = customMessage || text;
-
-    if (!title) {
-      switch (type) {
-        case "assigned":
-          title = "Task Assigned";
-          break;
-        case "due_soon":
-          title = "Due Soon Warning";
-          break;
-        case "overdue":
-          title = "Overdue Task Alert";
-          break;
-        case "mention":
-          title = "New Mention";
-          break;
-        case "update":
-        case "project_update":
-          title = "Project Update";
-          break;
-        case "reminder":
-          title = "Reminder Alert";
-          break;
-        case "file":
-        case "file_attached":
-          title = "File Attached";
-          break;
-        case "status_change":
-        case "status_changed":
-          title = "Status Changed";
-          break;
-        case "rescheduled":
-        case "milestone_rescheduled":
-          title = "Milestone Rescheduled";
-          break;
-        default:
-          title = "Workspace Alert";
-          break;
-      }
-    }
-
-    const newNotif = {
-      id: `n_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      type,
-      title,
-      message,
-      text: title + ": " + message,
-      read: false,
-      time: "Just now",
-      timestamp: new Date().toISOString(),
-      taskId,
-      projectId,
-    };
-
-    if (notificationSettings.inApp) {
-      setNotifications((prev) => [newNotif, ...prev]);
-    }
-
-    if (notificationSettings.pushMock) {
-      setActiveToast(newNotif);
-      setTimeout(() => {
-        setActiveToast((current) => current && current.id === newNotif.id ? null : current);
-      }, 4000);
-    }
-    
-    if (notificationSettings.emailMock) {
-      console.log(`[MOCK EMAIL DELIVERED] To ${currentUser?.email}: ${title} - ${message}`);
+  const updateProfile = async (fields) => {
+    try {
+      const user = await meApi.update(fields);
+      setCurrentUser(user);
+      return { success: true };
+    } catch (err) {
+      return { error: err.message };
     }
   };
 
-  // --- BILLING ACTIONS (mock — backend contract: these become API endpoints) ---
-
-  // Upgrade/downgrade a workspace plan. Generates a mock invoice for paid plans.
-  const changePlan = (wsId, planId, interval = "monthly", seats = 1) => {
-    const plan = getPlan(planId);
-    const amount = calcPrice(planId, interval, seats);
-    const now = new Date();
-    const renews = new Date(now);
-    if (interval === "yearly") renews.setFullYear(renews.getFullYear() + 1);
-    else renews.setMonth(renews.getMonth() + 1);
-
-    setSubscriptions((prev) => {
-      const existing = prev[wsId] || freeSubscription;
-      const newInvoices = amount > 0
-        ? [
-            {
-              id: `inv_${Date.now()}`,
-              date: now.toISOString(),
-              description: `${plan.name} plan — ${interval}, ${seats} seat${seats > 1 ? "s" : ""}`,
-              amount,
-              status: "Paid",
-            },
-            ...(existing.invoices || []),
-          ]
-        : existing.invoices || [];
-
-      return {
-        ...prev,
-        [wsId]: {
-          ...existing,
-          plan: planId,
-          interval,
-          seats,
-          status: "active",
-          renewsAt: planId === "free" ? null : renews.toISOString(),
-          trialEndsAt: null,
-          paymentMethod: amount > 0 ? (existing.paymentMethod || { brand: "Visa", last4: "4242" }) : existing.paymentMethod,
-          invoices: newInvoices,
-        },
-      };
-    });
-
-    logActivity(`changed workspace plan to ${plan.name} (${interval})`);
-    pushNotification(
-      planId === "free" ? "Workspace moved to the Free plan." : `Workspace upgraded to ${plan.name}.`,
-      "update",
-      null,
-      null,
-      "Plan Updated",
-      planId === "free"
-        ? "Your workspace is now on the Free plan."
-        : `Your workspace is now on the ${plan.name} plan (${interval}, ${seats} seat${seats > 1 ? "s" : ""}).`
-    );
-  };
-
-  // Cancel: keeps data, drops to Free at period end (mock: immediately marks canceled).
-  const cancelSubscription = (wsId) => {
-    setSubscriptions((prev) => {
-      const existing = prev[wsId];
-      if (!existing) return prev;
-      return { ...prev, [wsId]: { ...existing, status: "canceled", renewsAt: null, trialEndsAt: null } };
-    });
-    logActivity("canceled workspace subscription");
-    pushNotification("Subscription canceled. The workspace is now on the Free plan.", "update", null, null, "Subscription Canceled");
-  };
-
-  // Start a free trial of a paid plan (no card required).
-  const startTrial = (wsId, planId = "pro") => {
-    const ends = new Date();
-    ends.setDate(ends.getDate() + TRIAL_DAYS);
-    setSubscriptions((prev) => ({
-      ...prev,
-      [wsId]: {
-        ...(prev[wsId] || freeSubscription),
-        plan: planId,
-        status: "trialing",
-        trialEndsAt: ends.toISOString(),
-        renewsAt: null,
-      },
-    }));
-    logActivity(`started a ${getPlan(planId).name} trial`);
-    pushNotification(`Your ${TRIAL_DAYS}-day ${getPlan(planId).name} trial has started.`, "update", null, null, "Trial Started");
-  };
-
-  // Workspace actions
-  const addWorkspace = (name, logo = "💼", description = "", type = "company") => {
-    const newId = `ws_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const initialMembers = [
-      { id: currentUser?.id || "u1", name: currentUser?.name || "Yasin Chowdhury", email: currentUser?.email || "yasin@company.com", avatar: currentUser?.avatar || "YC", color: currentUser?.color || "bg-[#533afd] text-white", role: "Owner" },
-      { id: "u2", name: "Rakib Hasan", email: "rakib@company.com", avatar: "RH", color: "bg-emerald-600 text-white", role: "Admin" },
-      { id: "u3", name: "Nadia Islam", email: "nadia@company.com", avatar: "NI", color: "bg-amber-600 text-white", role: "Manager" }
-    ];
-    const newWs = {
-      id: newId,
-      name,
-      logo,
-      ownerId: currentUser?.id || "u1",
-      description: description || "Custom team workspace.",
-      isArchived: false,
-      members: type === "personal" ? initialMembers.slice(0, 1) : initialMembers,
-      type,
-      createdAt: new Date().toISOString()
-    };
-    setWorkspaces((prev) => [...prev, newWs]);
-    // New workspaces start on the Free plan
-    setSubscriptions((prev) => ({ ...prev, [newId]: { ...freeSubscription } }));
-    setActiveWorkspaceId(newId);
-    logActivity(`created workspace '${name}'`);
-    pushNotification(`New workspace '${name}' was provisioned.`, "update");
-    return newWs;
-  };
-
-  const updateWorkspace = (id, fields) => {
-    setWorkspaces((prev) => prev.map((w) => (w.id === id ? { ...w, ...fields } : w)));
-    logActivity(`modified settings for workspace '${fields.name || id}'`);
-  };
-
-  const deleteWorkspace = (id) => {
-    if (workspaces.length <= 1) return { error: "Cannot delete the last remaining workspace." };
-    setWorkspaces((prev) => prev.filter((w) => w.id !== id));
-    setActiveWorkspaceId(workspaces.find((w) => w.id !== id).id);
-    logActivity(`removed workspace ${id}`);
-    return { success: true };
-  };
-
-  // Project actions
-  const addProject = ({ name, description, icon, color, status, deadline }) => {
-    const newId = `p_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const newProj = {
-      id: newId,
-      workspaceId: activeWorkspaceId,
-      name,
-      description: description || "No description provided.",
-      icon: icon || "📁",
-      color: color || "#4f46e5",
-      status: status || "Planning",
-      startDate: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      deadline: deadline || formatDate(14),
-      members: [currentUser.id],
-      progress: 0,
-    };
-    setProjects((prev) => [...prev, newProj]);
-    logActivity(`created project '${name}'`);
-    pushNotification(`Project '${name}' was initialized.`, "update", null, newId);
-    return newProj;
-  };
-
-  const updateProject = (id, fields) => {
-    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...fields } : p)));
-    if (fields.name) {
-      logActivity(`renamed project to '${fields.name}'`);
-    } else if (fields.status) {
-      logActivity(`flagged project stage to '${fields.status}'`);
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      await meApi.changePassword(currentPassword, newPassword);
+      return { success: true };
+    } catch (err) {
+      return { error: err.message };
     }
   };
 
-  const deleteProject = (id) => {
-    setProjects((prev) => prev.filter((p) => p.id !== id));
-    setTasks((prev) => prev.filter((t) => t.projectId !== id));
-    logActivity(`deleted project '${id}'`);
+  const deleteAccount = async () => {
+    try {
+      await meApi.deleteAccount();
+    } catch (err) {
+      toastError(err, "Could not delete the account.");
+      return;
+    }
+    tokenStore.clear();
+    setIsAuthenticated(false);
+    setCurrentUser(null);
   };
 
-  // Task actions
-  const addTask = (taskFields) => {
-    const newId = `t_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const newTask = {
-      id: newId,
-      projectId: taskFields.projectId || activeWorkspaceProjects[0]?.id || "p1",
-      title: taskFields.title || "Untitled Task",
-      description: taskFields.description || "",
-      status: taskFields.status || (taskStatuses && taskStatuses.find(s => s.isDefault)?.name) || (taskStatuses && taskStatuses[0]?.name) || "To Do",
-      priority: taskFields.priority || "Medium",
-      assigneeId: taskFields.assigneeId || currentUser.id,
-      startDate: taskFields.startDate || new Date().toISOString(),
-      createdAt: taskFields.createdAt || new Date().toISOString(),
-      dueDate: taskFields.dueDate || formatDate(3),
-      estimatedTime: taskFields.estimatedTime || 0,
-      actualTime: 0,
-      tags: taskFields.tags || [],
-      checklist: taskFields.checklist || [],
-      comments: [],
-      watchers: [currentUser.id],
-      dependencies: taskFields.dependencies || [],
-      recurring: taskFields.recurring || { isRecurring: false },
-      attachments: [],
-      activities: [{ id: `act_init_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, text: `Task created by ${currentUser.name}`, timestamp: new Date().toISOString() }],
-    };
+  // --- projects --------------------------------------------------------------
 
-    setTasks((prev) => [newTask, ...prev]);
-    logActivity(`created task '${newTask.title}'`);
-    
-    // Trigger assignment notification
-    pushNotification(
-      `You were assigned a new task: ${newTask.title}.`,
-      "assigned",
-      newId,
-      newTask.projectId,
-      "Task Assigned",
-      `You have been assigned to design or coordinate '${newTask.title}'.`
-    );
-
-    // Evaluate automation trigger on creation
-    triggerAutomationOnTaskChange(newTask);
-    
-    return newTask;
+  const addProject = async (fields) => {
+    if (!activeWorkspaceId) return null;
+    try {
+      const project = await projectApi.create(activeWorkspaceId, fields);
+      refreshProjects();
+      refreshActivities();
+      refreshSubscription();
+      pushNotification(`Project '${project.name}' created.`, "update", null, project.id, "Project Created");
+      return project;
+    } catch (err) {
+      toastError(err, "Could not create the project.");
+      return null;
+    }
   };
 
-  const updateTask = (id, fields) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === id) {
-          const updated = { ...t, ...fields };
-          
-          // Log specific transitions
-          if (fields.status && fields.status !== t.status) {
-            updated.activities = [
-              { id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, text: `${currentUser.name} changed status from '${t.status}' to '${fields.status}'`, timestamp: new Date().toISOString() },
-              ...(t.activities || []),
-            ];
-            logActivity(`updated '${t.title}' status to '${fields.status}'`);
-            
-            // Push notification for status change
-            pushNotification(
-              `Task status updated to ${fields.status}`,
-              "status_changed",
-              t.id,
-              t.projectId,
-              "Status Changed",
-              `Task '${t.title}' status was updated to '${fields.status}' by ${currentUser.name}.`
-            );
-          }
-          
-          if (fields.priority && fields.priority !== t.priority) {
-            logActivity(`updated '${t.title}' priority to '${fields.priority}'`);
-          }
+  const updateProject = async (id, fields) => {
+    try {
+      await projectApi.update(id, fields);
+      refreshProjects();
+      refreshActivities();
+    } catch (err) {
+      toastError(err, "Could not update the project.");
+    }
+  };
 
-          if (fields.assigneeId && fields.assigneeId !== t.assigneeId) {
-            const asm = users.find((u) => u.id === fields.assigneeId);
-            if (asm) {
-              logActivity(`assigned '${t.title}' to ${asm.name}`);
-              pushNotification(`You have been assigned to: '${t.title}'`, "assigned", t.id);
+  const deleteProject = async (id) => {
+    try {
+      await projectApi.remove(id);
+      refreshProjects();
+      refreshTasks();
+      refreshActivities();
+    } catch (err) {
+      toastError(err, "Could not delete the project.");
+    }
+  };
+
+  const addProjectMember = async (projectId, userId) => {
+    try {
+      await projectApi.addMember(projectId, userId);
+      refreshProjects();
+    } catch (err) {
+      toastError(err, "Could not add the member.");
+    }
+  };
+
+  const removeProjectMember = async (projectId, userId) => {
+    try {
+      await projectApi.removeMember(projectId, userId);
+      refreshProjects();
+    } catch (err) {
+      toastError(err, "Could not remove the member.");
+    }
+  };
+
+  const instantiateTemplate = async (templateId, targetProjectId) => {
+    try {
+      await projectApi.instantiateTemplate(targetProjectId, templateId);
+      refreshTasks();
+      refreshActivities();
+      pushNotification("Template tasks created.", "update", null, targetProjectId, "Template Applied");
+    } catch (err) {
+      toastError(err, "Could not apply the template.");
+    }
+  };
+
+  // --- tasks -----------------------------------------------------------------
+
+  const statusIdByName = (name) => taskStatuses.find((s) => s.name === name)?.id;
+
+  const mergeTask = (task) => {
+    setTasks((prev) => {
+      const exists = prev.some((t) => t.id === task.id);
+      // Preserve already-loaded children (comments/attachments) across refreshes.
+      return exists
+        ? prev.map((t) => (t.id === task.id
+          ? {
+              ...t,
+              ...task,
+              comments: task.comments?.length ? task.comments : t.comments,
+              attachments: task.attachments?.length ? task.attachments : t.attachments,
+              activities: task.activities?.length ? task.activities : t.activities,
             }
-          }
+          : t))
+        : [task, ...prev];
+    });
+  };
 
-          if (fields.dueDate && fields.dueDate !== t.dueDate) {
-            const isMilestone = t.tags?.includes("Milestone") || t.tags?.includes("milestone") || fields.tags?.includes("Milestone");
-            if (isMilestone) {
-              pushNotification(
-                `Milestone '${t.title}' rescheduled to ${new Date(fields.dueDate).toLocaleDateString()}`,
-                "milestone_rescheduled",
-                t.id,
-                t.projectId,
-                "Milestone Rescheduled",
-                `Milestone '${t.title}' has been moved from ${new Date(t.dueDate).toLocaleDateString()} to ${new Date(fields.dueDate).toLocaleDateString()}.`
-              );
-            }
-          }
-
-          // Evaluate automation rules
-          setTimeout(() => triggerAutomationOnTaskChange(updated), 50);
-
-          return updated;
+  const addTask = async (taskFields) => {
+    const projectId = taskFields.projectId || projects[0]?.id;
+    if (!projectId) return null;
+    try {
+      const created = await taskApi.create(projectId, {
+        ...taskFields,
+        statusId: taskFields.status ? statusIdByName(taskFields.status) : undefined,
+      });
+      // AI planner passes a checklist; the create endpoint doesn't take one.
+      if (taskFields.checklist?.length) {
+        for (const item of taskFields.checklist) {
+          // eslint-disable-next-line no-await-in-loop
+          await taskApi.addChecklistItem(created.id, item.title).catch(() => {});
         }
-        return t;
-      })
-    );
-  };
-
-  const deleteTask = (id) => {
-    const target = tasks.find((t) => t.id === id);
-    if (!target) return;
-    setTasks((prev) => prev.filter((t) => t.id !== id));
-    logActivity(`deleted task '${target.title}'`);
-    if (activeTimerTaskId === id) {
-      setActiveTimerTaskId(null);
-    }
-  };
-
-  const addTaskStatus = (statusObj) => {
-    const newId = `s_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const newStatus = {
-      id: newId,
-      name: statusObj.name,
-      bg: statusObj.bg || "bg-zinc-100",
-      text: statusObj.text || "text-zinc-700",
-      border: statusObj.border || "border-zinc-200",
-      darkBg: statusObj.darkBg || "dark:bg-zinc-800",
-      darkText: statusObj.darkText || "dark:text-zinc-300",
-      darkBorder: statusObj.darkBorder || "dark:border-zinc-700",
-      icon: statusObj.icon || "FileEdit",
-      isDefault: false,
-      system: false
-    };
-    setTaskStatuses((prev) => [...prev, newStatus]);
-    logActivity(`added task status '${statusObj.name}'`);
-    return newStatus;
-  };
-
-  const updateTaskStatus = (id, fields) => {
-    const originalStatus = taskStatuses.find(s => s.id === id);
-    if (!originalStatus) return;
-
-    setTaskStatuses((prev) => {
-      const updated = prev.map((s) => (s.id === id ? { ...s, ...fields } : s));
-      if (fields.isDefault) {
-        return updated.map((s) => (s.id === id ? { ...s, isDefault: true } : { ...s, isDefault: false }));
+        created.checklistTotal = taskFields.checklist.length;
       }
-      return updated;
-    });
-
-    // If the name is changed, rename the status in all tasks
-    if (fields.name && fields.name !== originalStatus.name) {
-      setTasks((prevTasks) =>
-        prevTasks.map((t) =>
-          t.status === originalStatus.name ? { ...t, status: fields.name } : t
-        )
+      mergeTask(created);
+      refreshProjects();
+      refreshActivities();
+      pushNotification(
+        `Task '${created.title}' created.`, "assigned", created.id, projectId,
+        "Task Created", `'${created.title}' was added to the project.`
       );
-      logActivity(`renamed task status '${originalStatus.name}' to '${fields.name}'`);
-    } else {
-      logActivity(`updated task status '${originalStatus.name}' parameters`);
+      refreshNotifications();
+      return created;
+    } catch (err) {
+      toastError(err, "Could not create the task.");
+      return null;
     }
   };
 
-  const deleteTaskStatus = (id) => {
-    const statusToDelete = taskStatuses.find(s => s.id === id);
-    if (!statusToDelete) return;
-
-    // Filter out deleted status
-    const remaining = taskStatuses.filter((s) => s.id !== id);
-    setTaskStatuses(remaining);
-
-    // Find default status or first status to fall back to
-    const defaultStatus = remaining.find((s) => s.isDefault) || remaining[0] || defaultTaskStatuses[0];
-
-    // Reassign tasks with deleted status to default status
-    setTasks((prevTasks) =>
-      prevTasks.map((t) =>
-        t.status === statusToDelete.name ? { ...t, status: defaultStatus.name } : t
-      )
-    );
-
-    logActivity(`deleted task status '${statusToDelete.name}', reassigning pending items to '${defaultStatus.name}'`);
-  };
-
-  // Automation triggering
-  const triggerAutomationOnTaskChange = (task) => {
-    automationRules.forEach((rule) => {
-      if (!rule.active) return;
-      
-      // Automation: Completed -> Clear tags & unassign
-      if (rule.id === "ar1" && task.status === "Completed") {
-        const hasTagsOrAssignee = task.tags.length > 0 || task.assigneeId;
-        if (hasTagsOrAssignee) {
-          setTasks((prev) =>
-            prev.map((t) => (t.id === task.id ? { ...t, tags: [], assigneeId: null } : t))
-          );
-          logActivity(`executed automation rule: [Clear tags & unassign task] for completed task.`);
-        }
+  const updateTask = async (id, fields) => {
+    try {
+      const patch = { ...fields };
+      if (fields.status !== undefined && fields.statusId === undefined) {
+        patch.statusId = statusIdByName(fields.status);
+        delete patch.status;
       }
-
-      // Automation: Urgent priority -> alerts
-      if (rule.id === "ar2" && task.priority === "Urgent") {
-        // Trigger simulation
-        pushNotification(`[Automation Alert] Urgent task detected! Team alerted on external channels.`, "reminder", task.id);
-      }
-    });
+      const updated = await taskApi.update(id, patch);
+      mergeTask(updated);
+      refreshProjects();
+      refreshActivities();
+      refreshNotifications();
+    } catch (err) {
+      toastError(err, "Could not update the task.");
+    }
   };
 
-  // Checklist manipulation
-  const addChecklistItem = (taskId, title) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          const newItem = { 
-            id: `cl_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, 
-            title, 
-            completed: false,
-            createdAt: new Date().toISOString()
-          };
-          return {
-            ...t,
-            checklist: [...(t.checklist || []), newItem],
-          };
-        }
-        return t;
-      })
-    );
+  const deleteTask = async (id) => {
+    try {
+      await taskApi.remove(id);
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+      if (activeTimerTaskId === id) setActiveTimerTaskId(null);
+      if (activeTaskId === id) setActiveTaskId(null);
+      refreshProjects();
+      refreshActivities();
+    } catch (err) {
+      toastError(err, "Could not delete the task.");
+    }
   };
 
-  const toggleChecklistItem = (taskId, itemId) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          const updatedChecklist = t.checklist.map((item) =>
-            item.id === itemId ? { ...item, completed: !item.completed } : item
-          );
-          return { ...t, checklist: updatedChecklist };
-        }
-        return t;
-      })
-    );
+  const duplicateTask = async (taskId) => {
+    try {
+      const copy = await taskApi.duplicate(taskId);
+      mergeTask(copy);
+      refreshProjects();
+      pushNotification(`Task duplicated: '${copy.title}'.`, "update", copy.id, copy.projectId, "Task Duplicated");
+      return copy;
+    } catch (err) {
+      toastError(err, "Could not duplicate the task.");
+      return null;
+    }
   };
 
-  const deleteChecklistItem = (taskId, itemId) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          return {
-            ...t,
-            checklist: t.checklist.filter((item) => item.id !== itemId),
-          };
-        }
-        return t;
-      })
-    );
+  // Drawer detail hydration: children live behind separate endpoints.
+  const loadTaskDetail = useCallback(async (taskId) => {
+    try {
+      const [detail, comments, activityList] = await Promise.all([
+        taskApi.get(taskId),
+        taskApi.comments(taskId),
+        taskApi.activity(taskId),
+      ]);
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? { ...t, ...detail, comments, activities: activityList, attachments: t.attachments || [] }
+        : t)));
+    } catch {
+      /* the drawer degrades to list data */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTaskId && activeTaskId !== "NEW_TEMP") loadTaskDetail(activeTaskId);
+  }, [activeTaskId, loadTaskDetail]);
+
+  // --- checklist / comments / attachments ------------------------------------
+
+  const addChecklistItem = async (taskId, title) => {
+    try {
+      const item = await taskApi.addChecklistItem(taskId, title);
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? { ...t, checklist: [...(t.checklist || []), item], checklistTotal: (t.checklistTotal ?? 0) + 1 }
+        : t)));
+    } catch (err) {
+      toastError(err, "Could not add the checklist item.");
+    }
   };
 
-  // Tag Manager
-  const createTag = (name, colorStyle) => {
-    const newTag = { id: `t_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, name, color: colorStyle || "bg-[#533afd]/5 text-[#533afd] border-[#533afd]/20" };
-    setTags((prev) => [...prev, newTag]);
-    return newTag;
+  const toggleChecklistItem = async (taskId, itemId) => {
+    const task = tasks.find((t) => t.id === taskId);
+    const item = task?.checklist?.find((c) => c.id === itemId);
+    if (!item) return;
+    try {
+      const updated = await taskApi.updateChecklistItem(itemId, { completed: !item.completed });
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? { ...t, checklist: t.checklist.map((c) => (c.id === itemId ? updated : c)) }
+        : t)));
+    } catch (err) {
+      toastError(err, "Could not update the checklist item.");
+    }
   };
 
-  // Add Comment on Task
-  const addComment = (taskId, text) => {
-    if (!text.trim()) return;
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          const newComment = {
-            id: `c_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-            userId: currentUser.id,
-            text,
-            timestamp: new Date().toISOString(),
-          };
-          
-          // Trigger mention/comment notification
-          setTimeout(() => {
-            pushNotification(
-              `Nadia Islam and team mentioned you in a comment on task '${t.title}'.`,
-              "mention",
-              taskId,
-              t.projectId,
-              "New Comment & Mention",
-              `${currentUser.name} commented: "${text}" on task '${t.title}'`
-            );
-          }, 50);
-
-          return {
-            ...t,
-            comments: [...(t.comments || []), newComment],
-            activities: [
-              { id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, text: `${currentUser.name} added a comment`, timestamp: new Date().toISOString() },
-              ...(t.activities || []),
-            ],
-          };
-        }
-        return t;
-      })
-    );
-    logActivity(`commented on task`);
+  const deleteChecklistItem = async (taskId, itemId) => {
+    try {
+      await taskApi.removeChecklistItem(itemId);
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? { ...t, checklist: (t.checklist || []).filter((c) => c.id !== itemId) }
+        : t)));
+    } catch (err) {
+      toastError(err, "Could not delete the checklist item.");
+    }
   };
 
-  // Attach File on Task (with Base64 Support)
-  const attachFile = (taskId, name, size, type, base64 = null) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          const newAttachment = { 
-            id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, 
-            name, 
-            size, 
-            type, 
-            base64, 
-            timestamp: new Date().toISOString(), 
-            createdAt: new Date().toISOString(),
-            author: currentUser.name 
-          };
-          
-          // Trigger file attached notification
-          setTimeout(() => {
-            pushNotification(
-              `New file deliverable attached: '${name}' to task '${t.title}'.`,
-              "file_attached",
-              taskId,
-              t.projectId,
-              "File Attached",
-              `A new deliverable '${name}' (${size}) has been uploaded to task '${t.title}'.`
-            );
-          }, 50);
-
-          return {
-            ...t,
-            attachments: [...(t.attachments || []), newAttachment],
-          };
-        }
-        return t;
-      })
-    );
-    logActivity(`attached file '${name}' to task`);
+  const addComment = async (taskId, text) => {
+    if (!text?.trim()) return;
+    try {
+      const comment = await taskApi.addComment(taskId, text.trim());
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? { ...t, comments: [...(t.comments || []), comment], commentCount: (t.commentCount ?? 0) + 1 }
+        : t)));
+      refreshNotifications();
+    } catch (err) {
+      toastError(err, "Could not post the comment.");
+    }
   };
 
-  const removeAttachment = (taskId, attId) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          return {
-            ...t,
-            attachments: (t.attachments || []).filter((a) => a.id !== attId),
-          };
-        }
-        return t;
-      })
-    );
+  /** Upload a real file (multipart). Accepts a File/Blob. */
+  const attachFile = async (taskId, file) => {
+    try {
+      const attachment = await taskApi.attachments.upload(taskId, file);
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? { ...t, attachments: [...(t.attachments || []), attachment], attachmentCount: (t.attachmentCount ?? 0) + 1 }
+        : t)));
+      refreshNotifications();
+      return attachment;
+    } catch (err) {
+      toastError(err, "Could not upload the file.");
+      return null;
+    }
   };
 
-  // Attach File on Project
+  const removeAttachment = async (taskId, attId) => {
+    try {
+      await taskApi.attachments.remove(attId);
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? { ...t, attachments: (t.attachments || []).filter((a) => a.id !== attId), attachmentCount: Math.max(0, (t.attachmentCount ?? 1) - 1) }
+        : t)));
+    } catch (err) {
+      toastError(err, "Could not remove the file.");
+    }
+  };
+
+  /** Object-URL for inline preview of a stored attachment. Caller revokes. */
+  const getAttachmentBlobUrl = async (attachment) => {
+    try {
+      const blob = await taskApi.attachments.download(attachment.id);
+      return URL.createObjectURL(blob);
+    } catch (err) {
+      toastError(err, "Could not load the file preview.");
+      return null;
+    }
+  };
+
+  const downloadAttachment = async (attachment) => {
+    try {
+      const blob = await taskApi.attachments.download(attachment.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = attachment.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toastError(err, "Could not download the file.");
+    }
+  };
+
+  // Project file cabinet — backend endpoint pending (§9 gap): session-local only.
   const attachFileToProject = (projectId, name, size, type, base64 = null) => {
-    setProjects((prev) =>
-      prev.map((p) => {
-        if (p.id === projectId) {
-          const newAttachment = { 
-            id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, 
-            name, 
-            size, 
-            type, 
-            base64, 
-            timestamp: new Date().toISOString(), 
-            createdAt: new Date().toISOString(),
-            author: currentUser.name 
-          };
-          return {
-            ...p,
-            attachments: [...(p.attachments || []), newAttachment],
-          };
-        }
-        return p;
-      })
-    );
-    logActivity(`attached file '${name}' to project`);
-  };
-
-  const removeAttachmentFromProject = (projectId, attId) => {
-    setProjects((prev) =>
-      prev.map((p) => {
-        if (p.id === projectId) {
-          return {
-            ...p,
-            attachments: (p.attachments || []).filter((a) => a.id !== attId),
-          };
-        }
-        return p;
-      })
-    );
-    logActivity(`removed file attachment from project`);
-  };
-
-  // Duplicate Task
-  const duplicateTask = (taskId) => {
-    const target = tasks.find((t) => t.id === taskId);
-    if (!target) return null;
-    const newId = `t_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const newTask = {
-      ...target,
-      id: newId,
-      title: `${target.title} (Copy)`,
-      checklist: (target.checklist || []).map((c) => ({ ...c, id: `cl_${Date.now()}_${Math.random().toString(36).substring(2, 9)}` })),
-      comments: [],
-      attachments: (target.attachments || []).map((a) => ({ ...a, id: `att_${Date.now()}_${Math.random().toString(36).substring(2, 9)}` })),
-      activities: [{ id: `act_init_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, text: `Task duplicated from '${target.title}' by ${currentUser.name}`, timestamp: new Date().toISOString() }],
+    const att = {
+      id: `patt_${Date.now()}`,
+      name, size, type, base64,
+      timestamp: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      author: currentUser?.name || "",
     };
-    setTasks((prev) => [newTask, ...prev]);
-    logActivity(`duplicated task '${target.title}'`);
-    pushNotification(`Task duplicated: '${newTask.title}' was created.`, "update", newId);
-    return newTask;
+    setProjectFiles((prev) => ({ ...prev, [projectId]: [...(prev[projectId] || []), att] }));
+  };
+  const removeAttachmentFromProject = (projectId, attId) => {
+    setProjectFiles((prev) => ({ ...prev, [projectId]: (prev[projectId] || []).filter((a) => a.id !== attId) }));
   };
 
-  // Time-tracker Actions
+  // --- statuses & tags -------------------------------------------------------
+
+  const addTaskStatus = async (statusObj) => {
+    if (!activeWorkspaceId) return null;
+    try {
+      const created = await taskStatusApi.create(activeWorkspaceId, statusObj);
+      setTaskStatuses((prev) => [...prev, created]);
+      return created;
+    } catch (err) {
+      toastError(err, "Could not add the status.");
+      return null;
+    }
+  };
+
+  const updateTaskStatus = async (id, fields) => {
+    try {
+      await taskStatusApi.update(id, fields);
+      if (activeWorkspaceId) setTaskStatuses(await taskStatusApi.list(activeWorkspaceId));
+      refreshTasks(); // renames propagate into task rows
+    } catch (err) {
+      toastError(err, "Could not update the status.");
+    }
+  };
+
+  const deleteTaskStatus = async (id) => {
+    try {
+      await taskStatusApi.remove(id);
+      if (activeWorkspaceId) setTaskStatuses(await taskStatusApi.list(activeWorkspaceId));
+      refreshTasks(); // affected tasks fell back to the default status
+    } catch (err) {
+      toastError(err, "Could not delete the status.");
+    }
+  };
+
+  const createTag = async (name, colorStyle) => {
+    if (!activeWorkspaceId) return null;
+    try {
+      const tag = await tagApi.create(activeWorkspaceId, name, colorStyle);
+      setTags((prev) => [...prev, tag]);
+      return tag;
+    } catch (err) {
+      toastError(err, "Could not create the tag.");
+      return null;
+    }
+  };
+
+  // --- time tracking ---------------------------------------------------------
+
+  const logTaskTime = async (taskId, hours) => {
+    try {
+      const updated = await taskApi.logTime(taskId, hours);
+      mergeTask(updated);
+    } catch (err) {
+      toastError(err, "Could not log time.");
+    }
+  };
+
   const toggleTaskTimer = (taskId) => {
     if (activeTimerTaskId === taskId) {
-      // STOP TIMER - save actual time
-      const hoursAdded = timerSeconds / 3600 || 0.1; // fallback minor fraction
-      setTasks((prev) =>
-        prev.map((t) => {
-          if (t.id === taskId) {
-            return { ...t, actualTime: Number((t.actualTime + hoursAdded).toFixed(2)) };
-          }
-          return t;
-        })
-      );
+      const hours = Math.max(0.01, Number((timerSeconds / 3600).toFixed(2)));
       setActiveTimerTaskId(null);
-      logActivity(`tracked and stopped timer for task`);
+      logTaskTime(taskId, hours);
     } else {
-      // START TIMER
       if (activeTimerTaskId) {
-        // stop previous first
-        const prevId = activeTimerTaskId;
-        const hoursAdded = timerSeconds / 3600 || 0.1;
-        setTasks((prev) =>
-          prev.map((t) => (t.id === prevId ? { ...t, actualTime: Number((t.actualTime + hoursAdded).toFixed(2)) } : t))
-        );
+        const hours = Math.max(0.01, Number((timerSeconds / 3600).toFixed(2)));
+        logTaskTime(activeTimerTaskId, hours);
       }
       setActiveTimerTaskId(taskId);
       setTimerSeconds(0);
-      logActivity(`started timer for task`);
     }
   };
 
   const addManualTime = (taskId, hours) => {
     const h = parseFloat(hours) || 0;
     if (h <= 0) return;
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          return { ...t, actualTime: Number((t.actualTime + h).toFixed(2)) };
-        }
-        return t;
-      })
-    );
-    logActivity(`logged ${h}h manual labor spent`);
+    logTaskTime(taskId, h);
   };
 
-  // Trigger Template hydration
-  const instantiateTemplate = (templateId, targetProjectId) => {
-    const tpl = templates.find((t) => t.id === templateId);
-    if (!tpl) return;
-    tpl.tasks.forEach((taskTitle) => {
-      addTask({
-        title: taskTitle,
-        projectId: targetProjectId,
-        description: "Hydrated from system checklist template.",
-        status: "To Do",
-        priority: "Medium",
-        assigneeId: currentUser.id,
-      });
-    });
-    logActivity(`instantiated workflow template '${tpl.name}'`);
-    pushNotification(`Completed instantiating workflow template '${tpl.name}'.`, "update");
+  // --- notifications ---------------------------------------------------------
+
+  const setNotificationRead = async (id, read) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read } : n)));
+    try { await notificationApi.setRead(id, read); } catch { refreshNotifications(); }
   };
 
-  const resetToDefaultData = () => {
-    localStorage.removeItem("atm_users");
-    localStorage.removeItem("atm_workspaces");
-    localStorage.removeItem("atm_active_ws");
-    localStorage.removeItem("atm_projects");
-    localStorage.removeItem("atm_tasks");
-    localStorage.removeItem("atm_tags");
-    localStorage.removeItem("atm_notifications");
-    localStorage.removeItem("atm_activities");
-    localStorage.removeItem("atm_templates");
-    localStorage.removeItem("atm_automation");
-    localStorage.removeItem("atm_current_user");
-    localStorage.removeItem("atm_is_auth");
-    localStorage.removeItem("atm_task_statuses");
-    localStorage.removeItem("atm_subscriptions");
-
-    setUsers(mockUsers);
-    setWorkspaces(mockWorkspaces);
-    setActiveWorkspaceId("ws1");
-    setProjects(mockProjects);
-    setTasks(mockTasks);
-    setTags(mockTags);
-    setNotifications(mockNotifications);
-    setActivities(mockActivities);
-    setTemplates(mockTemplates);
-    setAutomationRules(mockAutomationRules);
-    setTaskStatuses(defaultTaskStatuses);
-    setSubscriptions(defaultSubscriptions);
-    setCurrentUser(mockUsers[0]);
-    setIsAuthenticated(true);
-    
-    logActivity("restored original workspace and task data metrics core package");
+  const markAllNotificationsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try { await notificationApi.markAllRead(); } catch { refreshNotifications(); }
   };
+
+  const clearReadNotifications = async () => {
+    setNotifications((prev) => prev.filter((n) => !n.read));
+    try { await notificationApi.clearRead(); } catch { refreshNotifications(); }
+  };
+
+  const deleteNotification = async (id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    try { await notificationApi.remove(id); } catch { refreshNotifications(); }
+  };
+
+  const setNotificationSettings = async (next) => {
+    const value = typeof next === "function" ? next(notificationSettings) : next;
+    setNotificationSettingsState(value);
+    try {
+      await notificationApi.updatePreferences(value);
+    } catch (err) {
+      toastError(err, "Could not save preferences.");
+    }
+  };
+
+  // --- billing ---------------------------------------------------------------
+
+  const changePlan = async (wsId, planId, interval = "monthly", seats = 1) => {
+    try {
+      await billingApi.changePlan(wsId, planId, interval, seats);
+      await refreshSubscription();
+      pushNotification(`Workspace plan updated.`, "update", null, null, "Plan Updated");
+    } catch (err) {
+      toastError(err, "Could not change the plan.");
+    }
+  };
+
+  const cancelSubscription = async (wsId) => {
+    try {
+      await billingApi.cancel(wsId);
+      await refreshSubscription();
+      pushNotification("Subscription canceled.", "update", null, null, "Subscription Canceled");
+    } catch (err) {
+      toastError(err, "Could not cancel the subscription.");
+    }
+  };
+
+  const startTrial = async (wsId, planId = "pro") => {
+    try {
+      await billingApi.startTrial(wsId, planId);
+      await refreshSubscription();
+      pushNotification("Your 14-day trial has started.", "update", null, null, "Trial Started");
+    } catch (err) {
+      toastError(err, "Could not start the trial.");
+    }
+  };
+
+  const getSubscription = () => activeSubscription;
+
+  // --- misc compatibility ----------------------------------------------------
+
+  const logActivity = () => { /* the backend writes the activity trail now */ };
+  const resetToDefaultData = () => refreshWorkspaceData();
 
   const value = {
-    users,
-    setUsers,
-    workspaces,
-    setWorkspaces,
-    activeWorkspaceId,
-    setActiveWorkspaceId,
+    // data
+    users, setUsers,
+    workspaces, setWorkspaces,
+    activeWorkspaceId, setActiveWorkspaceId,
     activeWorkspace,
-    projects,
-    setProjects,
+    projects, setProjects,
     activeWorkspaceProjects,
-    tasks,
-    setTasks,
+    tasks, setTasks,
     activeWorkspaceTasks,
-    tags,
-    setTags,
-    notifications,
-    setNotifications,
-    notificationSettings,
-    setNotificationSettings,
-    activeToast,
-    setActiveToast,
+    tags, setTags,
+    notifications, setNotifications,
+    notificationSettings, setNotificationSettings,
+    activities, setActivities,
+    templates, setTemplates,
+    automationRules, setAutomationRules,
+    taskStatuses, setTaskStatuses,
+    invites,
+    projectFiles,
+    // async lifecycle
+    bootLoading, dataLoading, dataError, refreshWorkspaceData, refreshNotifications,
+    simulateErrors, setSimulateErrors,
+    // session
+    currentUser, setCurrentUser,
+    isAuthenticated, setIsAuthenticated,
+    theme, setTheme,
+    // ui state
+    quickAddTaskOpen, setQuickAddTaskOpen,
+    aiPlannerOpen, setAiPlannerOpen,
+    activeTaskId, setActiveTaskId,
+    activeToast, setActiveToast,
     pushNotification,
-    activities,
-    setActivities,
-    templates,
-    setTemplates,
-    automationRules,
-    setAutomationRules,
-    taskStatuses,
-    setTaskStatuses,
-    // Billing / subscriptions
-    subscriptions,
+    // rbac & billing derived
+    currentRole, can,
+    activeSubscription, activePlanId, activePlanLimits,
+    canAddProject, canAddMember,
     getSubscription,
-    activeSubscription,
-    activePlanId,
-    activePlanLimits,
-    canAddProject,
-    canAddMember,
-    changePlan,
-    cancelSubscription,
-    startTrial,
-    currentUser,
-    setCurrentUser,
-    isAuthenticated,
-    setIsAuthenticated,
-    theme,
-    setTheme,
-    quickAddTaskOpen,
-    setQuickAddTaskOpen,
-    aiPlannerOpen,
-    setAiPlannerOpen,
-    activeTaskId,
-    setActiveTaskId,
-    // Timer
-    activeTimerTaskId,
-    timerSeconds,
-    toggleTaskTimer,
-    addManualTime,
-    // Core Cruds
-    login,
-    logout,
-    addWorkspace,
-    updateWorkspace,
-    deleteWorkspace,
-    addProject,
-    updateProject,
-    deleteProject,
-    addTask,
-    updateTask,
-    deleteTask,
-    addTaskStatus,
-    updateTaskStatus,
-    deleteTaskStatus,
-    addChecklistItem,
-    toggleChecklistItem,
-    deleteChecklistItem,
-    createTag,
-    addComment,
-    attachFile,
-    removeAttachment,
-    attachFileToProject,
-    removeAttachmentFromProject,
-    duplicateTask,
+    // timer
+    activeTimerTaskId, timerSeconds, toggleTaskTimer, addManualTime,
+    // auth
+    login, register, logout,
+    verifyEmail, resendVerification, forgotPassword, resetPassword,
+    updateProfile, changePassword, deleteAccount,
+    // workspaces & members
+    addWorkspace, updateWorkspace, deleteWorkspace,
+    transferOwnership, leaveWorkspace,
+    changeMemberRole, removeMember,
+    // invites
+    createInvite, revokeInvite, resendInvite, acceptInvite,
+    // projects
+    addProject, updateProject, deleteProject,
+    addProjectMember, removeProjectMember,
     instantiateTemplate,
-    logActivity,
-    resetToDefaultData,
+    // tasks
+    addTask, updateTask, deleteTask, duplicateTask, loadTaskDetail,
+    addChecklistItem, toggleChecklistItem, deleteChecklistItem,
+    addComment,
+    attachFile, removeAttachment, downloadAttachment, getAttachmentBlobUrl,
+    attachFileToProject, removeAttachmentFromProject,
+    addTaskStatus, updateTaskStatus, deleteTaskStatus,
+    createTag,
+    // notifications
+    setNotificationRead, markAllNotificationsRead, clearReadNotifications, deleteNotification,
+    // billing
+    changePlan, cancelSubscription, startTrial,
+    // misc
+    logActivity, resetToDefaultData,
+    // server-query escape hatches for pages that want them
+    dashboardApi, searchApi,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

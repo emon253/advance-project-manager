@@ -17,7 +17,7 @@ import {
   trialDaysLeft,
   formatRenewalDate,
 } from "../util/billingUtils";
-import { Check, CreditCard, Receipt, Sparkle, Clock, ShieldCheck } from "lucide-react";
+import { Check, CreditCard, Receipt, Sparkle, Clock, ShieldCheck, Lock } from "lucide-react";
 
 const PLAN_RANK = { free: 0, pro: 1, business: 2 };
 
@@ -29,6 +29,7 @@ export function BillingPage() {
     changePlan,
     cancelSubscription,
     startTrial,
+    can,
   } = useAppState();
 
   const [interval, setInterval] = useState(activeSubscription?.interval === "yearly" ? "yearly" : "monthly");
@@ -43,6 +44,30 @@ export function BillingPage() {
   const memberCount = activeWorkspace?.members?.length || 1;
   const isPersonal = activeWorkspace?.type === "personal";
   const renewalDate = formatRenewalDate(sub);
+
+  // Members and Viewers can't manage the subscription — show context only
+  if (!can("manageBilling")) {
+    return (
+      <div className="space-y-3 sm:space-y-5 text-left" id="billing-page-root">
+        <PageHeader
+          title="Plans & Billing"
+          description="Manage the subscription, seats, and invoices for this workspace."
+        />
+        <div className="card p-4 sm:p-6 flex flex-col items-center text-center gap-2">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500">
+            <Lock className="w-5 h-5" />
+          </span>
+          <h2 className="font-semibold text-sm sm:text-base text-zinc-900 dark:text-white">Admin access required</h2>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium max-w-sm">
+            Ask a workspace Owner or Admin to manage the subscription.
+          </p>
+          <span className="badge bg-primary/8 text-primary border-primary/20 dark:bg-primary/15 mt-1">
+            {currentPlan.name}{trialing ? " trial" : ""}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   const handleSelectPlan = (planId) => {
     if (planId === currentPlanId && !trialing) return;

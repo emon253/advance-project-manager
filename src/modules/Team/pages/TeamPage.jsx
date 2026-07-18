@@ -16,10 +16,10 @@ import { UpgradeModal } from "../../../components/common/UpgradeModal";
 import { getPlanLimits } from "../../Billing/util/billingUtils";
 
 export function TeamPage() {
-  const { users, setUsers, activeWorkspaceTasks, canAddMember, activePlanId } = useAppState();
+  const { users, activeWorkspaceTasks, canAddMember, activePlanId, can } = useAppState();
   const [showUpgrade, setShowUpgrade] = React.useState(false);
 
-  // Custom Invitation State Hook
+  // Custom Invitation State Hook — creates pending invites via provider
   const {
     showInviteForm,
     setShowInviteForm,
@@ -30,8 +30,9 @@ export function TeamPage() {
     inviteRole,
     setInviteRole,
     successBanner,
+    inviteError,
     handleInviteUser
-  } = useTeamInvite(users, setUsers);
+  } = useTeamInvite();
 
   return (
     <div className="space-y-3 sm:space-y-5 text-left" id="team-page-root">
@@ -40,20 +41,22 @@ export function TeamPage() {
         title="Workspace Associates"
         description="Review team workloads and invite new members to this workspace."
       >
-        <button
-          onClick={() => {
-            if (!showInviteForm && !canAddMember()) {
-              setShowUpgrade(true);
-              return;
-            }
-            setShowInviteForm(!showInviteForm);
-          }}
-          type="button"
-          className="btn btn-primary"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Invite Associate</span>
-        </button>
+        {can("manageMembers") && (
+          <button
+            onClick={() => {
+              if (!showInviteForm && !canAddMember()) {
+                setShowUpgrade(true);
+                return;
+              }
+              setShowInviteForm(!showInviteForm);
+            }}
+            type="button"
+            className="btn btn-primary"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Invite Associate</span>
+          </button>
+        )}
       </PageHeader>
 
       {/* 2. Success feedback banners */}
@@ -74,6 +77,7 @@ export function TeamPage() {
           setInviteEmail={setInviteEmail}
           inviteRole={inviteRole}
           setInviteRole={setInviteRole}
+          inviteError={inviteError}
           setShowInviteForm={setShowInviteForm}
         />
       )}
