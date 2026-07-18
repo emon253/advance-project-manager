@@ -20,10 +20,11 @@ import {
   templateApi,
   automationApi,
   workspaceApi,
+  planApi,
 } from "../api/endpoints";
 import { createRealtimeClient } from "../api/realtime";
 import { hasPermission, resolveRole } from "./permissions";
-import { effectivePlanId, getPlanLimits } from "../modules/Billing/util/billingUtils";
+import { effectivePlanId, getPlanLimits, PLANS, setPlans } from "../modules/Billing/util/billingUtils";
 
 /**
  * API-backed application state. The `useAppState()` contract is unchanged from
@@ -77,6 +78,7 @@ export function AppStateProvider({ children }) {
 
   // --- user-scoped data ------------------------------------------------------
   const [notifications, setNotifications] = useState([]);
+  const [plans, setPlansState] = useState(() => [...PLANS]);
   const [notificationSettings, setNotificationSettingsState] = useState({
     inApp: true, pushMock: false, emailMock: true,
     dailySummary: false, weeklySummary: true,
@@ -255,6 +257,21 @@ export function AppStateProvider({ children }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ---- owner-managed plan catalog ------------------------------------------
+  const refreshPlans = useCallback(async () => {
+    try {
+      const catalog = await planApi.list();
+      if (catalog.length > 0) {
+        setPlans(catalog);          // swap the live billingUtils catalog in place
+        setPlansState(catalog);     // re-render consumers
+      }
+    } catch { /* keep the seeded defaults */ }
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) refreshPlans();
+  }, [isAuthenticated, refreshPlans]);
 
   // ---- realtime channel (STOMP): live notification pushes -----------------
   // Preference lives in a ref so an edit doesn't tear down the socket.
@@ -1093,6 +1110,8 @@ export function AppStateProvider({ children }) {
     // auth
     login, register, logout,
     verifyEmail, resendVerification, forgotPassword, resetPassword, refreshCurrentUser,
+    plans, refreshPlans,
+    isSystemOwner: currentUser?.systemRole === "SYSTEM_OWNER",
     updateProfile, changePassword, deleteAccount,
     // workspaces & members
     addWorkspace, updateWorkspace, deleteWorkspace,

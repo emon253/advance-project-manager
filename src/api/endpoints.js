@@ -36,6 +36,13 @@ import {
   userToUi,
   workspaceToUi,
   workspaceTypeToApi,
+ planToUi,
+ adminPlanToUi,
+ adminUserRowToUi,
+ adminUserDetailToUi,
+ adminWorkspaceRowToUi,
+ adminAuditEntryToUi,
+ adminMetricsToUi,
 } from "./adapters";
 
 // --- auth (§4) ---------------------------------------------------------------
@@ -335,5 +342,63 @@ export const searchApi = {
     const params = new URLSearchParams({ q });
     if (type) params.set("type", type);
     return searchToUi(await http.get(`/workspaces/${workspaceId}/search?${params}`));
+  },
+};
+
+// --- plans (public catalog) ----------------------------------------------------
+
+export const planApi = {
+  list: async () => (await http.get("/plans")).map(planToUi),
+};
+
+// --- owner console (System Owner role required server-side) --------------------
+
+const adminPage = (data, mapRow) => ({
+  content: data.content.map(mapRow),
+  page: data.page,
+  size: data.size,
+  totalElements: data.totalElements,
+  totalPages: data.totalPages,
+  hasNext: data.hasNext,
+});
+
+const q = (params) => {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") search.set(key, value);
+  });
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+};
+
+export const ownerApi = {
+  metrics: async () => adminMetricsToUi(await http.get("/admin/metrics")),
+
+  users: {
+    list: async ({ query, status, plan, sort, page = 0, size = 20 } = {}) =>
+      adminPage(await http.get(`/admin/users${q({ query, status, plan, sort, page, size })}`), adminUserRowToUi),
+    get: async (id) => adminUserDetailToUi(await http.get(`/admin/users/${id}`)),
+    setStatus: async (id, enabled, reason) =>
+      adminUserRowToUi(await http.patch(`/admin/users/${id}/status`, { enabled, reason: reason || null })),
+  },
+
+  subscriptions: {
+    list: async ({ query, plan, status, page = 0, size = 20 } = {}) =>
+      adminPage(await http.get(`/admin/subscriptions${q({ query, plan, status, page, size })}`), adminWorkspaceRowToUi),
+    update: async (workspaceId, patch) =>
+      adminWorkspaceRowToUi(await http.patch(`/admin/subscriptions/${workspaceId}`, patch)),
+  },
+
+  plans: {
+    list: async () => (await http.get("/admin/plans")).map(adminPlanToUi),
+    create: async (body) => adminPlanToUi(await http.post("/admin/plans", body)),
+    update: async (code, body) => adminPlanToUi(await http.patch(`/admin/plans/${code}`, body)),
+    setStatus: async (code, status) => adminPlanToUi(await http.post(`/admin/plans/${code}/status`, { status })),
+    remove: (code) => http.delete(`/admin/plans/${code}`),
+  },
+
+  audit: {
+    list: async ({ targetType, page = 0, size = 25 } = {}) =>
+      adminPage(await http.get(`/admin/audit${q({ targetType, page, size })}`), adminAuditEntryToUi),
   },
 };

@@ -19,7 +19,8 @@ import {
   Folder,
   LogOut,
   Check,
-  CreditCard
+  CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import { getPlan, isTrialActive, trialDaysLeft } from "../../modules/Billing/util/billingUtils";
 import { UserAvatar } from "./UserAvatar";
@@ -37,7 +38,8 @@ export function DesktopSidebar({ onOpenQuickAdd, onOpenAISuggest, onClose = () =
     activeSubscription,
     activePlanId,
     can,
-    currentRole
+    currentRole,
+    isSystemOwner
   } = useAppState();
 
   const location = useLocation();
@@ -62,6 +64,7 @@ export function DesktopSidebar({ onOpenQuickAdd, onOpenAISuggest, onClose = () =
     ...(can("manageBilling") ? [{ label: "Plans & Billing", icon: CreditCard, path: "/billing" }] : []),
     { label: "Settings", icon: Settings, path: "/settings" },
     { label: "My Profile", icon: User, path: "/profile" },
+    ...(isSystemOwner ? [{ label: "Owner Console", icon: ShieldCheck, path: "/owner" }] : []),
   ];
 
   const trialing = isTrialActive(activeSubscription);
@@ -71,6 +74,7 @@ export function DesktopSidebar({ onOpenQuickAdd, onOpenAISuggest, onClose = () =
 
   const isItemActive = (item) =>
     location.pathname === item.path ||
+    (item.path === "/owner" && location.pathname.startsWith("/owner")) ||
     (item.path === "/my-tasks" && ["/tasks", "/today", "/upcoming", "/completed"].some(p => location.pathname.startsWith(p))) ||
     (item.path === "/projects" && location.pathname.startsWith("/projects/"));
 

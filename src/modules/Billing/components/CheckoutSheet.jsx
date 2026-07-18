@@ -63,7 +63,7 @@ export function CheckoutSheet({ isOpen, onClose, planId, interval, workspace, in
                 {workspace?.name} is now on {plan.name}
               </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-1">
-                {formatPrice(total)} billed {interval}. A receipt was added to your invoices.
+                {formatPrice(total, plan.currency)} billed {interval}. A receipt was added to your invoices.
               </p>
             </div>
             <button onClick={handleClose} className="btn btn-primary mt-2 w-full sm:w-auto sm:px-8">
@@ -78,7 +78,7 @@ export function CheckoutSheet({ isOpen, onClose, planId, interval, workspace, in
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-semibold text-zinc-900 dark:text-white">{plan.name} plan</span>
                   <span className="text-zinc-500 dark:text-zinc-400 font-medium">
-                    {formatPrice(perSeat)}/seat/{interval === "yearly" ? "yr" : "mo"}
+                    {formatPrice(perSeat, plan.currency)}/seat/{interval === "yearly" ? "yr" : "mo"}
                   </span>
                 </div>
 
@@ -112,7 +112,7 @@ export function CheckoutSheet({ isOpen, onClose, planId, interval, workspace, in
                 <div className="flex items-center justify-between pt-2.5 border-t border-zinc-100 dark:border-zinc-800">
                   <span className="text-sm font-semibold text-zinc-900 dark:text-white">Total</span>
                   <span className="text-sm font-bold text-zinc-900 dark:text-white font-tnum">
-                    {formatPrice(total)}<span className="text-xs font-medium text-zinc-500">/{interval === "yearly" ? "year" : "month"}</span>
+                    {formatPrice(total, plan.currency)}<span className="text-xs font-medium text-zinc-500">/{interval === "yearly" ? "year" : "month"}</span>
                   </span>
                 </div>
               </div>
@@ -145,7 +145,7 @@ export function CheckoutSheet({ isOpen, onClose, planId, interval, workspace, in
                 Cancel
               </button>
               <button type="submit" className="btn btn-primary flex-1">
-                Pay {formatPrice(total)}
+                Pay {formatPrice(total, plan.currency)}
               </button>
             </div>
           </form>

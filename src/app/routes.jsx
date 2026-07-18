@@ -18,6 +18,7 @@ import { InboxPage } from "../modules/Notifications/pages/InboxPage";
 import { SearchPage } from "../modules/Search/pages/SearchPage";
 import { TeamPage } from "../modules/Team/pages/TeamPage";
 import { SettingsPage } from "../modules/Settings/pages/SettingsPage";
+import { OwnerConsolePage } from "../modules/Owner/pages/OwnerConsolePage";
 import { ProfilePage } from "../modules/Profile/pages/ProfilePage";
 import { WorkspaceSettingsPage } from "../modules/Workspace/pages/WorkspaceSettingsPage";
 import { WorkspacesPage } from "../modules/Workspace/pages/WorkspacesPage";
@@ -203,6 +204,12 @@ export function AppRoutes() {
 
       {/* Personal & admin preferences settings */}
       <Route path="/settings" element={<AppLayout><SettingsPage /></AppLayout>} />
+
+      <Route path="/owner" element={<AppLayout><OwnerConsolePage tab="dashboard" /></AppLayout>} />
+      <Route path="/owner/users" element={<AppLayout><OwnerConsolePage tab="users" /></AppLayout>} />
+      <Route path="/owner/plans" element={<AppLayout><OwnerConsolePage tab="plans" /></AppLayout>} />
+      <Route path="/owner/subscriptions" element={<AppLayout><OwnerConsolePage tab="subscriptions" /></AppLayout>} />
+      <Route path="/owner/audit" element={<AppLayout><OwnerConsolePage tab="audit" /></AppLayout>} />
       <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />
       <Route path="/workspace/settings" element={<Navigate to="/workspace-settings" replace />} />
       <Route path="/workspace-settings" element={<AppLayout><WorkspaceSettingsPage /></AppLayout>} />

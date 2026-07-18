@@ -19,7 +19,11 @@ import {
 } from "../util/billingUtils";
 import { Check, CreditCard, Receipt, Sparkle, Clock, ShieldCheck, Lock } from "lucide-react";
 
-const PLAN_RANK = { free: 0, pro: 1, business: 2 };
+/** Rank by catalog order — works for owner-created plans too. */
+const planRank = (id) => {
+  const index = PLANS.findIndex((p) => p.id === id);
+  return index === -1 ? 0 : index;
+};
 
 export function BillingPage() {
   const {
@@ -216,7 +220,7 @@ export function BillingPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-4">
         {PLANS.map((plan) => {
           const isCurrent = plan.id === currentPlanId && !trialing;
-          const isDowngrade = PLAN_RANK[plan.id] < PLAN_RANK[currentPlanId];
+          const isDowngrade = planRank(plan.id) < planRank(currentPlanId);
           const price = interval === "yearly" ? plan.yearly : plan.monthly;
 
           return (
@@ -240,7 +244,7 @@ export function BillingPage() {
               </div>
 
               <p className="mt-2">
-                <span className="text-2xl font-bold text-zinc-900 dark:text-white font-tnum">{formatPrice(price)}</span>
+                <span className="text-2xl font-bold text-zinc-900 dark:text-white font-tnum">{formatPrice(price, plan.currency)}</span>
                 {price > 0 && (
                   <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400"> /seat/{interval === "yearly" ? "yr" : "mo"}</span>
                 )}
@@ -323,7 +327,7 @@ export function BillingPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2.5 shrink-0">
-                    <span className="text-sm font-semibold text-zinc-900 dark:text-white font-tnum">{formatPrice(inv.amount)}</span>
+                    <span className="text-sm font-semibold text-zinc-900 dark:text-white font-tnum">{formatPrice(inv.amount, inv.currency)}</span>
                     <span className="badge bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
                       {inv.status}
                     </span>

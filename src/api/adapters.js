@@ -66,6 +66,7 @@ export function userToUi(u) {
     role: u.role ? roleToUi(u.role) : undefined,
     phone: u.phone ?? null,
     emailVerified: u.emailVerified,
+    systemRole: u.systemRole || "USER",
   };
 }
 
@@ -310,6 +311,7 @@ export function invoiceToUi(inv) {
     date: iso(inv.issuedAt),
     description: inv.description,
     amount: Math.round(inv.amountCents) / 100,
+    currency: inv.currency || "USD",
     status: TITLE(inv.status), // PAID → Paid
   };
 }
@@ -342,5 +344,167 @@ export function searchToUi(s) {
     people: (s.peopleHits || []).map((h) => ({
       id: h.id, name: h.name, email: h.email, avatar: h.avatarInitials, color: h.avatarColor,
     })),
+  };
+}
+
+// --- plans (owner-managed catalog) -------------------------------------------
+
+const CURRENCY_SYMBOLS = { USD: "$", BDT: "\u09f3" };
+
+export function planToUi(p) {
+  return {
+    id: p.code.toLowerCase(),
+    code: p.code,
+    name: p.name,
+    tagline: p.tagline || "",
+    currency: p.currency || "USD",
+    symbol: CURRENCY_SYMBOLS[p.currency] || "$",
+    monthly: Math.round(p.monthlyPerSeatCents) / 100,
+    yearly: Math.round(p.yearlyPerSeatCents) / 100,
+    highlight: !!p.highlight,
+    trialDays: p.trialDays ?? 14,
+    features: p.features || [],
+    limits: {
+      projects: p.projectLimit == null ? Infinity : p.projectLimit,
+      members: p.memberLimit == null ? Infinity : p.memberLimit,
+      ai: !!p.ai,
+      customStatuses: !!p.customStatuses,
+      automation: !!p.automation,
+    },
+  };
+}
+
+// --- owner console ------------------------------------------------------------
+
+export function adminPlanToUi(p) {
+  return {
+    ...planToUi(p),
+    visible: !!p.visible,
+    status: p.status, // ACTIVE | INACTIVE | ARCHIVED
+    isDefault: !!p.defaultPlan,
+    sortOrder: p.sortOrder ?? 0,
+    subscriberCount: p.subscriberCount ?? 0,
+    projectLimitRaw: p.projectLimit,
+    memberLimitRaw: p.memberLimit,
+    monthlyCents: p.monthlyPerSeatCents,
+    yearlyCents: p.yearlyPerSeatCents,
+  };
+}
+
+export function adminUserRowToUi(u) {
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    initials: u.avatarInitials,
+    color: u.avatarColor,
+    emailVerified: !!u.emailVerified,
+    systemRole: u.systemRole,
+    enabled: !!u.enabled,
+    createdAt: iso(u.createdAt),
+    lastLoginAt: iso(u.lastLoginAt),
+    ownedWorkspaces: u.ownedWorkspaces ?? 0,
+    memberWorkspaces: u.memberWorkspaces ?? 0,
+    ownedPlans: (u.ownedPlans || []).map((c) => c.toLowerCase()),
+  };
+}
+
+export function adminSubscriptionInfoToUi(s) {
+  if (!s) return null;
+  return {
+    plan: s.plan.toLowerCase(),
+    planCode: s.plan,
+    planName: s.planName,
+    currency: s.currency || "USD",
+    symbol: CURRENCY_SYMBOLS[s.currency] || "$",
+    status: (s.status || "ACTIVE").toLowerCase(),
+    interval: (s.interval || "MONTHLY").toLowerCase(),
+    seats: s.seats ?? 1,
+    renewsAt: iso(s.renewsAt),
+    trialEndsAt: iso(s.trialEndsAt),
+    overrideProjectLimit: s.overrideProjectLimit,
+    overrideMemberLimit: s.overrideMemberLimit,
+    adminNotes: s.adminNotes || "",
+  };
+}
+
+export function adminWorkspaceRowToUi(w) {
+  return {
+    workspaceId: w.workspaceId,
+    name: w.workspaceName,
+    logoKey: w.logoKey,
+    type: (w.type || "PERSONAL").toLowerCase(),
+    ownerId: w.ownerId,
+    ownerName: w.ownerName,
+    ownerEmail: w.ownerEmail,
+    members: w.members ?? 0,
+    projects: w.projects ?? 0,
+    subscription: adminSubscriptionInfoToUi(w.subscription),
+  };
+}
+
+export function adminUserDetailToUi(d) {
+  return {
+    user: adminUserRowToUi(d.user),
+    workspaces: (d.workspaces || []).map((w) => ({
+      workspaceId: w.workspaceId,
+      name: w.workspaceName,
+      logoKey: w.logoKey,
+      type: (w.type || "PERSONAL").toLowerCase(),
+      role: TITLE(w.role),
+      members: w.members ?? 0,
+      projects: w.projects ?? 0,
+      subscription: adminSubscriptionInfoToUi(w.subscription),
+    })),
+    recentAudit: (d.recentAudit || []).map(adminAuditEntryToUi),
+  };
+}
+
+export function adminAuditEntryToUi(e) {
+  return {
+    id: e.id,
+    actorId: e.actorId,
+    actorName: e.actorName,
+    actorEmail: e.actorEmail,
+    action: e.action,
+    targetType: e.targetType,
+    targetId: e.targetId,
+    detail: e.detail || "",
+    createdAt: iso(e.createdAt),
+  };
+}
+
+export function adminMetricsToUi(m) {
+  return {
+    totalUsers: m.totalUsers,
+    suspendedUsers: m.suspendedUsers,
+    newUsers7d: m.newUsers7d,
+    newUsers30d: m.newUsers30d,
+    totalWorkspaces: m.totalWorkspaces,
+    activeSubscriptions: m.activeSubscriptions,
+    trialingSubscriptions: m.trialingSubscriptions,
+    planDistribution: (m.planDistribution || []).map((p) => ({
+      plan: p.plan.toLowerCase(),
+      planName: p.planName,
+      active: p.active,
+      trialing: p.trialing,
+      canceled: p.canceled,
+    })),
+    estimatedMrr: (m.estimatedMrr || []).map((r) => ({
+      currency: r.currency,
+      symbol: CURRENCY_SYMBOLS[r.currency] || "$",
+      monthly: Math.round(r.monthlyMinorUnits) / 100,
+    })),
+    trialsEndingSoon: (m.trialsEndingSoon || []).map(alertToUi),
+    lapsedSubscriptions: (m.lapsedSubscriptions || []).map(alertToUi),
+  };
+}
+
+function alertToUi(a) {
+  return {
+    workspaceId: a.workspaceId,
+    workspaceName: a.workspaceName,
+    plan: (a.plan || "").toLowerCase(),
+    when: iso(a.when),
   };
 }

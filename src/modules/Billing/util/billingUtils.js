@@ -8,6 +8,15 @@
  * every workspace has a plan, billed per seat, monthly or yearly.
  * Personal workspaces are single-seat; company workspaces pay per member.
  */
+/** Currency symbols the platform sells in (System Owner module). */
+export const CURRENCY_SYMBOLS = { USD: "$", BDT: "\u09f3" };
+
+/**
+ * Live plan catalog. Seeded with the launch defaults below so billing UI
+ * renders instantly, then REPLACED IN PLACE by `setPlans()` when the real
+ * catalog arrives from GET /plans (owner-managed, may add BDT plans etc.).
+ * Consumers keep importing PLANS / the helpers — same references, live data.
+ */
 export const PLANS = [
   {
     id: "free",
@@ -77,6 +86,20 @@ export const PLANS = [
   },
 ];
 
+PLANS.forEach((plan) => {
+  plan.code = plan.code || plan.id.toUpperCase();
+  plan.currency = plan.currency || "USD";
+  plan.symbol = CURRENCY_SYMBOLS[plan.currency] || "$";
+  plan.trialDays = plan.trialDays ?? 14;
+});
+
+/** Replace the live catalog with API plans (already UI-shaped). */
+export function setPlans(uiPlans) {
+  if (!Array.isArray(uiPlans) || uiPlans.length === 0) return;
+  PLANS.length = 0;
+  PLANS.push(...uiPlans);
+}
+
 export const TRIAL_DAYS = 14;
 
 export function getPlan(planId) {
@@ -94,8 +117,9 @@ export function calcPrice(planId, interval, seats = 1) {
   return perSeat * Math.max(1, seats);
 }
 
-export function formatPrice(amount) {
-  return amount === 0 ? "$0" : `$${amount.toLocaleString()}`;
+export function formatPrice(amount, currency = "USD") {
+  const symbol = CURRENCY_SYMBOLS[currency] || "$";
+  return amount === 0 ? `${symbol}0` : `${symbol}${amount.toLocaleString()}`;
 }
 
 /** Days left on a trial; 0 if expired or absent. */
