@@ -13,7 +13,7 @@
  *  - JSON by default, multipart when given FormData, blob downloads on request
  */
 
-export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://32.236.69.148:8095/carbarn-sandbox/api/v1";
 
 const ACCESS_KEY = "apm_access_token";
 const REFRESH_KEY = "apm_refresh_token";
