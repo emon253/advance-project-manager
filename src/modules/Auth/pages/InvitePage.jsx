@@ -9,7 +9,7 @@ import { useAppState } from "../../../app/providers";
 import { inviteApi } from "../../../api/endpoints";
 import { tokenStore } from "../../../api/client";
 import { getIconComponent } from "../../../components/common/IconHelper";
-import { LogoTile } from "../../../components/common/Logo";
+import { Wordmark } from "../../../components/common/Logo";
 import { MailX, CheckCircle2, Users, Loader2 } from "lucide-react";
 
 /**
@@ -118,7 +118,7 @@ export function InvitePage() {
     <div className="min-h-dvh bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center px-5 py-8 pt-safe pb-safe">
       <div className="w-full max-w-sm mx-auto">
         <div className="text-center mb-6">
-          <LogoTile size="h-12 w-12" rounded="rounded-xl" className="bg-primary text-white shadow-soft mb-3" />
+          <div className="mb-4"><Wordmark className="text-2xl" /></div>
         </div>
 
         <div className="w-full sm:bg-white sm:dark:bg-zinc-900 sm:border sm:border-zinc-200/80 sm:dark:border-zinc-800 sm:rounded-xl sm:shadow-soft sm:p-6 text-center">

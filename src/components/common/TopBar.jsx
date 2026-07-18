@@ -6,7 +6,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAppState } from "../../app/providers";
-import { LogoTile } from "./Logo";
+import { Wordmark } from "./Logo";
 import {
   Search,
   Sun,
@@ -75,11 +75,8 @@ export function TopBar({ onOpenQuickAdd, onOpenAISuggest, onMobileMenuToggle }) 
             </button>
           )}
 
-          <Link to="/dashboard" className="flex items-center gap-2 min-w-0 rounded-lg">
-            <LogoTile size="h-7 w-7" rounded="rounded-lg" className="bg-primary text-white" markClassName="w-[60%] h-[60%]" />
-            <span className="font-display font-extrabold text-sm tracking-wider text-zinc-900 dark:text-white uppercase truncate">
-              Junction
-            </span>
+          <Link to="/dashboard" className="flex items-center min-w-0 rounded-lg">
+            <Wordmark className="text-lg" />
           </Link>
         </div>
 

@@ -38,8 +38,8 @@ export function JunctionMark({ className = "w-full h-full" }) {
 
 /**
  * The brand mark on its rounded primary tile. `size` is a Tailwind size pair
- * for the tile; the mark sits at 58% of it. Pass `className` to override the
- * tile (e.g. inverted white tile on the auth brand panel).
+ * for the tile; the mark sits at 58% of it. Kept for compact icon contexts
+ * (favicon parity, PWA); the in-app logo is the {@link Wordmark}.
  */
 export function LogoTile({
   size = "h-9 w-9",
@@ -50,6 +50,26 @@ export function LogoTile({
   return (
     <span className={`inline-flex shrink-0 items-center justify-center ${size} ${rounded} ${className}`}>
       <JunctionMark className={markClassName} />
+    </span>
+  );
+}
+
+/**
+ * Junction wordmark — the primary logo. Plus Jakarta Sans ExtraBold, tight
+ * tracking, with the leading "J" in the brand primary and the rest in the
+ * foreground tone. Pass `inverted` on a primary/dark background (e.g. the auth
+ * brand panel), where the whole word goes white so the "J" doesn't disappear.
+ * Size is controlled by the caller via `className` (font-size).
+ */
+export function Wordmark({ className = "text-xl", inverted = false }) {
+  const base = `font-display font-extrabold tracking-[-0.022em] leading-none select-none whitespace-nowrap ${className}`;
+  if (inverted) {
+    return <span className={`${base} text-white`}>Junction</span>;
+  }
+  return (
+    <span className={base}>
+      <span className="text-primary">J</span>
+      <span className="text-zinc-900 dark:text-white">unction</span>
     </span>
   );
 }

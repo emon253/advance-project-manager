@@ -6,7 +6,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAppState } from "../../../app/providers";
-import { LogoTile } from "../../../components/common/Logo";
+import { Wordmark } from "../../../components/common/Logo";
 import {
   Eye, EyeOff, ShieldAlert, CheckCircle2, Loader2,
   LayoutDashboard, BellRing, Users, User, Building2,
@@ -30,9 +30,8 @@ function BrandPanel() {
         aria-hidden="true"
       />
 
-      <div className="relative flex items-center gap-3">
-        <LogoTile size="h-10 w-10" rounded="rounded-xl" className="bg-white text-primary shadow-soft" />
-        <span className="font-display font-bold text-lg tracking-[0.18em]">JUNCTION</span>
+      <div className="relative">
+        <Wordmark inverted className="text-2xl" />
       </div>
 
       <div className="relative max-w-md">
@@ -230,9 +229,8 @@ export function AuthPages() {
       {/* Form column */}
       <div className="flex-1 flex flex-col min-h-dvh overflow-y-auto pt-safe pb-safe">
         {/* Compact brand header (below lg the panel is hidden) */}
-        <div className="lg:hidden flex items-center gap-2.5 px-6 pt-6">
-          <LogoTile size="h-8 w-8" rounded="rounded-lg" className="bg-primary text-white shadow-soft" markClassName="w-[60%] h-[60%]" />
-          <span className="font-display font-bold text-sm tracking-[0.16em] text-zinc-900 dark:text-white">JUNCTION</span>
+        <div className="lg:hidden flex items-center px-6 pt-6">
+          <Wordmark className="text-xl" />
         </div>
 
         <div className="flex-1 flex items-center justify-center px-6 py-10">

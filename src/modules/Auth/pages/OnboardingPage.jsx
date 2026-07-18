@@ -7,7 +7,7 @@ import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAppState } from "../../../app/providers";
 import { X, UserPlus, FolderPlus } from "lucide-react";
-import { LogoTile } from "../../../components/common/Logo";
+import { Wordmark } from "../../../components/common/Logo";
 
 /**
  * First-run onboarding for new company workspaces (/welcome):
@@ -54,7 +54,7 @@ export function OnboardingPage() {
     <div className="min-h-dvh bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center px-5 py-8 pt-safe pb-safe">
       <div className="w-full max-w-md mx-auto">
         <div className="text-center mb-6">
-          <LogoTile size="h-12 w-12" rounded="rounded-xl" className="bg-primary text-white shadow-soft mb-3" />
+          <div className="mb-4"><Wordmark className="text-2xl" /></div>
           <h1 className="font-display font-bold text-xl text-zinc-900 dark:text-white">
             Welcome to {activeWorkspace?.name}
           </h1>
