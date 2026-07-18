@@ -21,6 +21,7 @@ import {
   automationApi,
   workspaceApi,
 } from "../api/endpoints";
+import { createRealtimeClient } from "../api/realtime";
 import { hasPermission, resolveRole } from "./permissions";
 import { effectivePlanId, getPlanLimits } from "../modules/Billing/util/billingUtils";
 
@@ -254,6 +255,49 @@ export function AppStateProvider({ children }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ---- realtime channel (STOMP): live notification pushes -----------------
+  // Preference lives in a ref so an edit doesn't tear down the socket.
+  const notificationSettingsRef = useRef(notificationSettings);
+  useEffect(() => {
+    notificationSettingsRef.current = notificationSettings;
+  }, [notificationSettings]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    const client = createRealtimeClient({
+      onEvent: ({ type, notification }) => {
+        if (type !== "notification") return;
+        setNotifications((prev) =>
+          prev.some((n) => String(n.id) === String(notification.id)) ? prev : [notification, ...prev]);
+        pushNotification(
+          notification.message, "update", notification.taskId, notification.projectId,
+          notification.title, notification.message);
+        // OS-level notification only when the tab is hidden, the user's
+        // "Browser push" preference is on, and the browser permission is granted.
+        if (document.hidden
+            && notificationSettingsRef.current?.pushMock
+            && typeof Notification !== "undefined"
+            && Notification.permission === "granted") {
+          try {
+            new Notification(notification.title || "Carbarn", {
+              body: notification.message,
+              tag: `apm-notification-${notification.id}`,
+            });
+          } catch { /* notification constructor unsupported (e.g. Android): fine */ }
+        }
+      },
+    });
+    return () => client.deactivate();
+  }, [isAuthenticated, pushNotification]);
+
+  // PWA app-icon badge mirrors the unread count where the API exists.
+  useEffect(() => {
+    if (!("setAppBadge" in navigator)) return;
+    const unread = notifications.filter((n) => !n.read).length;
+    if (unread > 0) navigator.setAppBadge(unread).catch(() => {});
+    else navigator.clearAppBadge?.().catch(() => {});
+  }, [notifications]);
 
   // Theme side-effect (unchanged behavior).
   useEffect(() => {

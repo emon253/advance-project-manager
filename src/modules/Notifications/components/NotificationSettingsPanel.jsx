@@ -31,6 +31,22 @@ function PreferenceRow({ title, description, enabled, onToggle }) {
 }
 
 export function NotificationSettingsPanel({ notificationSettings, handleTogglePreference }) {
+  const [browserPermission, setBrowserPermission] = React.useState(
+    typeof Notification !== "undefined" ? Notification.permission : "unsupported"
+  );
+
+  // Enabling browser push asks the browser for permission on the same click
+  // (permission prompts must ride a user gesture). Denied stays toggleable —
+  // the preference is server-side — but we surface that alerts are blocked.
+  const handleToggleBrowserPush = async () => {
+    const enabling = !notificationSettings.pushMock;
+    if (enabling && typeof Notification !== "undefined" && Notification.permission === "default") {
+      const result = await Notification.requestPermission();
+      setBrowserPermission(result);
+    }
+    handleTogglePreference("pushMock");
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-4 animate-in fade-in duration-200" id="inbox-settings-panel">
       {/* Box 1: Alert delivery channels */}
@@ -54,9 +70,13 @@ export function NotificationSettingsPanel({ notificationSettings, handleTogglePr
           />
           <PreferenceRow
             title="Browser push"
-            description="Show browser toast popups immediately"
+            description={
+              browserPermission === "denied"
+                ? "Blocked in your browser settings — allow notifications for this site to receive them"
+                : "Desktop alerts when Carbarn is in the background"
+            }
             enabled={notificationSettings.pushMock}
-            onToggle={() => handleTogglePreference("pushMock")}
+            onToggle={handleToggleBrowserPush}
           />
           <PreferenceRow
             title="Email copies"

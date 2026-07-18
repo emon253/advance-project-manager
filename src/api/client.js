@@ -13,7 +13,7 @@
  *  - JSON by default, multipart when given FormData, blob downloads on request
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
 
 const ACCESS_KEY = "apm_access_token";
 const REFRESH_KEY = "apm_refresh_token";
@@ -75,7 +75,7 @@ async function parseError(response) {
 // Single-flight refresh: concurrent 401s share one refresh round-trip.
 let refreshInFlight = null;
 
-async function refreshTokens() {
+export async function refreshTokens() {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
       const refreshToken = tokenStore.refresh;
