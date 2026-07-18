@@ -122,9 +122,13 @@ export function OwnerUsers() {
                   className="w-full text-left px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors lg:grid lg:grid-cols-[minmax(220px,2fr)_120px_140px_110px_120px_120px] lg:gap-3 lg:items-center cursor-pointer"
                 >
                   <span className="flex items-center gap-2.5 min-w-0">
-                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${u.color || "bg-primary text-white"}`}>
-                      {u.initials}
-                    </span>
+                    {u.avatarUrl ? (
+                      <img src={u.avatarUrl} alt="" referrerPolicy="no-referrer" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${u.color || "bg-primary text-white"}`}>
+                        {u.initials}
+                      </span>
+                    )}
                     <span className="min-w-0">
                       <span className="flex items-center gap-1.5 text-sm font-semibold text-zinc-900 dark:text-white truncate">
                         {u.name}
@@ -170,9 +174,13 @@ export function OwnerUsers() {
             <div className="sheet-grabber" />
             <div className="flex items-start justify-between gap-3 px-5 pt-4">
               <div className="flex items-center gap-3 min-w-0">
-                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${detail.user.color || "bg-primary text-white"}`}>
-                  {detail.user.initials}
-                </span>
+                {detail.user.avatarUrl ? (
+                  <img src={detail.user.avatarUrl} alt="" referrerPolicy="no-referrer" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                ) : (
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${detail.user.color || "bg-primary text-white"}`}>
+                    {detail.user.initials}
+                  </span>
+                )}
                 <div className="min-w-0">
                   <h2 className="font-display font-semibold text-base text-zinc-900 dark:text-white truncate">{detail.user.name}</h2>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">{detail.user.email}</p>
