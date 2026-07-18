@@ -65,7 +65,7 @@ export function WorkspacesPage() {
 
       {/* Page Header */}
       <PageHeader
-        title="Corporate Workspaces"
+        title="Workspaces"
         description="Browse workspaces, switch the active one, and manage team scopes."
       >
         <button

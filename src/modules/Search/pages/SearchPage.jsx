@@ -32,7 +32,7 @@ export function SearchPage() {
     <div className="space-y-2.5 sm:space-y-5 text-left" id="search-page-portfolio-root">
       {/* 1. Page Header */}
       <PageHeader 
-        title="Deep Filter Search" 
+        title="Search" 
         description="Filter specific deliverables, priorities, or commentaries across the active workspace."
       />
 

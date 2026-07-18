@@ -18,10 +18,24 @@ const CURRENCIES = [
 
 const EMPTY_FORM = {
   code: "", name: "", tagline: "", currency: "USD",
-  monthly: "0", yearly: "0", projectLimit: "", memberLimit: "",
+  monthly: "0", yearly: "0", projectLimit: "", memberLimit: "", workspaceLimit: "",
   ai: false, customStatuses: false, automation: false,
   trialDays: "14", features: "", highlight: false, visible: true, sortOrder: "10",
 };
+
+/** Finding #7: marketing bullets suggested live from the limit/feature inputs. */
+function suggestedBullets(f) {
+  const bullets = [];
+  bullets.push(f.projectLimit === "" ? "Unlimited projects" : `Up to ${f.projectLimit} projects per workspace`);
+  bullets.push(f.memberLimit === "" ? "Unlimited members" : `Up to ${f.memberLimit} members`);
+  if (f.workspaceLimit !== "") bullets.push(`Own up to ${f.workspaceLimit} workspace${f.workspaceLimit === "1" ? "" : "s"}`);
+  else bullets.push("Unlimited workspaces");
+  if (f.ai) bullets.push("AI task planner & refiner");
+  if (f.customStatuses) bullets.push("Custom task statuses");
+  if (f.automation) bullets.push("Automation rules");
+  if (parseInt(f.trialDays || "0", 10) > 0) bullets.push(`${f.trialDays}-day free trial`);
+  return bullets.join("\n");
+}
 
 /** Plan catalog management: create, edit, lifecycle, safe deletion. */
 export function OwnerPlans() {
@@ -42,13 +56,20 @@ export function OwnerPlans() {
 
   const refresh = async () => { load(); refreshPlans(); };
 
-  const openCreate = () => { setFormError(""); setEditor({ mode: "create", form: { ...EMPTY_FORM } }); };
+  const openCreate = () => {
+    setFormError("");
+    const form = { ...EMPTY_FORM };
+    form.features = suggestedBullets(form);
+    setEditor({ mode: "create", featuresTouched: false, form });
+  };
   const openEdit = (plan) => {
     setFormError("");
     setEditor({
       mode: "edit",
       code: plan.code,
       isDefault: plan.isDefault,
+      featuresTouched: true, // existing bullets are deliberate — never clobber
+
       form: {
         code: plan.code,
         name: plan.name,
@@ -58,6 +79,7 @@ export function OwnerPlans() {
         yearly: String(plan.yearly),
         projectLimit: plan.projectLimitRaw == null ? "" : String(plan.projectLimitRaw),
         memberLimit: plan.memberLimitRaw == null ? "" : String(plan.memberLimitRaw),
+        workspaceLimit: plan.workspaceLimitRaw == null ? "" : String(plan.workspaceLimitRaw),
         ai: plan.limits.ai,
         customStatuses: plan.limits.customStatuses,
         automation: plan.limits.automation,
@@ -86,6 +108,7 @@ export function OwnerPlans() {
       yearlyPerSeatCents: Math.round(parseFloat(f.yearly || "0") * 100),
       projectLimit: f.projectLimit === "" ? null : parseInt(f.projectLimit, 10),
       memberLimit: f.memberLimit === "" ? null : parseInt(f.memberLimit, 10),
+      workspaceLimit: f.workspaceLimit === "" ? null : parseInt(f.workspaceLimit, 10),
       ai: f.ai, customStatuses: f.customStatuses, automation: f.automation,
       trialDays: parseInt(f.trialDays || "0", 10),
       features: f.features.split("\n").map((x) => x.trim()).filter(Boolean),
@@ -138,7 +161,17 @@ export function OwnerPlans() {
 
   const field = (key) => ({
     value: editor?.form[key] ?? "",
-    onChange: (e) => setEditor((ed) => ({ ...ed, form: { ...ed.form, [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value } })),
+    onChange: (e) => setEditor((ed) => {
+      const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+      const form = { ...ed.form, [key]: value };
+      const featuresTouched = key === "features" ? true : ed.featuresTouched;
+      // Until the owner writes their own bullets, keep them in sync with the
+      // limits/features being configured (finding #7).
+      if (!featuresTouched && key !== "features") {
+        form.features = suggestedBullets(form);
+      }
+      return { ...ed, featuresTouched, form };
+    }),
   });
 
   return (
@@ -283,7 +316,7 @@ export function OwnerPlans() {
                   <input id="plan-yearly" className="field" type="number" min="0" step="0.01" {...field("yearly")} />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="label" htmlFor="plan-projects">Project limit</label>
                   <input id="plan-projects" className="field" type="number" min="1" placeholder="Unlimited" {...field("projectLimit")} />
@@ -291,6 +324,10 @@ export function OwnerPlans() {
                 <div>
                   <label className="label" htmlFor="plan-members">Member limit</label>
                   <input id="plan-members" className="field" type="number" min="1" placeholder="Unlimited" {...field("memberLimit")} />
+                </div>
+                <div>
+                  <label className="label" htmlFor="plan-workspaces">Workspace limit</label>
+                  <input id="plan-workspaces" className="field" type="number" min="1" placeholder="Unlimited" {...field("workspaceLimit")} />
                 </div>
                 <div>
                   <label className="label" htmlFor="plan-trial">Trial days</label>
@@ -306,7 +343,18 @@ export function OwnerPlans() {
                 ))}
               </div>
               <div>
-                <label className="label" htmlFor="plan-features">Marketing bullets (one per line)</label>
+                <div className="flex items-center justify-between">
+                  <label className="label" htmlFor="plan-features">Marketing bullets (one per line)</label>
+                  {editor.featuresTouched && (
+                    <button
+                      type="button"
+                      className="text-[11px] font-semibold text-primary hover:underline mb-1.5 cursor-pointer"
+                      onClick={() => setEditor((ed) => ({ ...ed, featuresTouched: false, form: { ...ed.form, features: suggestedBullets(ed.form) } }))}
+                    >
+                      Reset to suggested
+                    </button>
+                  )}
+                </div>
                 <textarea id="plan-features" rows={4} className="field" placeholder={"Unlimited projects\nPriority support"} {...field("features")} />
               </div>
               <div className="w-32">

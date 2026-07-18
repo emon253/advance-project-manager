@@ -19,12 +19,22 @@ export function UserAvatar({ user, size = "md", showRing = false, showPresence =
 
   return (
     <div className="relative shrink-0 select-none">
+      {user.avatarUrl ? (
+        <img
+          src={user.avatarUrl}
+          alt={user.name || "User avatar"}
+          title={user.name}
+          referrerPolicy="no-referrer"
+          className={`rounded-full object-cover ${sizeClasses[size]} ${showRing ? "ring-2 ring-primary/30" : ""}`}
+        />
+      ) : (
       <div
         className={`flex items-center justify-center font-display font-semibold rounded-full ${sizeClasses[size]} ${user.color || "bg-primary text-white"} ${showRing ? "ring-2 ring-primary/30" : ""}`}
         title={user.name}
       >
         {initials}
       </div>
+      )}
 
       {showPresence && (
         <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-950" />

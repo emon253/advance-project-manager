@@ -10,7 +10,7 @@ import { CheckCheck, Trash2 } from "lucide-react";
 export function InboxHeader({ activeTab, notifications, handleMarkAllRead, handleClearRead }) {
   return (
     <PageHeader
-      title="Workspace Inbox"
+      title="Inbox"
       description="Assigned tasks, team comments, file updates, and upcoming alerts."
     >
       {activeTab !== "preferences" && notifications.length > 0 && (

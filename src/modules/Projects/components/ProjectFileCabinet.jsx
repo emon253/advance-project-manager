@@ -4,8 +4,14 @@
  */
 
 import React from "react";
-import { Paperclip, AlertTriangle, FileText } from "lucide-react";
+import { Paperclip, AlertTriangle, FileText , Eye, Download, Trash2 } from "lucide-react";
 import { formatDateTime } from "../util/projectUtils";
+
+const isImageType = (t) => {
+  const type = (t || "").toLowerCase();
+  return type.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "gif"].includes(type);
+};
+const isPdfType = (t) => (t || "").toLowerCase().includes("pdf");
 
 export function ProjectFileCabinet({
   project,
@@ -48,8 +54,8 @@ export function ProjectFileCabinet({
 
       <div className="divide-y divide-zinc-100 dark:divide-zinc-800 sm:divide-y-0 sm:space-y-2.5">
         {projectFiles.map((file, idx) => {
-          const isImage = ["png", "jpg", "jpeg", "webp"].includes(file.type?.toLowerCase());
-          const isPDF = file.type?.toLowerCase() === "pdf";
+          const isImage = isImageType(file.type);
+          const isPDF = isPdfType(file.type);
           const isMockFile = ["att_mock1", "att_mock2", "att_mock3"].includes(file.id);
           return (
             <div
@@ -83,30 +89,37 @@ export function ProjectFileCabinet({
                   </p>
                 </div>
               </div>
+              {/* Finding #5: compact icon actions on mobile, labeled on desktop */}
               <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
                 {(isImage || isPDF) && (
                   <button
                     type="button"
                     onClick={() => setPreviewFile(file)}
                     className="btn btn-sm btn-ghost text-primary hover:text-primary hover:bg-primary/8 dark:hover:bg-primary/15"
+                    aria-label={`Preview ${file.name}`}
                   >
-                    Preview
+                    <Eye className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Preview</span>
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => handleDownloadFile(file)}
                   className="btn btn-sm btn-secondary"
+                  aria-label={`Download ${file.name}`}
                 >
-                  Download
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Download</span>
                 </button>
                 {!isMockFile && (
                   <button
                     type="button"
                     onClick={() => removeAttachmentFromProject(project.id, file.id)}
                     className="btn btn-sm btn-danger-soft"
+                    aria-label={`Delete ${file.name}`}
                   >
-                    Delete
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Delete</span>
                   </button>
                 )}
               </div>

@@ -7,12 +7,14 @@ import React, { useState } from "react";
 import { useAppState } from "../../../app/providers";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { UserAvatar } from "../../../components/common/UserAvatar";
-import { Key, UserCheck, Check, AlertTriangle, Trash2, X } from "lucide-react";
+import { Key, UserCheck, Check, AlertTriangle, Trash2, X , Camera, Loader2 } from "lucide-react";
 
 export function ProfilePage() {
-  const { currentUser, updateProfile, changePassword, deleteAccount } = useAppState();
+  const { currentUser, updateProfile, changePassword, deleteAccount , uploadAvatar, removeAvatar } = useAppState();
 
   const [name, setName] = useState(currentUser?.name || "");
+  const avatarInputRef = React.useRef(null);
+  const [avatarBusy, setAvatarBusy] = React.useState(false);
   const [email, setEmail] = useState(currentUser?.email || "");
   const [role] = useState(currentUser?.role || "Member");
   const [phone, setPhone] = useState(currentUser?.phone || "");
@@ -59,7 +61,7 @@ export function ProfilePage() {
   return (
     <div className="space-y-3 sm:space-y-5 text-left max-w-2xl">
       <PageHeader
-        title="Profile Settings"
+        title="Profile"
         description="Manage your name, contact details, and password."
       />
 
@@ -72,10 +74,45 @@ export function ProfilePage() {
 
       <div className="card p-3 sm:p-5 text-left space-y-3 sm:space-y-5">
 
-        {/* Upper visual avatar */}
+        {/* Upper visual avatar + picture upload (finding #8) */}
         <div className="flex items-center gap-3 sm:gap-4">
-          <span className="sm:hidden"><UserAvatar user={currentUser} size="md" /></span>
-          <span className="hidden sm:block"><UserAvatar user={currentUser} size="lg" /></span>
+          <input
+            type="file"
+            ref={avatarInputRef}
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (!file) return;
+              if (file.size > 5 * 1024 * 1024) {
+                alert("Profile pictures can be at most 5MB.");
+                return;
+              }
+              setAvatarBusy(true);
+              await uploadAvatar(file);
+              setAvatarBusy(false);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            className="relative group rounded-full cursor-pointer"
+            aria-label="Change profile picture"
+            title="Change profile picture"
+            disabled={avatarBusy}
+          >
+            <span className="sm:hidden"><UserAvatar user={currentUser} size="md" /></span>
+            <span className="hidden sm:block"><UserAvatar user={currentUser} size="lg" /></span>
+            <span className="absolute inset-0 rounded-full bg-zinc-950/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Camera className="w-4 h-4 text-white" />
+            </span>
+            {avatarBusy && (
+              <span className="absolute inset-0 rounded-full bg-zinc-950/45 flex items-center justify-center">
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              </span>
+            )}
+          </button>
           <div>
             <h3 className="font-display font-semibold text-base text-zinc-900 dark:text-white leading-none">
               {currentUser.name}
@@ -83,6 +120,16 @@ export function ProfilePage() {
             <span className="badge mt-1.5 text-primary bg-primary/8 dark:bg-primary/15 border-primary/20">
               {role}
             </span>
+            <div className="mt-1.5 flex items-center gap-2 text-[11px] font-semibold">
+              <button type="button" onClick={() => avatarInputRef.current?.click()} className="text-primary hover:underline cursor-pointer">
+                {currentUser.avatarUrl ? "Change picture" : "Add picture"}
+              </button>
+              {currentUser.avatarUrl && (
+                <button type="button" onClick={removeAvatar} className="text-zinc-400 hover:text-rose-500 cursor-pointer">
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

@@ -190,13 +190,14 @@ export function DesktopSidebar({ onOpenQuickAdd, onOpenAISuggest, onClose = () =
                   </button>
                 ) : (
                   <form
-                    onSubmit={(e) => {
+                    onSubmit={async (e) => {
                       e.preventDefault();
                       if (!newWSName.trim()) {
                         setInlineError("Workspace name is required.");
                         return;
                       }
-                      addWorkspace(newWSName.trim(), newWSLogo);
+                      const created = await addWorkspace(newWSName.trim(), newWSLogo);
+                      if (!created) return; // plan-limit / API error already toasted
                       setNewWSName("");
                       setNewWSLogo("💼");
                       setCreateNewOpen(false);

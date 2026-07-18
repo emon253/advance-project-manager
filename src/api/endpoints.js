@@ -83,6 +83,12 @@ export const meApi = {
   get: async () => userToUi(await http.get("/me")),
   update: async (patch) => userToUi(await http.patch("/me", patch)),
   changePassword: (currentPassword, newPassword) => http.patch("/me/password", { currentPassword, newPassword }),
+  uploadAvatar: async (file) => {
+    const form = new FormData();
+    form.append("file", file);
+    return userToUi(await http.post("/me/avatar", form));
+  },
+  removeAvatar: async () => userToUi(await http.delete("/me/avatar")),
   deleteAccount: () => http.delete("/me"),
 };
 

@@ -117,7 +117,7 @@ export function WorkspaceSettingsPage() {
 
       {/* 1. Header Area with dynamic Stats Summary badges */}
       <PageHeader
-        title="Workspace Parameters"
+        title="Workspace"
         description="Manage workspace details, members, roles, and archival."
       >
         {/* Dynamic workspace stats summary widget */}

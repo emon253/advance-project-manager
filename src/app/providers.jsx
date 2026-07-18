@@ -17,7 +17,6 @@ import {
   tagApi,
   taskApi,
   taskStatusApi,
-  templateApi,
   automationApi,
   workspaceApi,
   planApi,
@@ -43,11 +42,6 @@ export const defaultTaskStatuses = [
   { id: "s6", name: "Cancelled", bg: "bg-zinc-200", text: "text-zinc-500", border: "border-zinc-300", darkBg: "dark:bg-zinc-800", darkText: "dark:text-zinc-500", darkBorder: "dark:border-zinc-800", icon: "XCircle", isCancelled: true, system: true },
 ];
 
-// Backend seeds these two templates via Flyway; no list endpoint yet (§9 gap).
-const SEEDED_TEMPLATES = [
-  { id: 1, name: "Sprint kickoff", tasks: ["Define sprint goal", "Groom the backlog", "Plan capacity"] },
-  { id: 2, name: "Website launch", tasks: ["Configure DNS & SSL", "Run visual regression", "Publish sitemap", "Smoke-test checkout"] },
-];
 
 const ACTIVE_WS_KEY = "apm_active_workspace";
 const THEME_KEY = "apm_theme";
@@ -95,7 +89,6 @@ export function AppStateProvider({ children }) {
   const [activeTimerTaskId, setActiveTimerTaskId] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
 
-  const [templates, setTemplates] = useState(SEEDED_TEMPLATES); // replaced by GET /templates on boot
   const [automationRules, setAutomationRules] = useState([]);
   const [projectFiles, setProjectFiles] = useState({}); // per-project attachment lists (API-backed)
 
@@ -234,8 +227,6 @@ export function AppStateProvider({ children }) {
         await loadWorkspaceData(target.id);
       }
       refreshNotifications();
-      templateApi.list().then(setTemplates).catch(() => {});
-      return { success: true };
     } catch {
       tokenStore.clear();
       setIsAuthenticated(false);
@@ -499,8 +490,6 @@ export function AppStateProvider({ children }) {
       const target = list.find((w) => w.id === workspaceId) || list[0];
       if (target) setActiveWorkspaceId(target.id);
       refreshNotifications();
-      templateApi.list().then(setTemplates).catch(() => {});
-      return { success: true };
     } catch (err) {
       const code = err instanceof ApiError ? err.code : "invalid";
       if (code === "INVITE_ACCEPTED") return { error: "accepted" };
@@ -547,6 +536,27 @@ export function AppStateProvider({ children }) {
   };
 
   const verifyEmail = (token) => authApi.verifyEmail(token);
+  const uploadAvatar = async (file) => {
+    try {
+      setCurrentUser(await meApi.uploadAvatar(file));
+      pushNotification("Profile picture updated.", "update", null, null, "Profile");
+      return true;
+    } catch (err) {
+      toastError(err, "Could not upload the picture.");
+      return false;
+    }
+  };
+
+  const removeAvatar = async () => {
+    try {
+      setCurrentUser(await meApi.removeAvatar());
+      return true;
+    } catch (err) {
+      toastError(err, "Could not remove the picture.");
+      return false;
+    }
+  };
+
   const refreshCurrentUser = async () => {
     try { setCurrentUser(await meApi.get()); } catch { /* keep the cached user */ }
   };
@@ -641,16 +651,6 @@ export function AppStateProvider({ children }) {
     }
   };
 
-  const instantiateTemplate = async (templateId, targetProjectId) => {
-    try {
-      await projectApi.instantiateTemplate(targetProjectId, templateId);
-      refreshTasks();
-      refreshActivities();
-      pushNotification("Template tasks created.", "update", null, targetProjectId, "Template Applied");
-    } catch (err) {
-      toastError(err, "Could not apply the template.");
-    }
-  };
 
   // --- tasks -----------------------------------------------------------------
 
@@ -1082,7 +1082,6 @@ export function AppStateProvider({ children }) {
     notifications, setNotifications,
     notificationSettings, setNotificationSettings,
     activities, setActivities,
-    templates, setTemplates,
     automationRules, setAutomationRules, toggleAutomationRule,
     taskStatuses, setTaskStatuses,
     invites,
@@ -1110,6 +1109,7 @@ export function AppStateProvider({ children }) {
     // auth
     login, register, logout,
     verifyEmail, resendVerification, forgotPassword, resetPassword, refreshCurrentUser,
+    uploadAvatar, removeAvatar,
     plans, refreshPlans,
     isSystemOwner: currentUser?.systemRole === "SYSTEM_OWNER",
     updateProfile, changePassword, deleteAccount,
@@ -1122,7 +1122,6 @@ export function AppStateProvider({ children }) {
     // projects
     addProject, updateProject, deleteProject,
     addProjectMember, removeProjectMember,
-    instantiateTemplate,
     // tasks
     addTask, updateTask, deleteTask, duplicateTask, loadTaskDetail,
     addChecklistItem, toggleChecklistItem, deleteChecklistItem,

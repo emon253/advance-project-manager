@@ -108,6 +108,7 @@ export function QuickAddTask({ isOpen, onClose }) {
                 autoFocus
                 placeholder="e.g. Design mobile task card layout"
                 value={title}
+                maxLength={500}
                 onChange={(e) => setTitle(e.target.value)}
                 className="field mt-1.5"
               />

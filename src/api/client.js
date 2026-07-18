@@ -58,6 +58,23 @@ export function setSessionExpiredHandler(handler) {
   onSessionExpired = handler;
 }
 
+/** Turns jakarta-validation boilerplate into a sentence a user can act on. */
+function friendlyMessage(body) {
+  const first = body?.fieldErrors?.[0];
+  if (first?.message) {
+    const label = (first.field || "")
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (c) => c.toUpperCase())
+      .trim();
+    let msg = first.message
+      .replace(/^size must be between (\d+) and (\d+)$/i, "must be between $1 and $2 characters")
+      .replace(/^must not be (blank|null|empty)$/i, "is required");
+    // Backend messages already written as full sentences pass through untouched.
+    return /^[A-Z]/.test(first.message) ? first.message : `${label} ${msg}`.trim();
+  }
+  return body?.message;
+}
+
 async function parseError(response) {
   let body = null;
   try {
@@ -65,7 +82,7 @@ async function parseError(response) {
   } catch {
     /* non-JSON error body */
   }
-  return new ApiError(response.status, body?.code, body?.message, {
+  return new ApiError(response.status, body?.code, friendlyMessage(body), {
     fieldErrors: body?.fieldErrors,
     limit: body?.limit,
     current: body?.current,

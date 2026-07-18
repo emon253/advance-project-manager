@@ -34,6 +34,7 @@ export function BillingPage() {
     cancelSubscription,
     startTrial,
     can,
+    pushNotification,
   } = useAppState();
 
   const [interval, setInterval] = useState(activeSubscription?.interval === "yearly" ? "yearly" : "monthly");
@@ -54,7 +55,7 @@ export function BillingPage() {
     return (
       <div className="space-y-3 sm:space-y-5 text-left" id="billing-page-root">
         <PageHeader
-          title="Plans & Billing"
+          title="Billing"
           description="Manage the subscription, seats, and invoices for this workspace."
         />
         <div className="card p-4 sm:p-6 flex flex-col items-center text-center gap-2">
@@ -73,13 +74,24 @@ export function BillingPage() {
     );
   }
 
-  const handleSelectPlan = (planId) => {
+  // No payment gateway yet (finding #15): paid plans can't be self-purchased.
+  // Eligible workspaces get the free trial; otherwise the platform owner
+  // activates the plan manually.
+  const trialAvailable = !sub?.trialEndsAt && (sub?.invoices || []).length === 0;
+  const handleSelectPlan = async (planId) => {
     if (planId === currentPlanId && !trialing) return;
     if (planId === "free") {
       setConfirmCancel(true);
       return;
     }
-    setCheckoutPlan(planId);
+    if (trialAvailable) {
+      await startTrial(planId);
+      return;
+    }
+    pushNotification(
+      "Self-serve checkout is coming soon. Contact the platform owner to activate this plan for your workspace.",
+      "update", null, null, "Upgrades are handled for you"
+    );
   };
 
   const usage = [
@@ -90,7 +102,7 @@ export function BillingPage() {
   return (
     <div className="space-y-3 sm:space-y-5 text-left" id="billing-page-root">
       <PageHeader
-        title="Plans & Billing"
+        title="Billing"
         description="Manage the subscription, seats, and invoices for this workspace."
       />
 
@@ -266,7 +278,11 @@ export function BillingPage() {
                   disabled={isCurrent}
                   className={`btn w-full ${isCurrent ? "btn-secondary" : plan.highlight ? "btn-primary" : "btn-secondary"}`}
                 >
-                  {isCurrent ? "Current plan" : isDowngrade ? `Downgrade to ${plan.name}` : trialing && plan.id === sub.plan ? "Subscribe now" : `Upgrade to ${plan.name}`}
+                  {isCurrent ? "Current plan"
+                    : isDowngrade ? `Downgrade to ${plan.name}`
+                    : trialing && plan.id === sub.plan ? "Contact us to subscribe"
+                    : trialAvailable ? `Start free ${plan.name} trial`
+                    : `Request ${plan.name} upgrade`}
                 </button>
                 {plan.id === "pro" && currentPlanId === "free" && !trialing && sub?.status !== "canceled" && (
                   <button onClick={() => startTrial(wsId, "pro")} className="btn btn-ghost w-full text-primary hover:bg-primary/8">

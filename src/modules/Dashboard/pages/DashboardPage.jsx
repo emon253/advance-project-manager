@@ -94,7 +94,7 @@ export function DashboardPage() {
     >
       <div>
         <h1 className="font-display font-bold text-xl md:text-2xl text-zinc-900 dark:text-white tracking-tight">
-          Project Dashboard
+          Dashboard
         </h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-1">
           Progress summaries across the active workspace.

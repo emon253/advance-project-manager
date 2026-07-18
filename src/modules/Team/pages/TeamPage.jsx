@@ -38,7 +38,7 @@ export function TeamPage() {
     <div className="space-y-3 sm:space-y-5 text-left" id="team-page-root">
       {/* 1. Page Header */}
       <PageHeader
-        title="Workspace Associates"
+        title="Team"
         description="Review team workloads and invite new members to this workspace."
       >
         {can("manageMembers") && (

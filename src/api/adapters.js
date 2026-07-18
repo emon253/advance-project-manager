@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { BASE_URL } from "./client";
+
 /**
  * Wire ⇄ UI adapters (BACKEND_PLAN.md §9.7).
  *
@@ -67,7 +69,14 @@ export function userToUi(u) {
     phone: u.phone ?? null,
     emailVerified: u.emailVerified,
     systemRole: u.systemRole || "USER",
+    avatarUrl: toAvatarUrl(u.avatarUrl),
   };
+}
+
+/** API-relative avatar path -> absolute URL a plain <img> can load. */
+export function toAvatarUrl(path) {
+  if (!path) return null;
+  return path.startsWith("http") ? path : `${BASE_URL}${path}`;
 }
 
 export function memberToUi(m) {
@@ -342,7 +351,7 @@ export function searchToUi(s) {
       id: h.id, name: h.name, icon: h.iconKey, color: h.color, status: projectStatusToUi(h.status),
     })),
     people: (s.peopleHits || []).map((h) => ({
-      id: h.id, name: h.name, email: h.email, avatar: h.avatarInitials, color: h.avatarColor,
+      id: h.id, name: h.name, email: h.email, avatar: h.avatarInitials, color: h.avatarColor, avatarUrl: toAvatarUrl(h.avatarUrl),
     })),
   };
 }
@@ -367,6 +376,7 @@ export function planToUi(p) {
     limits: {
       projects: p.projectLimit == null ? Infinity : p.projectLimit,
       members: p.memberLimit == null ? Infinity : p.memberLimit,
+      workspaces: p.workspaceLimit == null ? Infinity : p.workspaceLimit,
       ai: !!p.ai,
       customStatuses: !!p.customStatuses,
       automation: !!p.automation,
@@ -386,6 +396,7 @@ export function adminPlanToUi(p) {
     subscriberCount: p.subscriberCount ?? 0,
     projectLimitRaw: p.projectLimit,
     memberLimitRaw: p.memberLimit,
+    workspaceLimitRaw: p.workspaceLimit,
     monthlyCents: p.monthlyPerSeatCents,
     yearlyCents: p.yearlyPerSeatCents,
   };
@@ -397,6 +408,7 @@ export function adminUserRowToUi(u) {
     name: u.name,
     email: u.email,
     initials: u.avatarInitials,
+    avatarUrl: toAvatarUrl(u.avatarUrl),
     color: u.avatarColor,
     emailVerified: !!u.emailVerified,
     systemRole: u.systemRole,

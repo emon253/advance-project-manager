@@ -13,7 +13,7 @@ export function ProjectHeader({ showAddForm, setShowAddForm }) {
 
   return (
     <PageHeader
-      title="Corporate Projects Portfolio"
+      title="Projects"
       description="Launch, archive, or audit active projects and key milestones across your workspace."
     >
       {can("manageProjects") && (

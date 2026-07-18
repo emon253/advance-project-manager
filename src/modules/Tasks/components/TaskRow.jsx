@@ -29,18 +29,21 @@ export function TaskRow({
     ? dueDateObj.toLocaleDateString(undefined, { month: "short", day: "numeric" })
     : null;
 
+  // Finding #3: no project name in task rows — the colored dot (with a
+  // tooltip) is enough of a cue without eating row width.
   const renderProjectChip = (visibility) => proj && (
-    <span className={`${visibility} items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shrink-0 max-w-40`}>
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: proj.color || "#6366f1" }} />
-      <span className="truncate">{proj.name}</span>
+    <span
+      className={`${visibility} items-center shrink-0`}
+      title={proj.name}
+    >
+      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: proj.color || "#6366f1" }} />
     </span>
   );
 
-  // Quieter variant for the mobile meta line: colored dot + name, no pill chrome
+  // Quieter variant for the mobile meta line: just the colored dot
   const projectPlainLabel = proj && (
-    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 min-w-0">
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: proj.color || "#6366f1" }} />
-      <span className="truncate max-w-36">{proj.name}</span>
+    <span className="inline-flex items-center min-w-0" title={proj.name}>
+      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: proj.color || "#6366f1" }} />
     </span>
   );
 

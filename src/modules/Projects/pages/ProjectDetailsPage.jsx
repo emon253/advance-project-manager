@@ -47,8 +47,6 @@ export function ProjectDetailsPage() {
     deleteProject,
     addTask,
     updateTask,
-    instantiateTemplate,
-    templates,
     setActiveTaskId,
     attachFileToProject,
     removeAttachmentFromProject,
@@ -68,7 +66,6 @@ export function ProjectDetailsPage() {
   const fileInputRef = useRef(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [previewFile, setPreviewFile] = useState(null);
-  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Quick project edit states
@@ -145,10 +142,6 @@ export function ProjectDetailsPage() {
     navigate("/projects");
   };
 
-  const handleTemplateImport = (tplId) => {
-    instantiateTemplate(tplId, project.id);
-    setShowTemplateMenu(false);
-  };
 
   const deadlineStr = formatDetailedProjectDeadline(project.deadline);
 
@@ -189,7 +182,7 @@ export function ProjectDetailsPage() {
       )}
 
       {/* 2. Page Header with Settings quick buttons */}
-      <div className="card p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-4">
+      <div className="card p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-4 relative">
         <div className="flex items-start gap-2.5 sm:gap-3.5 min-w-0">
           <span className="bg-primary/8 dark:bg-primary/15 border border-primary/20 text-primary rounded-xl flex items-center justify-center w-9 h-9 sm:w-12 sm:h-12 shrink-0">
             {getIconComponent(project.icon, "w-4 h-4 sm:w-6 sm:h-6")}
@@ -213,34 +206,8 @@ export function ProjectDetailsPage() {
 
         {/* Templates quick deployment dropdown — managers only */}
         {can("manageProjects") && (
-        <div className="flex items-center gap-2 relative shrink-0">
-          <button
-            onClick={() => setShowTemplateMenu(!showTemplateMenu)}
-            type="button"
-            className="btn btn-sm btn-secondary"
-            aria-haspopup="menu"
-            aria-expanded={showTemplateMenu}
-          >
-            <span>Use Template</span>
-          </button>
-
-          {showTemplateMenu && (
-            <div className="menu-panel absolute right-0 top-10 z-50 p-1.5 w-64 animate-in fade-in slide-in-from-top-2">
-              <p className="px-3 py-1.5 text-[11px] uppercase font-semibold text-zinc-500 dark:text-zinc-400 tracking-wide">Deploy workflow template</p>
-              {templates.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  onClick={() => handleTemplateImport(tpl.id)}
-                  type="button"
-                  className="w-full text-left px-3 py-2.5 rounded-lg text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium flex items-center justify-between gap-2 cursor-pointer"
-                >
-                  <span className="truncate">{tpl.name}</span>
-                  <Plus className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                </button>
-              ))}
-            </div>
-          )}
-
+        /* Finding #4: on mobile the gear pins to the header's top-right corner. */
+        <div className="absolute top-3 right-3 sm:static shrink-0">
           <button
             type="button"
             onClick={() => {

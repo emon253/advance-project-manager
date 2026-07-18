@@ -56,16 +56,40 @@ export function TaskDetailsDrawer() {
   const [inlineCLTitle, setInlineCLTitle] = useState("");
   const [manualHours, setManualHours] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  // Trello-style editing (findings #11/#13): title & description are LOCAL
+  // drafts committed on blur/Enter — never an API write per keystroke.
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [descDraft, setDescDraft] = useState("");
+  const titleInputRef = useRef(null);
   const [previewFile, setPreviewFile] = useState(null);
   const fileInputRef = useRef(null);
 
   const task = tasks.find((t) => t.id === activeTaskId);
+
+  useEffect(() => {
+    if (task && !editingTitle) setTitleDraft(task.title || "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.id, task?.title]);
+  useEffect(() => {
+    if (task) setDescDraft(task.description || "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.id]);
+  // Auto-grow the title textarea to its content (2–3 line wrap, finding #13).
+  useEffect(() => {
+    const el = titleInputRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+  }, [titleDraft, editingTitle]);
 
   // Auto-scroll logic or state reset on transition
   useEffect(() => {
     setCommentInput("");
     setInlineCLTitle("");
     setManualHours("");
+    setEditingTitle(false);
   }, [activeTaskId]);
 
   if (!task) return null;
@@ -95,6 +119,22 @@ export function TaskDetailsDrawer() {
 
   const handleTextChange = (field, val) => {
     updateTask(task.id, { [field]: val });
+  };
+
+  const commitTitle = () => {
+    setEditingTitle(false);
+    const value = titleDraft.trim();
+    if (!value || value === task.title) {
+      setTitleDraft(task.title || "");
+      return;
+    }
+    updateTask(task.id, { title: value });
+  };
+
+  const commitDescription = () => {
+    if ((descDraft || "") !== (task.description || "")) {
+      updateTask(task.id, { description: descDraft });
+    }
   };
 
   const handlePostComment = (e) => {
@@ -193,20 +233,45 @@ export function TaskDetailsDrawer() {
             </div>
           )}
 
-          {/* Editable Title */}
+          {/* Editable Title — click to edit, wraps over multiple lines (findings #11/#13) */}
           <div>
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <label htmlFor="task-title-input" className="label mb-0">Task Title</label>
-              <AIEnhanceButton value={task.title} onEnhance={(val) => handleTextChange("title", val)} type="title" />
+              <AIEnhanceButton
+                value={task.title}
+                onEnhance={(val) => { setTitleDraft(val); handleTextChange("title", val); }}
+                type="title"
+              />
             </div>
-            <input
-              id="task-title-input"
-              type="text"
-              value={task.title}
-              onChange={(e) => handleTextChange("title", e.target.value)}
-              className="field h-10 text-base font-semibold font-display"
-              placeholder="Give task a brief clear title..."
-            />
+            {editingTitle && canEdit ? (
+              <textarea
+                id="task-title-input"
+                ref={titleInputRef}
+                value={titleDraft}
+                maxLength={500}
+                rows={1}
+                autoFocus
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onBlur={commitTitle}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.target.blur(); }
+                  if (e.key === "Escape") { setTitleDraft(task.title || ""); setEditingTitle(false); }
+                }}
+                className="field text-base font-semibold font-display leading-snug resize-none overflow-hidden py-2"
+                placeholder="Give task a brief clear title..."
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => canEdit && setEditingTitle(true)}
+                className={`w-full text-left text-base font-semibold font-display leading-snug text-zinc-900 dark:text-white whitespace-pre-wrap break-words rounded-lg px-3 py-2 -mx-0.5 border border-transparent ${
+                  canEdit ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/50 hover:border-zinc-200 dark:hover:border-zinc-700 cursor-text" : "cursor-default"
+                }`}
+                title={canEdit ? "Click to edit the title" : undefined}
+              >
+                {task.title}
+              </button>
+            )}
             <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1.5">
               Created: {task.createdAt ? formatDateTime(task.createdAt) : formatDateTime(task.startDate)}
             </p>
@@ -317,12 +382,13 @@ export function TaskDetailsDrawer() {
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1.5">
                     <label htmlFor="task-description" className="label mb-0">Context parameters & briefing</label>
-                    <AIEnhanceButton value={task.description} onEnhance={(val) => handleTextChange("description", val)} type="description" />
+                    <AIEnhanceButton value={descDraft} onEnhance={(val) => { setDescDraft(val); handleTextChange("description", val); }} type="description" />
                   </div>
                   <textarea
                     id="task-description"
-                    value={task.description}
-                    onChange={(e) => handleTextChange("description", e.target.value)}
+                    value={descDraft}
+                    onChange={(e) => setDescDraft(e.target.value)}
+                    onBlur={commitDescription}
                     placeholder="Provide granular constraints, requirements specifications, or stakeholder definitions for this deliverable..."
                     rows={4}
                     className="field"
@@ -412,8 +478,10 @@ export function TaskDetailsDrawer() {
                                     if (url) setPreviewFile({ ...file, base64: url });
                                   }}
                                   className="btn btn-sm btn-secondary"
+                                  aria-label={`Preview ${file.name}`}
                                 >
-                                  Preview
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline">Preview</span>
                                 </button>
                               )}
                               <button

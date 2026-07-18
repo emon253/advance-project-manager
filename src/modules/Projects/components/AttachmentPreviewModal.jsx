@@ -6,6 +6,12 @@
 import React from "react";
 import { X, Download } from "lucide-react";
 
+const isImageType = (t) => {
+  const type = (t || "").toLowerCase();
+  return type.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "gif"].includes(type);
+};
+const isPdfType = (t) => (t || "").toLowerCase().includes("pdf");
+
 export function AttachmentPreviewModal({ previewFile, setPreviewFile, handleDownloadFile }) {
   if (!previewFile) return null;
 
@@ -41,14 +47,14 @@ export function AttachmentPreviewModal({ previewFile, setPreviewFile, handleDown
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-4 py-3.5 sm:px-5 sm:py-4">
           <div className="flex items-center justify-center bg-zinc-100 dark:bg-zinc-950 rounded-xl p-2 min-h-[300px]">
-            {["png", "jpg", "jpeg", "webp"].includes(previewFile.type?.toLowerCase()) ? (
+            {isImageType(previewFile.type) ? (
               <img
                 src={previewFile.base64}
                 alt=""
                 className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-soft"
                 referrerPolicy="no-referrer"
               />
-            ) : previewFile.type?.toLowerCase() === "pdf" ? (
+            ) : isPdfType(previewFile.type) ? (
               <iframe
                 src={previewFile.base64}
                 className="w-full h-[60vh] rounded-lg border-0 bg-white"

@@ -85,8 +85,8 @@ export function useWorkspaceSettings() {
     e.preventDefault();
     setInviteError("");
 
-    if (!inviteName.trim() || !inviteEmail.trim()) {
-      setInviteError("Please fill out all member invitation fields.");
+    if (!inviteEmail.trim()) {
+      setInviteError("An email address is required.");
       return;
     }
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -95,8 +95,9 @@ export function useWorkspaceSettings() {
       return;
     }
 
+    // Finding #18: the invitee provides their own name at signup — the
+    // invitation only needs where to send it and which role to grant.
     const result = await createInvite(ws.id, {
-      name: inviteName.trim(),
       email: inviteEmail.trim().toLowerCase(),
       role: inviteRole,
     });

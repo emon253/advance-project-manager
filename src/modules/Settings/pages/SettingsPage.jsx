@@ -38,7 +38,7 @@ export function SettingsPage() {
   return (
     <div className="text-left max-w-4xl" id="settings-page-root">
       <PageHeader
-        title="Administrative Settings"
+        title="Settings"
         description="Configure task workflows, state parameters, or restore the default demo database."
       />
 
