@@ -9,6 +9,7 @@ import { AuthPages } from "../modules/Auth/pages/AuthPages";
 import { InvitePage } from "../modules/Auth/pages/InvitePage";
 import { VerifyEmailPage } from "../modules/Auth/pages/VerifyEmailPage";
 import { OnboardingPage } from "../modules/Auth/pages/OnboardingPage";
+import { VerifyEmailBanner } from "../components/common/VerifyEmailBanner";
 import { DashboardPage } from "../modules/Dashboard/pages/DashboardPage";
 import { TasksPage } from "../modules/Tasks/pages/TasksPage";
 import { ProjectsPage } from "../modules/Projects/pages/ProjectsPage";
@@ -84,9 +85,12 @@ function AppLayout({ children }) {
         )}
 
         {/* Content canvas container */}
-        <main className={`flex-1 min-w-0 overflow-x-hidden ${isMobile ? "px-[max(0.75rem,env(safe-area-inset-left))] pt-3 pb-nav" : "p-5 lg:px-8 lg:py-5"}`}>
-          <div className="max-w-[1440px] mx-auto w-full h-full">
-            {children}
+        <main className={`flex-1 min-w-0 overflow-x-hidden flex flex-col ${isMobile ? "pb-nav" : ""}`}>
+          <VerifyEmailBanner />
+          <div className={`flex-1 min-w-0 w-full ${isMobile ? "px-[max(0.75rem,env(safe-area-inset-left))] pt-3" : "p-5 lg:px-8 lg:py-5"}`}>
+            <div className="max-w-[1440px] mx-auto w-full h-full">
+              {children}
+            </div>
           </div>
         </main>
       </div>

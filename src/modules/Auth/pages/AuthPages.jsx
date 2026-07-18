@@ -55,6 +55,10 @@ export function AuthPages() {
         setError("Please enter your name.");
         return;
       }
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return;
+      }
       if (accountType === "company" && !companyName.trim()) {
         setError("Please enter your company name.");
         return;

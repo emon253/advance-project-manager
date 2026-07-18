@@ -129,7 +129,11 @@ export async function request(path, { method = "GET", body, auth = true, blob = 
 
   if (!response.ok) throw await parseError(response);
   if (response.status === 204) return null;
-  return blob ? response.blob() : response.json();
+  if (blob) return response.blob();
+  // Some success responses are intentionally bodyless (e.g. 200 from
+  // /auth/verify-email) — an empty body is success, not a parse failure.
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
 
 export const http = {

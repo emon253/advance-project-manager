@@ -18,7 +18,7 @@ import { MailCheck, CheckCircle2, Loader2, ShieldAlert } from "lucide-react";
 export function VerifyEmailPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { verifyEmail, resendVerification } = useAppState();
+  const { verifyEmail, resendVerification, isAuthenticated, refreshCurrentUser } = useAppState();
 
   const email = params.get("email") || "your email";
   const next = params.get("next") || "/dashboard";
@@ -31,7 +31,13 @@ export function VerifyEmailPage() {
     if (!token) return;
     let cancelled = false;
     verifyEmail(token)
-      .then(() => !cancelled && setState("verified"))
+      .then(() => {
+        if (cancelled) return;
+        setState("verified");
+        // A signed-in user just verified in this tab: sync /me so the
+        // in-app "verify your email" banner disappears immediately.
+        if (isAuthenticated) refreshCurrentUser();
+      })
       .catch(() => !cancelled && setState("failed"));
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -69,8 +75,8 @@ export function VerifyEmailPage() {
             <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-2 leading-relaxed">
               Your account is confirmed. Let's get you set up.
             </p>
-            <button onClick={() => navigate(next)} className="btn btn-primary w-full mt-6">
-              Continue
+            <button onClick={() => navigate(isAuthenticated ? next : "/login")} className="btn btn-primary w-full mt-6">
+              {isAuthenticated ? "Continue" : "Continue to sign in"}
             </button>
           </>
         )}

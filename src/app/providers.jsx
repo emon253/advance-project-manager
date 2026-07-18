@@ -486,6 +486,9 @@ export function AppStateProvider({ children }) {
   };
 
   const verifyEmail = (token) => authApi.verifyEmail(token);
+  const refreshCurrentUser = async () => {
+    try { setCurrentUser(await meApi.get()); } catch { /* keep the cached user */ }
+  };
   const resendVerification = (email) => authApi.resendVerification(email);
   const forgotPassword = (email) => authApi.forgotPassword(email);
   const resetPassword = (token, newPassword) => authApi.resetPassword(token, newPassword);
@@ -1045,7 +1048,7 @@ export function AppStateProvider({ children }) {
     activeTimerTaskId, timerSeconds, toggleTaskTimer, addManualTime,
     // auth
     login, register, logout,
-    verifyEmail, resendVerification, forgotPassword, resetPassword,
+    verifyEmail, resendVerification, forgotPassword, resetPassword, refreshCurrentUser,
     updateProfile, changePassword, deleteAccount,
     // workspaces & members
     addWorkspace, updateWorkspace, deleteWorkspace,
