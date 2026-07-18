@@ -26,7 +26,6 @@ export function ProjectFileCabinet({
         type="file"
         ref={fileInputRef}
         onChange={handleRealFileUpload}
-        accept="image/png, image/jpeg, image/jpg, image/webp, application/pdf"
         className="hidden"
       />
 
@@ -37,7 +36,7 @@ export function ProjectFileCabinet({
       >
         <Paperclip className="w-6 h-6 mx-auto text-zinc-400 mb-2" />
         <p className="text-sm font-semibold text-primary">Click to upload assets</p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-1">Supports PDF & Image files up to 1.5MB for storage protection.</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-1">Any file type up to 10MB.</p>
       </button>
 
       {errorMsg && (
@@ -85,7 +84,7 @@ export function ProjectFileCabinet({
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
-                {(isImage || isPDF) && file.base64 && (
+                {(isImage || isPDF) && (
                   <button
                     type="button"
                     onClick={() => setPreviewFile(file)}

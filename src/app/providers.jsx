@@ -17,6 +17,8 @@ import {
   tagApi,
   taskApi,
   taskStatusApi,
+  templateApi,
+  automationApi,
   workspaceApi,
 } from "../api/endpoints";
 import { hasPermission, resolveRole } from "./permissions";
@@ -90,13 +92,9 @@ export function AppStateProvider({ children }) {
   const [activeTimerTaskId, setActiveTimerTaskId] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
 
-  // Session-local leftovers kept for page compatibility.
-  const [templates, setTemplates] = useState(SEEDED_TEMPLATES);
-  const [automationRules, setAutomationRules] = useState([
-    { id: "ar1", name: "Clear tags & unassign when Completed", active: false },
-    { id: "ar2", name: "Alert the team on Urgent priority", active: false },
-  ]);
-  const [projectFiles, setProjectFiles] = useState({}); // §9 gap: project attachments API pending
+  const [templates, setTemplates] = useState(SEEDED_TEMPLATES); // replaced by GET /templates on boot
+  const [automationRules, setAutomationRules] = useState([]);
+  const [projectFiles, setProjectFiles] = useState({}); // per-project attachment lists (API-backed)
 
   // --- async data lifecycle (useMockQuery contract) --------------------------
   const [dataLoading, setDataLoading] = useState(false);
@@ -167,6 +165,7 @@ export function AppStateProvider({ children }) {
       // Admin-only extras — non-admins simply do without (server is authoritative).
       inviteApi.listPending(wsId).then(setInvites).catch(() => setInvites([]));
       billingApi.subscription(wsId).then(setActiveSubscription).catch(() => setActiveSubscription(null));
+      automationApi.list(wsId).then(setAutomationRules).catch(() => setAutomationRules([]));
     } catch {
       if (seq === loadSeq.current) setDataError(true);
     } finally {
@@ -232,6 +231,7 @@ export function AppStateProvider({ children }) {
         await loadWorkspaceData(target.id);
       }
       refreshNotifications();
+      templateApi.list().then(setTemplates).catch(() => {});
       return { success: true };
     } catch {
       tokenStore.clear();
@@ -438,6 +438,7 @@ export function AppStateProvider({ children }) {
       const target = list.find((w) => w.id === workspaceId) || list[0];
       if (target) setActiveWorkspaceId(target.id);
       refreshNotifications();
+      templateApi.list().then(setTemplates).catch(() => {});
       return { success: true };
     } catch (err) {
       const code = err instanceof ApiError ? err.code : "invalid";
@@ -686,13 +687,14 @@ export function AppStateProvider({ children }) {
   // Drawer detail hydration: children live behind separate endpoints.
   const loadTaskDetail = useCallback(async (taskId) => {
     try {
-      const [detail, comments, activityList] = await Promise.all([
+      const [detail, comments, activityList, attachmentList] = await Promise.all([
         taskApi.get(taskId),
         taskApi.comments(taskId),
         taskApi.activity(taskId),
+        taskApi.attachments.list(taskId).catch(() => []),
       ]);
       setTasks((prev) => prev.map((t) => (t.id === taskId
-        ? { ...t, ...detail, comments, activities: activityList, attachments: t.attachments || [] }
+        ? { ...t, ...detail, comments, activities: activityList, attachments: attachmentList }
         : t)));
     } catch {
       /* the drawer degrades to list data */
@@ -807,19 +809,50 @@ export function AppStateProvider({ children }) {
     }
   };
 
-  // Project file cabinet — backend endpoint pending (§9 gap): session-local only.
-  const attachFileToProject = (projectId, name, size, type, base64 = null) => {
-    const att = {
-      id: `patt_${Date.now()}`,
-      name, size, type, base64,
-      timestamp: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      author: currentUser?.name || "",
-    };
-    setProjectFiles((prev) => ({ ...prev, [projectId]: [...(prev[projectId] || []), att] }));
+  // Project file cabinet — API-backed.
+  const loadProjectFiles = useCallback(async (projectId) => {
+    try {
+      const files = await projectApi.attachments.list(projectId);
+      setProjectFiles((prev) => ({ ...prev, [projectId]: files }));
+    } catch {
+      /* non-member or transient; cabinet shows empty */
+    }
+  }, []);
+
+  const attachFileToProject = async (projectId, file) => {
+    try {
+      const att = await projectApi.attachments.upload(projectId, file);
+      setProjectFiles((prev) => ({ ...prev, [projectId]: [att, ...(prev[projectId] || [])] }));
+      refreshActivities();
+      return att;
+    } catch (err) {
+      toastError(err, "Could not upload the file.");
+      return null;
+    }
   };
-  const removeAttachmentFromProject = (projectId, attId) => {
-    setProjectFiles((prev) => ({ ...prev, [projectId]: (prev[projectId] || []).filter((a) => a.id !== attId) }));
+
+  const removeAttachmentFromProject = async (projectId, attId) => {
+    try {
+      await taskApi.attachments.remove(attId); // shared /attachments/{id} delete
+      setProjectFiles((prev) => ({ ...prev, [projectId]: (prev[projectId] || []).filter((a) => a.id !== attId) }));
+    } catch (err) {
+      toastError(err, "Could not remove the file.");
+    }
+  };
+
+  // Automation rules — API-backed, Pro-gated server-side (402 on activation).
+  const toggleAutomationRule = async (ruleId, active) => {
+    try {
+      const updated = await automationApi.setActive(ruleId, active);
+      setAutomationRules((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)));
+      return { success: true };
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "PLAN_LIMIT") {
+        return { error: "plan", message: err.message };
+      }
+      toastError(err, "Could not update the automation rule.");
+      return { error: err.message };
+    }
   };
 
   // --- statuses & tags -------------------------------------------------------
@@ -986,7 +1019,7 @@ export function AppStateProvider({ children }) {
     notificationSettings, setNotificationSettings,
     activities, setActivities,
     templates, setTemplates,
-    automationRules, setAutomationRules,
+    automationRules, setAutomationRules, toggleAutomationRule,
     taskStatuses, setTaskStatuses,
     invites,
     projectFiles,
@@ -1029,7 +1062,7 @@ export function AppStateProvider({ children }) {
     addChecklistItem, toggleChecklistItem, deleteChecklistItem,
     addComment,
     attachFile, removeAttachment, downloadAttachment, getAttachmentBlobUrl,
-    attachFileToProject, removeAttachmentFromProject,
+    attachFileToProject, removeAttachmentFromProject, loadProjectFiles,
     addTaskStatus, updateTaskStatus, deleteTaskStatus,
     createTag,
     // notifications

@@ -52,11 +52,18 @@ export function ProjectDetailsPage() {
     setActiveTaskId,
     attachFileToProject,
     removeAttachmentFromProject,
+    loadProjectFiles,
+    downloadAttachment,
+    getAttachmentBlobUrl,
     projectFiles: useAppState_projectFiles,
     can,
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState("overview"); // overview, tasks, files, settings
+
+  React.useEffect(() => {
+    if (projectId) loadProjectFiles(projectId);
+  }, [projectId, loadProjectFiles]);
 
   const fileInputRef = useRef(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -93,45 +100,26 @@ export function ProjectDetailsPage() {
 
   const completionPercentage = calculateCompletionPercentage(projectTasks);
 
-  // Real Project Files persisted on project, or fallbacks if none are saved
-  const fallbackProjectFiles = [
-    { id: "att_mock1", name: "creative-brief-v4.docx", size: "1.2 MB", type: "document", timestamp: "5 days ago", author: "Nadia Islam" },
-    { id: "att_mock2", name: "wireframe-desktop-flow.png", size: "4.5 MB", type: "image", timestamp: "3 days ago", author: "Yasin Chowdhury" },
-    { id: "att_mock3", name: "api-contracts-v2.json", size: "244 KB", type: "json", timestamp: "Yesterday", author: "Rakib Hasan" },
-  ];
-
-  const storedProjectFiles = useAppState_projectFiles[project.id] || [];
-  const projectFiles = storedProjectFiles.length > 0 ? storedProjectFiles : fallbackProjectFiles;
+  // Project files come from the attachments API (S3/local behind the backend).
+  const projectFiles = useAppState_projectFiles[project.id] || [];
 
   const handleRealFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    // Check size limit: 1.5MB = 1572864 bytes
-    const limit = 1.5 * 1024 * 1024;
+    // Server caps uploads at 10MB.
+    const limit = 10 * 1024 * 1024;
     if (file.size > limit) {
-      setErrorMsg("Warning: Selected file is larger than 1.5MB. Browser local storage is limited in scale. Please use smaller files.");
+      setErrorMsg("File is larger than the 10MB upload limit. Please choose a smaller file.");
       setTimeout(() => setErrorMsg(""), 6000);
       return;
     }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result;
-      const sizeStr = file.size > 1024 * 1024
-        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
-        : `${Math.round(file.size / 1024)} KB`;
-
-      const fileType = file.name.split(".").pop() || "pdf";
-      attachFileToProject(project.id, file.name, sizeStr, fileType, base64);
-    };
-    reader.readAsDataURL(file);
+    attachFileToProject(project.id, file);
     e.target.value = ""; // reset
   };
 
   const handleDownloadFile = (file) => {
     if (!file.base64) {
-      alert("This is a static mock file. Real files selected from your desktop are fully downloadable!");
+      downloadAttachment(file);
       return;
     }
     const a = document.createElement("a");
@@ -428,7 +416,11 @@ export function ProjectDetailsPage() {
               fileInputRef={fileInputRef}
               handleRealFileUpload={handleRealFileUpload}
               errorMsg={errorMsg}
-              setPreviewFile={setPreviewFile}
+              setPreviewFile={async (file) => {
+                if (file.base64) { setPreviewFile(file); return; }
+                const url = await getAttachmentBlobUrl(file);
+                if (url) setPreviewFile({ ...file, base64: url });
+              }}
               handleDownloadFile={handleDownloadFile}
               removeAttachmentFromProject={removeAttachmentFromProject}
             />

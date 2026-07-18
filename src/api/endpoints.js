@@ -156,6 +156,40 @@ export const projectApi = {
   addMember: (id, userId) => http.post(`/projects/${id}/members/${userId}`),
   removeMember: (id, userId) => http.delete(`/projects/${id}/members/${userId}`),
   instantiateTemplate: (id, templateId) => http.post(`/projects/${id}/instantiate-template/${templateId}`),
+
+  attachments: {
+    list: async (projectId) => (await http.get(`/projects/${projectId}/attachments`)).map(attachmentToUi),
+    upload: async (projectId, file) => {
+      const form = new FormData();
+      form.append("file", file);
+      return attachmentToUi(await http.post(`/projects/${projectId}/attachments`, form));
+    },
+  },
+};
+
+export const templateApi = {
+  list: () => http.get("/templates"),
+};
+
+const AUTOMATION_ACTIONS = {
+  COMPLETE_CLEANUP: "When a task moves to a completed status, its tags are cleared and the assignee is removed.",
+  URGENT_ALERT: "When a task is flagged Urgent, watchers get an immediate alert notification.",
+};
+
+export const automationApi = {
+  list: async (workspaceId) =>
+    (await http.get(`/workspaces/${workspaceId}/automation-rules`)).map((r) => ({
+      id: r.id,
+      ruleKey: r.ruleKey,
+      name: r.name,
+      trigger: r.name,
+      action: AUTOMATION_ACTIONS[r.ruleKey] || "Automated workspace action.",
+      active: r.active,
+    })),
+  setActive: async (ruleId, active) => {
+    const r = await http.patch(`/automation-rules/${ruleId}`, { active });
+    return { id: r.id, ruleKey: r.ruleKey, name: r.name, trigger: r.name, action: AUTOMATION_ACTIONS[r.ruleKey] || "Automated workspace action.", active: r.active };
+  },
 };
 
 export const taskStatusApi = {
@@ -237,6 +271,7 @@ export const taskApi = {
   logTime: async (taskId, hours) => taskToUi(await http.post(`/tasks/${taskId}/time`, { hours })),
 
   attachments: {
+    list: async (taskId) => (await http.get(`/tasks/${taskId}/attachments`)).map(attachmentToUi),
     upload: async (taskId, file) => {
       const form = new FormData();
       form.append("file", file);

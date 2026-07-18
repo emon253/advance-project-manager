@@ -335,7 +335,6 @@ export function TaskDetailsDrawer() {
                     type="file"
                     ref={fileInputRef}
                     onChange={handleRealFileUpload}
-                    accept="image/png, image/jpeg, image/jpg, image/webp, application/pdf"
                     className="hidden"
                   />
                   <div className="flex justify-between items-center gap-3 pb-3 border-b border-zinc-100 dark:border-zinc-800">

@@ -11,6 +11,8 @@ import { PageHeader } from "../../../components/common/PageHeader";
 // Modular Imports
 import { DatabaseRestorePanel } from "../components/DatabaseRestorePanel";
 import { StatusSettingsPanel } from "../components/StatusSettingsPanel";
+import { RulesEngine } from "../components/RulesEngine";
+import { UpgradeModal } from "../../../components/common/UpgradeModal";
 
 import "../style/settings.css";
 
@@ -18,10 +20,20 @@ export function SettingsPage() {
   const {
     resetToDefaultData,
     simulateErrors,
-    setSimulateErrors
+    setSimulateErrors,
+    automationRules,
+    toggleAutomationRule
   } = useAppState();
 
   const [systemAlertMessage, setSystemAlertMessage] = useState("");
+  const [showUpgrade, setShowUpgrade] = useState(false);
+
+  const handleToggleRule = async (ruleId) => {
+    const rule = automationRules.find((r) => r.id === ruleId);
+    if (!rule) return;
+    const res = await toggleAutomationRule(ruleId, !rule.active);
+    if (res?.error === "plan") setShowUpgrade(true);
+  };
 
   return (
     <div className="text-left max-w-4xl" id="settings-page-root">
@@ -39,6 +51,9 @@ export function SettingsPage() {
 
         {/* Task workflow status configuration controller */}
         <StatusSettingsPanel />
+
+        {/* Automation rules (Pro feature — activation is plan-gated server-side) */}
+        <RulesEngine automationRules={automationRules} handleToggleRule={handleToggleRule} />
 
         {/* Demo Data Rehydration card */}
         <DatabaseRestorePanel
@@ -73,6 +88,12 @@ export function SettingsPage() {
         </div>
       </div>
 
+      <UpgradeModal
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        title="Automation is a Pro feature"
+        limitText="Automation rules run on the Pro and Business plans."
+      />
     </div>
   );
 }
