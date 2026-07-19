@@ -25,12 +25,11 @@ export function TeamPage() {
     setShowInviteForm,
     inviteEmail,
     setInviteEmail,
-    inviteName,
-    setInviteName,
     inviteRole,
     setInviteRole,
     successBanner,
     inviteError,
+    inviteBusy,
     handleInviteUser
   } = useTeamInvite();
 
@@ -71,13 +70,12 @@ export function TeamPage() {
       {showInviteForm && (
         <InviteUserDialog
           handleInviteUser={handleInviteUser}
-          inviteName={inviteName}
-          setInviteName={setInviteName}
           inviteEmail={inviteEmail}
           setInviteEmail={setInviteEmail}
           inviteRole={inviteRole}
           setInviteRole={setInviteRole}
           inviteError={inviteError}
+          inviteBusy={inviteBusy}
           setShowInviteForm={setShowInviteForm}
         />
       )}

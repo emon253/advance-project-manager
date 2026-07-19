@@ -46,6 +46,7 @@ export function useWorkspaceSettings() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("Member");
   const [inviteError, setInviteError] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
 
   // Sync form with the active workspace
   useEffect(() => {
@@ -97,10 +98,12 @@ export function useWorkspaceSettings() {
 
     // Finding #18: the invitee provides their own name at signup — the
     // invitation only needs where to send it and which role to grant.
+    setInviteBusy(true);
     const result = await createInvite(ws.id, {
       email: inviteEmail.trim().toLowerCase(),
       role: inviteRole,
     });
+    setInviteBusy(false);
 
     if (result?.error) {
       setInviteError(result.error);
@@ -213,6 +216,7 @@ export function useWorkspaceSettings() {
     setInviteRole,
     inviteError,
     setInviteError,
+    inviteBusy,
     handleUpdateDetails,
     handleInviteMember,
     handleChangeMemberRole,

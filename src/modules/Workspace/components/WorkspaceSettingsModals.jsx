@@ -24,6 +24,8 @@ export function WorkspaceSettingsModals({
   showDeleteConfirm,
   setShowDeleteConfirm,
   handleDeleteWorkspace
+,
+  inviteBusy
 }) {
   return (
     <>
@@ -95,8 +97,8 @@ export function WorkspaceSettingsModals({
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary flex-1">
-                  Send invite
+                <button type="submit" className="btn btn-primary flex-1" disabled={inviteBusy}>
+                  {inviteBusy ? "Sending…" : "Send Invitation"}
                 </button>
               </div>
             </form>

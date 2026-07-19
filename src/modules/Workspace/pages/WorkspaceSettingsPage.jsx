@@ -76,6 +76,7 @@ export function WorkspaceSettingsPage() {
     inviteRole,
     setInviteRole,
     inviteError,
+    inviteBusy,
     handleUpdateDetails,
     handleInviteMember,
     handleChangeMemberRole,
@@ -231,6 +232,7 @@ export function WorkspaceSettingsPage() {
         ws={ws}
         showInviteModal={showInviteModal}
         setShowInviteModal={setShowInviteModal}
+        inviteBusy={inviteBusy}
         inviteName={inviteName}
         setInviteName={setInviteName}
         inviteEmail={inviteEmail}

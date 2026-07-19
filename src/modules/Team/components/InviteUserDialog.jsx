@@ -8,13 +8,12 @@ import { Mail, X, AlertTriangle } from "lucide-react";
 
 export function InviteUserDialog({
   handleInviteUser,
-  inviteName,
-  setInviteName,
   inviteEmail,
   setInviteEmail,
   inviteRole,
   setInviteRole,
   inviteError,
+  inviteBusy,
   setShowInviteForm
 }) {
   return (
@@ -41,31 +40,21 @@ export function InviteUserDialog({
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-3 sm:py-4 space-y-3 sm:space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-              <div>
-                <label htmlFor="invite-full-name" className="label">Full Name</label>
-                <input
-                  id="invite-full-name"
-                  type="text"
-                  required
-                  placeholder="e.g. Salim Al Mamun"
-                  value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                  className="field"
-                />
-              </div>
-              <div>
-                <label htmlFor="invite-email" className="label">Email Address</label>
-                <input
-                  id="invite-email"
-                  type="email"
-                  required
-                  placeholder="developer@corp.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="field"
-                />
-              </div>
+            <div>
+              <label htmlFor="invite-email" className="label">Email Address</label>
+              <input
+                id="invite-email"
+                type="email"
+                required
+                placeholder="developer@corp.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="field"
+                autoFocus
+              />
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium mt-1.5">
+                They'll set their own name when they accept the invitation.
+              </p>
             </div>
 
             <div>
@@ -104,8 +93,9 @@ export function InviteUserDialog({
             <button
               type="submit"
               className="btn btn-primary flex-1"
+              disabled={inviteBusy}
             >
-              Send Invite
+              {inviteBusy ? "Sending…" : "Send Invite"}
             </button>
           </div>
         </form>
