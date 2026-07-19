@@ -48,8 +48,12 @@ export function WorkspaceSettingsPage() {
     revokeInvite,
     resendInvite,
     transferOwnership,
-    leaveWorkspace
+    leaveWorkspace,
+    ensureInvites
   } = useAppState();
+
+  // Pending invites are settings-screen data — fetched on first visit, not at boot.
+  React.useEffect(() => { ensureInvites(); }, [ensureInvites]);
 
   const {
     ws,

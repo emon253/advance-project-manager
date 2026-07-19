@@ -35,7 +35,14 @@ export function BillingPage() {
     startTrial,
     can,
     pushNotification,
+    loadInvoices,
+    refreshSubscription,
   } = useAppState();
+
+  // Billing-screen data: a fresh subscription snapshot plus its invoices —
+  // fetched here on visit rather than at app boot. Sequenced: the invoice
+  // merge must land after the subscription snapshot, never be clobbered by it.
+  React.useEffect(() => { refreshSubscription().then(loadInvoices); }, [refreshSubscription, loadInvoices]);
 
   const [interval, setInterval] = useState(activeSubscription?.interval === "yearly" ? "yearly" : "monthly");
   const [checkoutPlan, setCheckoutPlan] = useState(null);

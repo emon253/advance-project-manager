@@ -19,8 +19,12 @@ export function DashboardPage() {
     activeWorkspaceTasks,
     activeWorkspaceProjects,
     users,
-    activities
+    activities,
+    ensureActivities
   } = useAppState();
+
+  // The activity feed is dashboard-screen data — fetched on first visit, not at boot.
+  React.useEffect(() => { ensureActivities(); }, [ensureActivities]);
 
   const now = new Date();
 

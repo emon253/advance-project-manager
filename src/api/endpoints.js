@@ -37,6 +37,7 @@ import {
   workspaceToUi,
   workspaceTypeToApi,
  planToUi,
+ invoiceToUi,
  adminPlanToUi,
  adminUserRowToUi,
  adminUserDetailToUi,
@@ -318,16 +319,12 @@ export const notificationApi = {
 // --- billing (§6) ------------------------------------------------------------
 
 export const billingApi = {
-  subscription: async (workspaceId) => {
-    const sub = await http.get(`/workspaces/${workspaceId}/subscription`);
-    let invoices = [];
-    try {
-      invoices = await http.get(`/workspaces/${workspaceId}/invoices`);
-    } catch {
-      invoices = []; // non-admins can read nothing extra; subscription call would have thrown first
-    }
-    return subscriptionToUi(sub, invoices);
-  },
+  // Invoices are billing-page-only — fetched separately so the boot path
+  // stays one request (finding: per-screen loading).
+  subscription: async (workspaceId) =>
+    subscriptionToUi(await http.get(`/workspaces/${workspaceId}/subscription`), []),
+  invoices: async (workspaceId) =>
+    (await http.get(`/workspaces/${workspaceId}/invoices`)).map(invoiceToUi),
   changePlan: (workspaceId, plan, interval, seats) =>
     http.post(`/workspaces/${workspaceId}/subscription/change`, {
       plan: upperToApi(plan), interval: upperToApi(interval), seats,

@@ -140,14 +140,30 @@ export function AppStateProvider({ children }) {
     const seq = ++loadSeq.current;
     setDataLoading(true);
     setDataError(false);
+    // On a genuine workspace change, drop the previous workspace's lazily
+    // loaded data so screens refetch for the new one (their ensure* effects
+    // re-run because ensureOnce's identity follows activeWorkspaceId). This
+    // must happen synchronously BEFORE those effects fire, or it would wipe
+    // data they just fetched. On a same-workspace refresh, keep everything —
+    // blanking would strand mounted screens, whose mount effects won't rerun.
+    if (lastLoadedWsRef.current !== wsId) {
+      lastLoadedWsRef.current = wsId;
+      lazyLoadedRef.current = {};
+      setActivities([]);
+      setInvites([]);
+      setAutomationRules([]);
+    }
     try {
-      const [members, projectList, taskPage, statuses, tagList, activityPage] = await Promise.all([
+      // CORE data only — what the shell and every screen render immediately
+      // (task/project chips, statuses, tags, the sidebar plan badge).
+      // Screen-specific data (activity, invites, automation rules, invoices)
+      // loads lazily via ensure*() when its screen mounts.
+      const [members, projectList, taskPage, statuses, tagList] = await Promise.all([
         workspaceApi.members(wsId),
         projectApi.list(wsId, true),
         taskApi.list(wsId, { size: 200 }),
         taskStatusApi.list(wsId),
         tagApi.list(wsId),
-        workspaceApi.activity(wsId, 0, 30),
       ]);
       if (seq !== loadSeq.current) return; // a newer load superseded this one
       setUsers(members);
@@ -155,13 +171,11 @@ export function AppStateProvider({ children }) {
       setTasks(taskPage.content);
       setTaskStatuses(statuses);
       setTags(tagList);
-      setActivities(activityPage.content);
       setWorkspaces((prev) => prev.map((w) => (w.id === wsId ? { ...w, members } : w)));
 
-      // Admin-only extras — non-admins simply do without (server is authoritative).
-      inviteApi.listPending(wsId).then(setInvites).catch(() => setInvites([]));
+      // The sidebar's plan badge needs the subscription everywhere, so it
+      // stays eager (invoices are billing-page-only and load there).
       billingApi.subscription(wsId).then(setActiveSubscription).catch(() => setActiveSubscription(null));
-      automationApi.list(wsId).then(setAutomationRules).catch(() => setAutomationRules([]));
     } catch {
       if (seq === loadSeq.current) setDataError(true);
     } finally {
@@ -190,9 +204,17 @@ export function AppStateProvider({ children }) {
     try { setActivities((await workspaceApi.activity(activeWorkspaceId, 0, 30)).content); } catch { /* keep last */ }
   }, [activeWorkspaceId]);
 
+  const subInFlight = useRef(null);
   const refreshSubscription = useCallback(async () => {
     if (!activeWorkspaceId) return;
-    try { setActiveSubscription(await billingApi.subscription(activeWorkspaceId)); } catch { /* non-admin */ }
+    // Collapse concurrent calls (StrictMode double-runs mount effects in dev).
+    if (subInFlight.current) return subInFlight.current;
+    subInFlight.current = (async () => {
+      try { setActiveSubscription(await billingApi.subscription(activeWorkspaceId)); } catch { /* non-admin */ } finally {
+        subInFlight.current = null;
+      }
+    })();
+    return subInFlight.current;
   }, [activeWorkspaceId]);
 
   const refreshInvites = useCallback(async () => {
@@ -202,9 +224,47 @@ export function AppStateProvider({ children }) {
 
   const refreshWorkspaceData = useCallback(() => loadWorkspaceData(activeWorkspaceId), [loadWorkspaceData, activeWorkspaceId]);
 
+  // --- lazy, screen-scoped loaders (finding: don't fetch every API on every
+  // reload — a screen pulls its own data on first visit, then it's cached
+  // until the workspace changes or a mutation refreshes it) ------------------
+  const lazyLoadedRef = useRef({});
+  const lastLoadedWsRef = useRef(null);
+  const ensureOnce = useCallback((key, loader) => {
+    if (!activeWorkspaceId) return;
+    const cacheKey = `${key}:${activeWorkspaceId}`;
+    if (lazyLoadedRef.current[cacheKey]) return;
+    lazyLoadedRef.current[cacheKey] = true;
+    loader();
+  }, [activeWorkspaceId]);
+
+  const ensureActivities = useCallback(() => ensureOnce("activity", refreshActivities), [ensureOnce, refreshActivities]);
+  const ensureInvites = useCallback(() => ensureOnce("invites", refreshInvites), [ensureOnce, refreshInvites]);
+  const ensureAutomationRules = useCallback(() => ensureOnce("automation", () => {
+    automationApi.list(activeWorkspaceId).then(setAutomationRules).catch(() => setAutomationRules([]));
+  }), [ensureOnce, activeWorkspaceId]);
+  const invoicesInFlight = useRef(null);
+  const loadInvoices = useCallback(async () => {
+    if (!activeWorkspaceId) return;
+    if (invoicesInFlight.current) return invoicesInFlight.current;
+    invoicesInFlight.current = (async () => {
+      try {
+        const invoices = await billingApi.invoices(activeWorkspaceId);
+        setActiveSubscription((prev) => (prev ? { ...prev, invoices } : prev));
+      } catch { /* non-admin */ } finally {
+        invoicesInFlight.current = null;
+      }
+    })();
+    return invoicesInFlight.current;
+  }, [activeWorkspaceId]);
+
   // --- boot ------------------------------------------------------------------
 
+  const bootInFlight = useRef(false);
   const bootSession = useCallback(async () => {
+    // StrictMode double-mounts (and rapid re-triggers) must not double every
+    // boot request — one boot at a time.
+    if (bootInFlight.current) return { success: true };
+    bootInFlight.current = true;
     setBootLoading(true);
     try {
       const [user, wsList, prefs] = await Promise.all([
@@ -233,6 +293,7 @@ export function AppStateProvider({ children }) {
       setCurrentUser(null);
       return { success: false };
     } finally {
+      bootInFlight.current = false;
       setBootLoading(false);
     }
   }, [loadWorkspaceData, refreshNotifications]);
@@ -250,14 +311,23 @@ export function AppStateProvider({ children }) {
   }, []);
 
   // ---- owner-managed plan catalog ------------------------------------------
-  const refreshPlans = useCallback(async () => {
-    try {
-      const catalog = await planApi.list();
-      if (catalog.length > 0) {
-        setPlans(catalog);          // swap the live billingUtils catalog in place
-        setPlansState(catalog);     // re-render consumers
+  const plansInFlight = useRef(null);
+  const refreshPlans = useCallback(() => {
+    // Collapse concurrent calls (StrictMode fires the effect below twice) —
+    // one request serves both; later calls after settling fetch fresh.
+    if (plansInFlight.current) return plansInFlight.current;
+    plansInFlight.current = (async () => {
+      try {
+        const catalog = await planApi.list();
+        if (catalog.length > 0) {
+          setPlans(catalog);          // swap the live billingUtils catalog in place
+          setPlansState(catalog);     // re-render consumers
+        }
+      } catch { /* keep the seeded defaults */ } finally {
+        plansInFlight.current = null;
       }
-    } catch { /* keep the seeded defaults */ }
+    })();
+    return plansInFlight.current;
   }, []);
 
   useEffect(() => {
@@ -1096,6 +1166,7 @@ export function AppStateProvider({ children }) {
     projectFiles,
     // async lifecycle
     bootLoading, dataLoading, dataError, refreshWorkspaceData, refreshNotifications,
+    ensureActivities, ensureInvites, ensureAutomationRules, loadInvoices, refreshSubscription,
     simulateErrors, setSimulateErrors,
     // session
     currentUser, setCurrentUser,

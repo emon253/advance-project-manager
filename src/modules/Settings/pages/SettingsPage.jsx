@@ -22,8 +22,12 @@ export function SettingsPage() {
     simulateErrors,
     setSimulateErrors,
     automationRules,
-    toggleAutomationRule
+    toggleAutomationRule,
+    ensureAutomationRules
   } = useAppState();
+
+  // Automation rules are settings-screen data — fetched on first visit, not at boot.
+  React.useEffect(() => { ensureAutomationRules(); }, [ensureAutomationRules]);
 
   const [systemAlertMessage, setSystemAlertMessage] = useState("");
   const [showUpgrade, setShowUpgrade] = useState(false);

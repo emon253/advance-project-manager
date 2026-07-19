@@ -16,7 +16,10 @@ import { UpgradeModal } from "../../../components/common/UpgradeModal";
 import { getPlanLimits } from "../../Billing/util/billingUtils";
 
 export function TeamPage() {
-  const { users, activeWorkspaceTasks, canAddMember, activePlanId, can } = useAppState();
+  const { users, activeWorkspaceTasks, canAddMember, activePlanId, can, ensureInvites } = useAppState();
+
+  // Pending invites are team-screen data — fetched on first visit, not at boot.
+  React.useEffect(() => { ensureInvites(); }, [ensureInvites]);
   const [showUpgrade, setShowUpgrade] = React.useState(false);
 
   // Custom Invitation State Hook — creates pending invites via provider
