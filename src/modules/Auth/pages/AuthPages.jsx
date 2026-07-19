@@ -5,6 +5,7 @@
 
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { GoogleSignInButton, googleSignInAvailable } from "../components/GoogleSignInButton";
 import { useAppState } from "../../../app/providers";
 import { Wordmark } from "../../../components/common/Logo";
 import {
@@ -69,11 +70,39 @@ function BrandPanel() {
   );
 }
 
-/** SSO row — visual placeholders until the SSO rollout (handler explains). */
-function SsoButtons({ onUnavailable }) {
+/**
+ * SSO row. Google is live when VITE_GOOGLE_CLIENT_ID is configured (official
+ * GIS button, required branding); the rest stay visual placeholders until
+ * their providers roll out.
+ */
+function SsoButtons({ onUnavailable, onGoogleCredential, onGoogleError }) {
   const base =
     "flex items-center justify-center gap-2 h-10 rounded-lg border border-zinc-200 dark:border-zinc-800 " +
     "bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer";
+  if (googleSignInAvailable) {
+    return (
+      <div className="space-y-2.5">
+        <GoogleSignInButton onCredential={onGoogleCredential} onError={onGoogleError} />
+        <div className="grid grid-cols-2 gap-2.5">
+          <button type="button" onClick={onUnavailable} className={base} title="Continue with Apple">
+            <svg className="w-4 h-4 fill-zinc-900 dark:fill-white" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+            </svg>
+            <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Apple</span>
+          </button>
+          <button type="button" onClick={onUnavailable} className={base} title="Continue with Microsoft">
+            <svg className="w-4 h-4" viewBox="0 0 23 23" aria-hidden="true">
+              <path fill="#F35325" d="M1 1h10v10H1z" />
+              <path fill="#81BC06" d="M12 1h10v10H12z" />
+              <path fill="#05A6F0" d="M1 12h10v10H1z" />
+              <path fill="#FFBA08" d="M12 12h10v10H12z" />
+            </svg>
+            <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Microsoft</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="grid grid-cols-3 gap-2.5">
       <button type="button" onClick={onUnavailable} className={base} title="Continue with Google">
@@ -105,7 +134,7 @@ function SsoButtons({ onUnavailable }) {
 }
 
 export function AuthPages() {
-  const { login, register, forgotPassword, resetPassword } = useAppState();
+  const { login, loginWithGoogle, register, forgotPassword, resetPassword } = useAppState();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -204,6 +233,19 @@ export function AuthPages() {
       } finally {
         setSubmitting(false);
       }
+    }
+  };
+
+  const handleGoogleCredential = async (credential) => {
+    setError("");
+    setSuccess("");
+    setSubmitting(true);
+    const res = await loginWithGoogle(credential);
+    setSubmitting(false);
+    if (res.success) {
+      navigate("/dashboard");
+    } else {
+      setError(res.error || "Google sign-in failed — please try again.");
     }
   };
 
@@ -405,6 +447,8 @@ export function AuthPages() {
                   <SsoButtons
                     onUnavailable={() =>
                       setError("Social sign-in arrives with the SSO rollout — use email and password for now.")}
+                    onGoogleCredential={handleGoogleCredential}
+                    onGoogleError={setError}
                   />
                 </div>
               )}

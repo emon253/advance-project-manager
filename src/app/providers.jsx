@@ -591,6 +591,17 @@ export function AppStateProvider({ children }) {
     }
   };
 
+  const loginWithGoogle = async (credential) => {
+    try {
+      const { user } = await authApi.google(credential);
+      setCurrentUser(user);
+      await bootSession();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  };
+
   const register = async ({ name, email, password, accountType, companyName }) => {
     try {
       const { user } = await authApi.register({ name, email, password, accountType, companyName });
@@ -1186,7 +1197,7 @@ export function AppStateProvider({ children }) {
     // timer
     activeTimerTaskId, timerSeconds, toggleTaskTimer, addManualTime,
     // auth
-    login, register, logout,
+    login, loginWithGoogle, register, logout,
     verifyEmail, resendVerification, forgotPassword, resetPassword, refreshCurrentUser,
     uploadAvatar, removeAvatar,
     plans, refreshPlans,

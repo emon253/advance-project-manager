@@ -65,6 +65,13 @@ export const authApi = {
     return { user: userToUi(data.user) };
   },
 
+  /** Exchange a Google Identity Services credential for a normal session. */
+  async google(credential) {
+    const data = await http.post("/auth/google", { credential }, { auth: false });
+    tokenStore.set(data);
+    return { user: userToUi(data.user) };
+  },
+
   async logout() {
     const refreshToken = tokenStore.refresh;
     try {
