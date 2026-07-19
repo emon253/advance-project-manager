@@ -10,7 +10,7 @@ import { UserAvatar } from "../../../components/common/UserAvatar";
 import { Key, UserCheck, Check, AlertTriangle, Trash2, X , Camera, Loader2 } from "lucide-react";
 
 export function ProfilePage() {
-  const { currentUser, updateProfile, changePassword, deleteAccount , uploadAvatar, removeAvatar } = useAppState();
+  const { currentUser, updateProfile, changePassword, deleteAccount , uploadAvatar, removeAvatar , pushNotification } = useAppState();
 
   const [name, setName] = useState(currentUser?.name || "");
   const avatarInputRef = React.useRef(null);
@@ -86,7 +86,7 @@ export function ProfilePage() {
               e.target.value = "";
               if (!file) return;
               if (file.size > 5 * 1024 * 1024) {
-                alert("Profile pictures can be at most 5MB.");
+                pushNotification("Profile pictures can be at most 5MB.", "update", null, null, "Image too large");
                 return;
               }
               setAvatarBusy(true);

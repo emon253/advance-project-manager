@@ -55,6 +55,8 @@ export function ProjectDetailsPage() {
     getAttachmentBlobUrl,
     projectFiles: useAppState_projectFiles,
     can,
+      addProjectMember,
+    removeProjectMember,
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState("overview"); // overview, tasks, files, settings
@@ -356,7 +358,7 @@ export function ProjectDetailsPage() {
 
               {/* Sidebar list of resources */}
               <div className="space-y-2.5 sm:space-y-4">
-                <ProjectMembersList project={project} users={users} updateProject={updateProject} />
+                <ProjectMembersList project={project} users={users} addProjectMember={addProjectMember} removeProjectMember={removeProjectMember} />
               </div>
 
             </div>

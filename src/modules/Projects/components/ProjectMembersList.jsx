@@ -7,25 +7,32 @@ import React from "react";
 import { UserAvatar } from "../../../components/common/UserAvatar";
 import { UserPlus, X } from "lucide-react";
 
-export function ProjectMembersList({ project, users, updateProject }) {
-  // If the project doesn't have members array, fallback to default behavior
-  const projectMemberIds = project?.members || [];
-  const projectMembers = users.filter((u) => projectMemberIds.includes(u.id));
-  const nonMembers = users.filter((u) => !projectMemberIds.includes(u.id));
+export function ProjectMembersList({ project, users, addProjectMember, removeProjectMember }) {
+  const [busy, setBusy] = React.useState(false);
+  const [hint, setHint] = React.useState("");
+  const projectMemberIds = (project?.members || []).map(Number);
+  const projectMembers = users.filter((u) => projectMemberIds.includes(Number(u.id)));
+  const nonMembers = users.filter((u) => !projectMemberIds.includes(Number(u.id)));
 
-  const handleAddMember = (memberId) => {
-    if (!memberId) return;
-    const updatedMembers = [...projectMemberIds, memberId];
-    updateProject(project.id, { members: updatedMembers });
+  // The backend has dedicated membership endpoints — PATCH /projects never
+  // carried members, which is why the old updateProject path silently no-oped.
+  const handleAddMember = async (memberId) => {
+    if (!memberId || busy) return;
+    setBusy(true);
+    await addProjectMember(project.id, Number(memberId));
+    setBusy(false);
   };
 
-  const handleRemoveMember = (memberId) => {
+  const handleRemoveMember = async (memberId) => {
+    if (busy) return;
     if (projectMemberIds.length <= 1) {
-      alert("A project must have at least one team member.");
+      setHint("A project must keep at least one team member.");
+      setTimeout(() => setHint(""), 4000);
       return;
     }
-    const updatedMembers = projectMemberIds.filter((id) => id !== memberId);
-    updateProject(project.id, { members: updatedMembers });
+    setBusy(true);
+    await removeProjectMember(project.id, Number(memberId));
+    setBusy(false);
   };
 
   return (
@@ -36,6 +43,11 @@ export function ProjectMembersList({ project, users, updateProject }) {
         </p>
       </div>
 
+      {hint && (
+        <p className="mb-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-400 text-xs font-semibold" role="status">
+          {hint}
+        </p>
+      )}
       <div className="divide-y divide-zinc-100 dark:divide-zinc-800 sm:divide-y-0 sm:space-y-1">
         {projectMembers.map((member) => (
           <div key={member.id} className="flex items-center justify-between gap-2.5 group min-h-10 py-1 sm:py-0 px-1 rounded-none sm:rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
@@ -71,6 +83,7 @@ export function ProjectMembersList({ project, users, updateProject }) {
             value=""
             onChange={(e) => handleAddMember(e.target.value)}
             className="field"
+            disabled={busy}
           >
             <option value="" disabled>+ Add team member to project...</option>
             {nonMembers.map((u) => (

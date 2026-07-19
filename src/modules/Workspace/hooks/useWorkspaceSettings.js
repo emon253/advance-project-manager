@@ -72,12 +72,12 @@ export function useWorkspaceSettings() {
       setError("Workspace name cannot be left empty.");
       return;
     }
-    await updateWorkspace(ws.id, {
+    const ok = await updateWorkspace(ws.id, {
       name: wsName.trim(),
       logo: wsLogo,
       description: wsDescription.trim(),
     });
-    triggerSuccess("Workspace details updated successfully!");
+    if (ok) triggerSuccess("Workspace details updated successfully!");
   };
 
   // 2. Invite member — pending invitation via the API
@@ -116,14 +116,14 @@ export function useWorkspaceSettings() {
 
   // 3. Change member role
   const handleChangeMemberRole = async (memberId, newRole) => {
-    await changeMemberRole(ws.id, memberId, newRole);
-    triggerSuccess("Member role updated.");
+    const ok = await changeMemberRole(ws.id, memberId, newRole);
+    if (ok) triggerSuccess("Member role updated.");
   };
 
   // 4. Remove member
   const handleRemoveMember = async (memberId) => {
-    await removeMember(ws.id, memberId);
-    triggerSuccess("Member removed from the workspace.");
+    const ok = await removeMember(ws.id, memberId);
+    if (ok) triggerSuccess("Member removed from the workspace.");
   };
 
   // 5. Archive workspace
@@ -134,17 +134,19 @@ export function useWorkspaceSettings() {
       setShowArchiveConfirm(false);
       return;
     }
-    await updateWorkspace(ws.id, { isArchived: true });
+    const ok = await updateWorkspace(ws.id, { isArchived: true });
+    setShowArchiveConfirm(false);
+    if (!ok) return;
     const nextWorkspace = activeWorkspaces.find((w) => w.id !== ws.id);
     if (nextWorkspace) setActiveWorkspaceId(nextWorkspace.id);
-    setShowArchiveConfirm(false);
     navigate("/workspace-settings");
     triggerSuccess(`Workspace '${ws.name}' archived.`);
   };
 
   // 6. Restore archived workspace
   const handleRestoreWorkspace = async (restoreId) => {
-    await updateWorkspace(restoreId, { isArchived: false });
+    const ok = await updateWorkspace(restoreId, { isArchived: false });
+    if (!ok) return;
     setActiveWorkspaceId(restoreId);
     triggerSuccess("Workspace restored successfully!");
   };
@@ -170,8 +172,8 @@ export function useWorkspaceSettings() {
   // 8. Transfer ownership
   const handleTransferOwnership = async (memberId) => {
     const member = (ws.members || []).find((m) => m.id === memberId);
-    await transferOwnership(ws.id, memberId);
-    triggerSuccess(`Ownership transferred to ${member?.name || "the selected member"}. You are now an Admin.`);
+    const ok = await transferOwnership(ws.id, memberId);
+    if (ok) triggerSuccess(`Ownership transferred to ${member?.name || "the selected member"}. You are now an Admin.`);
   };
 
   // 9. Leave workspace (non-Owners only)

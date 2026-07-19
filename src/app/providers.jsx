@@ -386,8 +386,10 @@ export function AppStateProvider({ children }) {
       }
       await refreshWorkspaces();
       if (id === activeWorkspaceId) refreshActivities();
+      return true;
     } catch (err) {
       toastError(err, "Could not update the workspace.");
+      return false;
     }
   };
 
@@ -411,8 +413,10 @@ export function AppStateProvider({ children }) {
       await refreshWorkspaces();
       await loadWorkspaceData(wsId);
       pushNotification("Ownership transferred.", "update", null, null, "Ownership Transferred");
+      return true;
     } catch (err) {
       toastError(err, "Could not transfer ownership.");
+      return false;
     }
   };
 
@@ -434,8 +438,10 @@ export function AppStateProvider({ children }) {
     try {
       await workspaceApi.changeMemberRole(wsId, userId, role);
       await loadWorkspaceData(wsId);
+      return true;
     } catch (err) {
       toastError(err, "Could not change the member's role.");
+      return false;
     }
   };
 
@@ -443,8 +449,10 @@ export function AppStateProvider({ children }) {
     try {
       await workspaceApi.removeMember(wsId, userId);
       await loadWorkspaceData(wsId);
+      return true;
     } catch (err) {
       toastError(err, "Could not remove the member.");
+      return false;
     }
   };
 
@@ -636,18 +644,18 @@ export function AppStateProvider({ children }) {
   const addProjectMember = async (projectId, userId) => {
     try {
       await projectApi.addMember(projectId, userId);
-      refreshProjects();
+      await refreshProjects();
     } catch (err) {
-      toastError(err, "Could not add the member.");
+      toastError(err, "Could not add the member to the project.");
     }
   };
 
   const removeProjectMember = async (projectId, userId) => {
     try {
       await projectApi.removeMember(projectId, userId);
-      refreshProjects();
+      await refreshProjects();
     } catch (err) {
-      toastError(err, "Could not remove the member.");
+      toastError(err, "Could not remove the member from the project.");
     }
   };
 

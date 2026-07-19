@@ -101,6 +101,12 @@
     color-scheme: dark;
   }
 
+  html {
+    /* PWA: suppress pinch/double-tap zoom for a native-app feel */
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;

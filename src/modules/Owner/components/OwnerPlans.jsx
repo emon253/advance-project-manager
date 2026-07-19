@@ -47,6 +47,7 @@ export function OwnerPlans() {
   const [confirm, setConfirm] = useState(null);    // {type:"archive"|"delete", plan}
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState("");
+  const [actionError, setActionError] = useState("");
 
   const load = useCallback(() => {
     setError(false);
@@ -134,11 +135,12 @@ export function OwnerPlans() {
 
   const setStatus = async (plan, status) => {
     setMenuFor(null);
+    setActionError("");
     try {
       await ownerApi.plans.setStatus(plan.code, status);
       refresh();
     } catch (err) {
-      alert(err.message || "Could not update the plan.");
+      setActionError(err.message || "Could not update the plan.");
     }
   };
 
@@ -150,7 +152,8 @@ export function OwnerPlans() {
       setConfirm(null);
       refresh();
     } catch (err) {
-      alert(err.message || "Could not complete the action.");
+      setConfirm(null);
+      setActionError(err.message || "Could not complete the action.");
     } finally {
       setBusy(false);
     }
@@ -184,6 +187,13 @@ export function OwnerPlans() {
           <Plus className="w-3.5 h-3.5" /> New plan
         </button>
       </div>
+
+      {actionError && (
+        <div className="p-3 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 text-xs font-medium border border-rose-100 dark:border-rose-900/30 flex items-center justify-between gap-3" role="alert">
+          <span>{actionError}</span>
+          <button type="button" className="font-semibold hover:underline cursor-pointer shrink-0" onClick={() => setActionError("")}>Dismiss</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-4">
         {plans.map((plan) => (

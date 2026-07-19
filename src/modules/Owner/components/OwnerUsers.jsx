@@ -33,6 +33,7 @@ export function OwnerUsers() {
   const [confirm, setConfirm] = useState(null);    // {user, enable}
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
   const debounce = useRef(null);
 
   const load = useCallback(() => {
@@ -61,7 +62,7 @@ export function OwnerUsers() {
       setConfirm(null);
       setReason("");
     } catch (err) {
-      alert(err.message || "Could not update the account.");
+      setActionError(err.message || "Could not update the account.");
     } finally {
       setBusy(false);
     }
@@ -268,9 +269,14 @@ export function OwnerUsers() {
           : `${confirm?.user.name} will be signed out everywhere and blocked from signing in. Their data stays intact.`}
         confirmLabel={confirm?.enable ? "Reactivate" : "Suspend"}
         busy={busy}
-        onCancel={() => { setConfirm(null); setReason(""); }}
+        onCancel={() => { setConfirm(null); setReason(""); setActionError(""); }}
         onConfirm={applyStatus}
       >
+        {actionError && (
+          <p className="mt-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-xs font-semibold" role="alert">
+            {actionError}
+          </p>
+        )}
         {confirm && !confirm.enable && (
           <div className="mt-3">
             <label className="label" htmlFor="suspend-reason">Reason (kept in the audit log)</label>
