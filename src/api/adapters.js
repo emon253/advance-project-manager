@@ -336,6 +336,7 @@ export function dashboardToUi(d) {
       name: w.name,
       avatar: w.avatarInitials,
       color: w.avatarColor,
+      avatarUrl: toAvatarUrl(w.avatarUrl),
       activeTaskCount: w.activeTaskCount,
     })),
     recentActivity: (d.recentActivity || []).map(activityToUi),
