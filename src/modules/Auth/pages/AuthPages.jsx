@@ -70,68 +70,6 @@ function BrandPanel() {
   );
 }
 
-/**
- * SSO row. Google is live when VITE_GOOGLE_CLIENT_ID is configured (official
- * GIS button, required branding); the rest stay visual placeholders until
- * their providers roll out.
- */
-function SsoButtons({ onUnavailable, onGoogleCredential, onGoogleError }) {
-  const base =
-    "flex items-center justify-center gap-2 h-10 rounded-lg border border-zinc-200 dark:border-zinc-800 " +
-    "bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors cursor-pointer";
-  if (googleSignInAvailable) {
-    return (
-      <div className="space-y-2.5">
-        <GoogleSignInButton onCredential={onGoogleCredential} onError={onGoogleError} />
-        <div className="grid grid-cols-2 gap-2.5">
-          <button type="button" onClick={onUnavailable} className={base} title="Continue with Apple">
-            <svg className="w-4 h-4 fill-zinc-900 dark:fill-white" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-            </svg>
-            <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Apple</span>
-          </button>
-          <button type="button" onClick={onUnavailable} className={base} title="Continue with Microsoft">
-            <svg className="w-4 h-4" viewBox="0 0 23 23" aria-hidden="true">
-              <path fill="#F35325" d="M1 1h10v10H1z" />
-              <path fill="#81BC06" d="M12 1h10v10H12z" />
-              <path fill="#05A6F0" d="M1 12h10v10H1z" />
-              <path fill="#FFBA08" d="M12 12h10v10H12z" />
-            </svg>
-            <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Microsoft</span>
-          </button>
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="grid grid-cols-3 gap-2.5">
-      <button type="button" onClick={onUnavailable} className={base} title="Continue with Google">
-        <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="#4285F4" d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.86c2.26-2.09 3.58-5.17 3.58-8.81z" />
-          <path fill="#34A853" d="M12 24c3.24 0 5.96-1.08 7.94-2.91l-3.86-3c-1.08.72-2.45 1.15-4.08 1.15-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09A11.99 11.99 0 0 0 12 24z" />
-          <path fill="#FBBC05" d="M5.27 14.28A7.2 7.2 0 0 1 4.89 12c0-.79.14-1.56.38-2.28V6.63H1.29a11.99 11.99 0 0 0 0 10.74l3.98-3.09z" />
-          <path fill="#EA4335" d="M12 4.77c1.76 0 3.35.61 4.6 1.8l3.42-3.42A11.97 11.97 0 0 0 12 0 11.99 11.99 0 0 0 1.29 6.63l3.98 3.09C6.22 6.88 8.87 4.77 12 4.77z" />
-        </svg>
-        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Google</span>
-      </button>
-      <button type="button" onClick={onUnavailable} className={base} title="Continue with Apple">
-        <svg className="w-4 h-4 fill-zinc-900 dark:fill-white" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-        </svg>
-        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Apple</span>
-      </button>
-      <button type="button" onClick={onUnavailable} className={base} title="Continue with Microsoft">
-        <svg className="w-4 h-4" viewBox="0 0 23 23" aria-hidden="true">
-          <path fill="#F35325" d="M1 1h10v10H1z" />
-          <path fill="#81BC06" d="M12 1h10v10H12z" />
-          <path fill="#05A6F0" d="M1 12h10v10H1z" />
-          <path fill="#FFBA08" d="M12 12h10v10H12z" />
-        </svg>
-        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Microsoft</span>
-      </button>
-    </div>
-  );
-}
 
 export function AuthPages() {
   const { login, loginWithGoogle, register, forgotPassword, resetPassword } = useAppState();
@@ -435,8 +373,8 @@ export function AuthPages() {
                 </button>
               </form>
 
-              {/* Social logins */}
-              {(isLogin || isRegister) && (
+              {/* Social logins (Apple/Microsoft return with their rollouts) */}
+              {(isLogin || isRegister) && googleSignInAvailable && (
                 <div className="mt-6">
                   <div className="relative flex items-center justify-center my-4">
                     <div className="absolute w-full border-t border-zinc-200 dark:border-zinc-800" />
@@ -444,12 +382,7 @@ export function AuthPages() {
                       or continue with
                     </span>
                   </div>
-                  <SsoButtons
-                    onUnavailable={() =>
-                      setError("Social sign-in arrives with the SSO rollout — use email and password for now.")}
-                    onGoogleCredential={handleGoogleCredential}
-                    onGoogleError={setError}
-                  />
+                  <GoogleSignInButton onCredential={handleGoogleCredential} onError={setError} />
                 </div>
               )}
 

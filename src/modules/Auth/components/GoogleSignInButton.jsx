@@ -20,7 +20,8 @@ function loadGsi() {
   if (!gsiLoader) {
     gsiLoader = new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
+      // hl pins the button language; otherwise GIS localizes to the browser.
+      script.src = "https://accounts.google.com/gsi/client?hl=en";
       script.async = true;
       script.onload = resolve;
       script.onerror = () => { gsiLoader = null; reject(new Error("gsi load failed")); };
@@ -58,6 +59,7 @@ export function GoogleSignInButton({ onCredential, onError }) {
           text: "continue_with",
           shape: "rect",
           logo_alignment: "center",
+          locale: "en_US",
           width: Math.min(400, Math.max(200, slotRef.current.offsetWidth || 360)),
         });
       })
