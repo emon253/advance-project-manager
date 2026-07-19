@@ -92,7 +92,7 @@ export function BillingPage() {
       return;
     }
     if (trialAvailable) {
-      await startTrial(planId);
+      await startTrial(wsId, planId);
       return;
     }
     pushNotification(
