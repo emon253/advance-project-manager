@@ -6,9 +6,11 @@
 import React, { useEffect, useRef } from "react";
 
 // OAuth 2.0 Web-application client ID (Google Cloud Console). Public by
-// design — it identifies the app, it doesn't authenticate it. Unset means
-// Google sign-in is hidden and the placeholder SSO button shows instead.
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+// design — it identifies the app, it doesn't authenticate it — so the live
+// ID is safe as the baked-in default; VITE_GOOGLE_CLIENT_ID overrides it
+// (set it to "" to hide Google sign-in entirely).
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+  ?? "865958340443-18nmi7r1pfhtbiabi87ted2tkfaer7ca.apps.googleusercontent.com";
 
 export const googleSignInAvailable = Boolean(CLIENT_ID);
 
