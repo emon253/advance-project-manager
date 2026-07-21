@@ -78,15 +78,13 @@ export function TaskChecklist({ task, showTitle = true }) {
         </div>
       )}
 
-      {/* Progress bar */}
+      {/* Progress bar — thin, with the % inline (Trello density) */}
       {items.length > 0 && (
-        <div className="space-y-1.5 mb-3">
-          <div className="flex justify-between items-center text-[11px]">
-            <span className={`font-mono font-tnum font-semibold ${progress === 100 ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}`}>
-              {progress}%
-            </span>
-          </div>
-          <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+        <div className="flex items-center gap-2 mb-2">
+          <span className={`text-[11px] font-mono font-tnum font-semibold w-8 shrink-0 ${progress === 100 ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}`}>
+            {progress}%
+          </span>
+          <div className="flex-1 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${progress === 100 ? "bg-emerald-500" : "bg-primary"}`}
               style={{ width: `${progress}%` }}
@@ -116,13 +114,13 @@ export function TaskChecklist({ task, showTitle = true }) {
       {items.length === 0 ? (
         <p className="text-xs text-zinc-500 dark:text-zinc-400 py-4 text-center">No checklist items yet.</p>
       ) : (
-        <div className="space-y-0.5">
+        <div>
           {items
             .filter((cli) => !hideChecked || !cli.completed)
             .map((cli) => (
               <div
                 key={cli.id}
-                className="group/cl flex items-center gap-2.5 px-1.5 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-colors"
+                className="group/cl flex items-center gap-2.5 px-1.5 py-1 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-colors"
               >
                 <input
                   type="checkbox"
@@ -130,7 +128,7 @@ export function TaskChecklist({ task, showTitle = true }) {
                   disabled={!editable}
                   onChange={() => toggleChecklistItem(task.id, cli.id)}
                   aria-label={`Mark "${cli.title}" ${cli.completed ? "incomplete" : "complete"}`}
-                  className="w-4.5 h-4.5 text-primary border-zinc-300 dark:border-zinc-600 rounded cursor-pointer shrink-0 bg-transparent focus:ring-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-4 h-4 text-primary border-zinc-300 dark:border-zinc-600 rounded cursor-pointer shrink-0 bg-transparent focus:ring-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className={`flex-1 min-w-0 text-sm font-medium truncate ${cli.completed ? "line-through text-zinc-400 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
                   {cli.title}

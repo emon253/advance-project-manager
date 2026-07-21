@@ -15,9 +15,12 @@
   --color-primary-active: #3a28c4;
   --color-accent: #ea2261;
 
-  /* Elevation */
-  --shadow-elevated: 0px 24px 40px -24px rgba(50, 50, 93, 0.22), 0px 12px 24px -14px rgba(0, 0, 0, 0.1);
-  --shadow-soft: 0px 2px 6px rgba(23, 23, 23, 0.05), 0px 1px 2px rgba(23, 23, 23, 0.04);
+  /* Elevation — kept deliberately restrained for a flat, premium feel.
+     `soft` is a near-flat hairline for resting surfaces (cards); real
+     elevation (`elevated`) is reserved for floating overlays: modals,
+     drawers, menus, toasts. */
+  --shadow-elevated: 0px 12px 28px -12px rgba(16, 24, 40, 0.16), 0px 4px 10px -6px rgba(16, 24, 40, 0.08);
+  --shadow-soft: 0px 1px 2px rgba(16, 24, 40, 0.04);
 
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
