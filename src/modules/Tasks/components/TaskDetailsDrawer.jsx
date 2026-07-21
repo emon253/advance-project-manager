@@ -31,6 +31,7 @@ const isImageType = (t) => {
 };
 const isPdfType = (t) => (t || "").toLowerCase().includes("pdf");
 import { AIEnhanceButton } from "../../../components/common/AIEnhanceButton";
+import { TaskChecklist } from "./TaskChecklist";
 
 export function TaskDetailsDrawer() {
   const {
@@ -53,23 +54,12 @@ export function TaskDetailsDrawer() {
     removeAttachment,
     downloadAttachment,
     getAttachmentBlobUrl,
-    addChecklistItem,
-    toggleChecklistItem,
-    deleteChecklistItem,
     duplicateTask,
     can
   } = useAppState();
 
   const [activeTab, setActiveTab] = useState("general"); // general, checklist, comments, advanced
   const [commentInput, setCommentInput] = useState("");
-  const [inlineCLTitle, setInlineCLTitle] = useState("");
-  // Trello-style checklist affordances: items hidden (not deleted) while
-  // toggled, the add row only appears on demand, and clearing the whole
-  // checklist asks for confirmation inline (no browser confirm() dialogs).
-  const [hideCheckedItems, setHideCheckedItems] = useState(false);
-  const [addingChecklistItem, setAddingChecklistItem] = useState(false);
-  const [confirmClearChecklist, setConfirmClearChecklist] = useState(false);
-  const [clearingChecklist, setClearingChecklist] = useState(false);
   const [manualHours, setManualHours] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   // Trello-style editing (findings #11/#13): title & description are LOCAL
@@ -103,11 +93,8 @@ export function TaskDetailsDrawer() {
   // Auto-scroll logic or state reset on transition
   useEffect(() => {
     setCommentInput("");
-    setInlineCLTitle("");
     setManualHours("");
     setEditingTitle(false);
-    setAddingChecklistItem(false);
-    setConfirmClearChecklist(false);
   }, [activeTaskId]);
 
   if (!task) return null;
@@ -128,12 +115,8 @@ export function TaskDetailsDrawer() {
     return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Checklist computation
+  // Only the count is needed here (tab label); the checklist UI lives in <TaskChecklist>.
   const checklistItems = task.checklist || [];
-  const completedCLCount = checklistItems.filter((i) => i.completed).length;
-  const checklistProgress = checklistItems.length > 0
-    ? Math.round((completedCLCount / checklistItems.length) * 100)
-    : 0;
 
   const handleTextChange = (field, val) => {
     updateTask(task.id, { [field]: val });
@@ -160,21 +143,6 @@ export function TaskDetailsDrawer() {
     if (!commentInput.trim()) return;
     addComment(task.id, commentInput.trim());
     setCommentInput("");
-  };
-
-  const handleAddCL = (e) => {
-    e.preventDefault();
-    if (!inlineCLTitle.trim()) return;
-    addChecklistItem(task.id, inlineCLTitle.trim());
-    setInlineCLTitle("");
-    // Stays open (Trello's pattern): rapid successive adds without re-clicking.
-  };
-
-  const handleClearChecklist = async () => {
-    setClearingChecklist(true);
-    await Promise.all(checklistItems.map((cli) => deleteChecklistItem(task.id, cli.id)));
-    setClearingChecklist(false);
-    setConfirmClearChecklist(false);
   };
 
   const handleRealFileUpload = (e) => {
@@ -547,158 +515,9 @@ export function TaskDetailsDrawer() {
               </div>
             )}
 
-            {/* CHECKLISTS TAB — Trello-inspired: named header row with Hide
-                checked items / Delete, a progress bar, flat item rows
-                (strikethrough on completion), and an on-demand "Add an item"
-                row instead of an always-visible form. */}
+            {/* CHECKLISTS TAB — the shared Trello-style checklist block. */}
             {activeTab === "checklist" && (
-              <div className="space-y-3 sm:space-y-4">
-                <div>
-                  {/* Checklist header: title + Hide checked items / Delete, like Trello's per-checklist bar */}
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Checklist</span>
-                    {checklistItems.length > 0 && (
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {completedCLCount > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setHideCheckedItems((v) => !v)}
-                            className="btn btn-secondary btn-sm h-7 px-2.5 text-[11px]"
-                          >
-                            {hideCheckedItems ? "Show checked items" : "Hide checked items"}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setConfirmClearChecklist(true)}
-                          className="btn btn-secondary btn-sm h-7 px-2.5 text-[11px]"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Progress bar */}
-                  {checklistItems.length > 0 && (
-                    <div className="space-y-1.5 mb-3">
-                      <div className="flex justify-between items-center text-[11px]">
-                        <span className={`font-mono font-tnum font-semibold ${checklistProgress === 100 ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}`}>
-                          {checklistProgress}%
-                        </span>
-                      </div>
-                      <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            checklistProgress === 100 ? "bg-emerald-500" : "bg-primary"
-                          }`}
-                          style={{ width: `${checklistProgress}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Inline "delete whole checklist" confirmation */}
-                  {confirmClearChecklist && (
-                    <div className="flex items-center justify-between gap-2 p-2.5 mb-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40">
-                      <span className="text-xs font-medium text-rose-700 dark:text-rose-300">
-                        Delete all {checklistItems.length} checklist items? This can't be undone.
-                      </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setConfirmClearChecklist(false)}
-                          className="btn btn-secondary btn-sm h-7 px-2.5 text-[11px]"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleClearChecklist}
-                          disabled={clearingChecklist}
-                          className="btn btn-danger-soft btn-sm h-7 px-2.5 text-[11px]"
-                        >
-                          {clearingChecklist ? "Deleting…" : "Delete"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Items */}
-                  {checklistItems.length === 0 ? (
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center py-6">No checklist items yet.</p>
-                  ) : (
-                    <div className="space-y-0.5">
-                      {checklistItems
-                        .filter((cli) => !hideCheckedItems || !cli.completed)
-                        .map((cli) => (
-                          <div
-                            key={cli.id}
-                            className="group/cl flex items-center gap-2.5 px-1.5 py-1.5 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={cli.completed}
-                              onChange={() => toggleChecklistItem(task.id, cli.id)}
-                              aria-label={`Mark "${cli.title}" ${cli.completed ? "incomplete" : "complete"}`}
-                              className="w-4.5 h-4.5 text-primary border-zinc-300 dark:border-zinc-600 rounded cursor-pointer shrink-0 bg-transparent focus:ring-primary/30"
-                            />
-                            <span className={`flex-1 min-w-0 text-sm font-medium truncate ${cli.completed ? "line-through text-zinc-400 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}>
-                              {cli.title}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => deleteChecklistItem(task.id, cli.id)}
-                              className="flex items-center justify-center h-7 w-7 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer shrink-0 opacity-0 group-hover/cl:opacity-100 focus-visible:opacity-100"
-                              aria-label="Delete checklist item"
-                              title="Delete checklist item"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-
-                  {/* On-demand "Add an item" row (Trello's pattern: a button until clicked) */}
-                  {addingChecklistItem ? (
-                    <form onSubmit={handleAddCL} className="mt-2 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          autoFocus
-                          placeholder="Add an item…"
-                          value={inlineCLTitle}
-                          onChange={(e) => setInlineCLTitle(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Escape") setAddingChecklistItem(false); }}
-                          aria-label="New checklist item"
-                          className="field flex-1"
-                        />
-                        <AIEnhanceButton value={inlineCLTitle} onEnhance={setInlineCLTitle} type="checklist" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button type="submit" className="btn btn-primary btn-sm">Add</button>
-                        <button
-                          type="button"
-                          onClick={() => { setAddingChecklistItem(false); setInlineCLTitle(""); }}
-                          className="btn btn-secondary btn-sm"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setAddingChecklistItem(true)}
-                      className="btn btn-secondary btn-sm mt-2 w-full sm:w-auto justify-center"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Add an item
-                    </button>
-                  )}
-                </div>
-              </div>
+              <TaskChecklist key={task.id} task={task} />
             )}
 
             {/* REVIEWS & THREADS TAB */}

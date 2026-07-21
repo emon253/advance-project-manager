@@ -859,6 +859,20 @@ export function AppStateProvider({ children }) {
     if (activeTaskId && activeTaskId !== "NEW_TEMP") loadTaskDetail(activeTaskId);
   }, [activeTaskId, loadTaskDetail]);
 
+  // Lazy checklist hydration for inline expansion in the Tasks Lineup: the
+  // bulk task list carries only counts (checklist: []), so pull the full items
+  // on demand. Lighter than loadTaskDetail — checklist only, no comments/attachments.
+  const loadTaskChecklist = useCallback(async (taskId) => {
+    try {
+      const detail = await taskApi.get(taskId);
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? { ...t, checklist: detail.checklist || [], checklistDone: detail.checklistDone, checklistTotal: detail.checklistTotal }
+        : t)));
+    } catch {
+      /* keep list data */
+    }
+  }, []);
+
   // --- checklist / comments / attachments ------------------------------------
 
   const addChecklistItem = async (taskId, title) => {
@@ -1238,7 +1252,7 @@ export function AppStateProvider({ children }) {
     addProject, updateProject, deleteProject,
     addProjectMember, removeProjectMember,
     // tasks
-    addTask, updateTask, deleteTask, duplicateTask, loadTaskDetail,
+    addTask, updateTask, deleteTask, duplicateTask, loadTaskDetail, loadTaskChecklist,
     addChecklistItem, toggleChecklistItem, deleteChecklistItem,
     addComment,
     attachFile, removeAttachment, downloadAttachment, getAttachmentBlobUrl,
