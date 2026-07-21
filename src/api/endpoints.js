@@ -412,3 +412,13 @@ export const ownerApi = {
       adminPage(await http.get(`/admin/audit${q({ targetType, page, size })}`), adminAuditEntryToUi),
   },
 };
+
+export const aiApi = {
+  /**
+   * type: title|description|checklist|comment; action: grammar|professional|
+   * concise|expand. Authenticated like every other endpoint — each call
+   * spends real Gemini quota.
+   */
+  enhance: async (text, type, action) =>
+    (await http.post("/ai/enhance", { text, type, action })).enhancedText,
+};

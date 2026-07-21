@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Wand2, Loader2, X, AlertCircle, CheckCircle2 } from "lucide-react";
+import { aiApi } from "../../api/endpoints";
 
 const PRESETS = [
   { id: "grammar", title: "Fix Grammar", hint: "Spelling & typos" },
@@ -36,26 +37,9 @@ export function AIEnhancerModal({ isOpen, onClose, initialValue, onApply, type =
     setError("");
 
     try {
-      const response = await fetch("/api/enhance", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: originalText,
-          type,
-          action,
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Failed to contact Gemini API.");
-      }
-
-      const data = await response.json();
-      if (data.enhancedText) {
-        setSuggestion(data.enhancedText);
+      const enhancedText = await aiApi.enhance(originalText, type, action);
+      if (enhancedText) {
+        setSuggestion(enhancedText);
       } else {
         throw new Error("No suggestion returned from the AI model.");
       }
@@ -202,7 +186,7 @@ export function AIEnhancerModal({ isOpen, onClose, initialValue, onApply, type =
         {/* Footer controls */}
         <div className="px-5 pt-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-3 shrink-0">
           <div className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium hidden sm:inline-block">
-            Powered by Gemini 3.5 Flash
+            Powered by Google Gemini
           </div>
           <div className="flex items-center gap-2.5 w-full sm:w-auto ml-auto">
             <button

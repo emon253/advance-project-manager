@@ -12,7 +12,6 @@
     "lint": "echo 'Skip TS check for pure JSX/JS project'"
   },
   "dependencies": {
-    "@google/genai": "^2.4.0",
     "@stomp/stompjs": "^7.3.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
