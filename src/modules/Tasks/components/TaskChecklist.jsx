@@ -22,7 +22,6 @@ import { AIEnhanceButton } from "../../../components/common/AIEnhanceButton";
 export function TaskChecklist({ task, showTitle = true }) {
   const { addChecklistItem, toggleChecklistItem, deleteChecklistItem, can } = useAppState();
   const [inlineTitle, setInlineTitle] = useState("");
-  const [hideChecked, setHideChecked] = useState(false);
   const [adding, setAdding] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -49,22 +48,12 @@ export function TaskChecklist({ task, showTitle = true }) {
 
   return (
     <div>
-      {/* Header: optional title (drawer) + Hide checked items. The
-          whole-checklist Delete lives in the bottom action row now. */}
-      {(showTitle || (editable && done > 0)) && (
-        <div className="flex items-center justify-between gap-2 mb-2">
-          {showTitle
-            ? <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Checklist</span>
-            : <span />}
-          {editable && done > 0 && (
-            <button
-              type="button"
-              onClick={() => setHideChecked((v) => !v)}
-              className="btn btn-secondary btn-sm h-7 px-2.5 text-[11px] shrink-0"
-            >
-              {hideChecked ? "Show checked items" : "Hide checked items"}
-            </button>
-          )}
+      {/* Title — drawer only. Inline in the lineup the toggle bar already
+          labels the checklist. The whole-checklist Delete lives in the
+          bottom action row. */}
+      {showTitle && (
+        <div className="mb-2">
+          <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Checklist</span>
         </div>
       )}
 
@@ -90,7 +79,6 @@ export function TaskChecklist({ task, showTitle = true }) {
       ) : (
         <div>
           {items
-            .filter((cli) => !hideChecked || !cli.completed)
             .map((cli) => (
               <div
                 key={cli.id}
