@@ -11,6 +11,7 @@ import { useAppState } from "../../../app/providers";
 import { Calendar } from "lucide-react";
 import { getIconComponent } from "../../../components/common/IconHelper";
 import { formatProjectDeadline } from "../util/projectUtils";
+import { richTextToPlain } from "../../../components/common/RichText/sanitizeHtml";
 
 export function ProjectCard({ project, projectTasks }) {
   const { users } = useAppState();
@@ -45,7 +46,7 @@ export function ProjectCard({ project, projectTasks }) {
           </div>
 
           <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 sm:mt-2 line-clamp-2 leading-relaxed">
-            {project.description}
+            {richTextToPlain(project.description)}
           </p>
         </div>
 

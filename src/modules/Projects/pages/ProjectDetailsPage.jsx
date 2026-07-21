@@ -20,6 +20,8 @@ import { ProjectTaskLineup } from "../components/ProjectTaskLineup";
 import { ProjectFileCabinet } from "../components/ProjectFileCabinet";
 import { ProjectAdminControls } from "../components/ProjectAdminControls";
 import { AttachmentPreviewModal } from "../components/AttachmentPreviewModal";
+import { RichTextEditor } from "../../../components/common/RichText/RichTextEditor";
+import { RichTextView } from "../../../components/common/RichText/RichTextView";
 
 import {
   calculateCompletionPercentage,
@@ -289,12 +291,11 @@ export function ProjectDetailsPage() {
 
                 <div>
                   <label htmlFor="edit-project-desc" className="label">Description</label>
-                  <textarea
+                  <RichTextEditor
                     id="edit-project-desc"
                     value={editDesc}
-                    onChange={(e) => setEditDesc(e.target.value)}
-                    rows={3}
-                    className="field"
+                    onChange={setEditDesc}
+                    placeholder="Outline the charter, goals, or scope… use the toolbar to format."
                   />
                 </div>
               </div>
@@ -344,9 +345,7 @@ export function ProjectDetailsPage() {
               <div className="md:col-span-2 space-y-2.5 sm:space-y-4">
                 <div className="card p-3 sm:p-4">
                   <p className="text-[10px] sm:text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1.5 sm:mb-2">Charter Statement</p>
-                  <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
-                    {project.description}
-                  </p>
+                  <RichTextView html={project.description} emptyText="No charter statement yet — edit the project to add one." />
                 </div>
 
                 {/* Progress and velocity metrics state cards */}

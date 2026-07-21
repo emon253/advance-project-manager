@@ -7,6 +7,8 @@ import React from "react";
 import { X } from "lucide-react";
 import { AIEnhanceButton } from "../../../components/common/AIEnhanceButton";
 import { ICON_OPTIONS } from "../../../components/common/IconHelper";
+import { RichTextEditor } from "../../../components/common/RichText/RichTextEditor";
+import { richTextToPlain, plainToRichText } from "../../../components/common/RichText/sanitizeHtml";
 
 export function ProjectFormDialog({
   handleCreateProject,
@@ -97,16 +99,20 @@ export function ProjectFormDialog({
             <div>
               <div className="flex items-center justify-between">
                 <label htmlFor="new-project-brief" className="label mb-0">Project Brief</label>
-                <AIEnhanceButton value={newProjDesc} onEnhance={setNewProjDesc} type="description" />
+                <AIEnhanceButton
+                  value={richTextToPlain(newProjDesc)}
+                  onEnhance={(text) => setNewProjDesc(plainToRichText(text))}
+                  type="description"
+                />
               </div>
-              <textarea
-                id="new-project-brief"
-                placeholder="Outline high-level parameters or criteria..."
-                rows={3}
-                value={newProjDesc}
-                onChange={(e) => setNewProjDesc(e.target.value)}
-                className="field mt-1.5"
-              />
+              <div className="mt-1.5">
+                <RichTextEditor
+                  id="new-project-brief"
+                  value={newProjDesc}
+                  onChange={setNewProjDesc}
+                  placeholder="Outline high-level parameters or criteria… use the toolbar to format."
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

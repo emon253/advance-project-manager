@@ -252,3 +252,11 @@
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
 }
+
+/* Rich-text editor: attribute-driven placeholder + code-block presentation.
+   (Tailwind arbitrary variants can't reach ::before content from an attr.) */
+.richtext-editable:empty:before {
+  content: attr(data-placeholder);
+  color: #a1a1aa;
+  pointer-events: none;
+}
