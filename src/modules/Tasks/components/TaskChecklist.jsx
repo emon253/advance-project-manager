@@ -49,37 +49,28 @@ export function TaskChecklist({ task, showTitle = true }) {
 
   return (
     <div>
-      {/* Header: optional title + Hide checked items / Delete (Trello's per-checklist bar) */}
-      {(showTitle || (editable && items.length > 0)) && (
+      {/* Header: optional title (drawer) + Hide checked items. The
+          whole-checklist Delete lives in the bottom action row now. */}
+      {(showTitle || (editable && done > 0)) && (
         <div className="flex items-center justify-between gap-2 mb-2">
           {showTitle
             ? <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Checklist</span>
             : <span />}
-          {editable && items.length > 0 && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              {done > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setHideChecked((v) => !v)}
-                  className="btn btn-secondary btn-sm h-7 px-2.5 text-[11px]"
-                >
-                  {hideChecked ? "Show checked items" : "Hide checked items"}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setConfirmClear(true)}
-                className="btn btn-secondary btn-sm h-7 px-2.5 text-[11px]"
-              >
-                Delete
-              </button>
-            </div>
+          {editable && done > 0 && (
+            <button
+              type="button"
+              onClick={() => setHideChecked((v) => !v)}
+              className="btn btn-secondary btn-sm h-7 px-2.5 text-[11px] shrink-0"
+            >
+              {hideChecked ? "Show checked items" : "Hide checked items"}
+            </button>
           )}
         </div>
       )}
 
-      {/* Progress bar — thin, with the % inline (Trello density) */}
-      {items.length > 0 && (
+      {/* Progress bar — drawer only. Inline in the Tasks Lineup the toggle bar
+          already shows the count + mini bar, so a second one here is redundant. */}
+      {showTitle && items.length > 0 && (
         <div className="flex items-center gap-2 mb-2">
           <span className={`text-[11px] font-mono font-tnum font-semibold w-8 shrink-0 ${progress === 100 ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}`}>
             {progress}%
@@ -89,23 +80,6 @@ export function TaskChecklist({ task, showTitle = true }) {
               className={`h-full rounded-full transition-all duration-300 ${progress === 100 ? "bg-emerald-500" : "bg-primary"}`}
               style={{ width: `${progress}%` }}
             />
-          </div>
-        </div>
-      )}
-
-      {/* Inline "delete whole checklist" confirmation */}
-      {confirmClear && (
-        <div className="flex items-center justify-between gap-2 p-2.5 mb-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40">
-          <span className="text-xs font-medium text-rose-700 dark:text-rose-300">
-            Delete all {items.length} checklist items? This can't be undone.
-          </span>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button type="button" onClick={() => setConfirmClear(false)} className="btn btn-secondary btn-sm h-7 px-2.5 text-[11px]">
-              Cancel
-            </button>
-            <button type="button" onClick={handleClear} disabled={clearing} className="btn btn-danger-soft btn-sm h-7 px-2.5 text-[11px]">
-              {clearing ? "Deleting…" : "Delete"}
-            </button>
           </div>
         </div>
       )}
@@ -149,44 +123,65 @@ export function TaskChecklist({ task, showTitle = true }) {
         </div>
       )}
 
-      {/* On-demand "Add an item" row (Trello's pattern: a button until clicked) */}
+      {/* Bottom action row: Add an item (left) and, once there are items, the
+          whole-checklist Delete on the right (Trello-style). Clicking Delete
+          swaps in an inline confirm; Add an item swaps in the add form. */}
       {editable && (
-        adding ? (
-          <form onSubmit={handleAdd} className="mt-2 space-y-2">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                autoFocus
-                placeholder="Add an item…"
-                value={inlineTitle}
-                onChange={(e) => setInlineTitle(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Escape") setAdding(false); }}
-                aria-label="New checklist item"
-                className="field flex-1"
-              />
-              <AIEnhanceButton value={inlineTitle} onEnhance={setInlineTitle} type="checklist" />
+        <div className="mt-2">
+          {confirmClear ? (
+            <div className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40">
+              <span className="text-xs font-medium text-rose-700 dark:text-rose-300">
+                Delete all {items.length} checklist items? This can't be undone.
+              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button type="button" onClick={() => setConfirmClear(false)} className="btn btn-secondary btn-sm h-7 px-2.5 text-[11px]">
+                  Cancel
+                </button>
+                <button type="button" onClick={handleClear} disabled={clearing} className="btn btn-danger-soft btn-sm h-7 px-2.5 text-[11px]">
+                  {clearing ? "Deleting…" : "Delete"}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button type="submit" className="btn btn-primary btn-sm">Add</button>
-              <button
-                type="button"
-                onClick={() => { setAdding(false); setInlineTitle(""); }}
-                className="btn btn-secondary btn-sm"
-              >
-                Cancel
+          ) : adding ? (
+            <form onSubmit={handleAdd} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Add an item…"
+                  value={inlineTitle}
+                  onChange={(e) => setInlineTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Escape") setAdding(false); }}
+                  aria-label="New checklist item"
+                  className="field flex-1"
+                />
+                <AIEnhanceButton value={inlineTitle} onEnhance={setInlineTitle} type="checklist" />
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="submit" className="btn btn-primary btn-sm">Add</button>
+                <button
+                  type="button"
+                  onClick={() => { setAdding(false); setInlineTitle(""); }}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <button type="button" onClick={() => setAdding(true)} className="btn btn-secondary btn-sm">
+                <Plus className="w-3.5 h-3.5" />
+                Add an item
               </button>
+              {items.length > 0 && (
+                <button type="button" onClick={() => setConfirmClear(true)} className="btn btn-secondary btn-sm shrink-0">
+                  Delete
+                </button>
+              )}
             </div>
-          </form>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="btn btn-secondary btn-sm mt-2 w-full sm:w-auto justify-center"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add an item
-          </button>
-        )
+          )}
+        </div>
       )}
     </div>
   );

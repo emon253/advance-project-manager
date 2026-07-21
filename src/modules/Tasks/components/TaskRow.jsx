@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import { MessageSquare, Calendar, ChevronRight, CheckCircle2, Paperclip } from "lucide-react";
+import { MessageSquare, Calendar, ChevronRight, Paperclip } from "lucide-react";
 import { PriorityBadge } from "../../../components/common/PriorityBadge";
 import { StatusBadge } from "../../../components/common/StatusBadge";
 import { UserAvatar } from "../../../components/common/UserAvatar";
@@ -19,8 +19,6 @@ export function TaskRow({
 }) {
   const { can } = useAppState();
   const isCompleted = task.status === "Completed";
-  const checklistItems = task.checklist || [];
-  const completedCLCount = checklistItems.filter((i) => i.completed).length;
   const commentCount = task.comments?.length || 0;
 
   const dueDateObj = task.dueDate ? new Date(task.dueDate) : null;
@@ -49,16 +47,8 @@ export function TaskRow({
 
   const metaChips = (
     <>
-      {/* Checklist progress */}
-      {checklistItems.length > 0 && (
-        <span
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400"
-          title={`${completedCLCount}/${checklistItems.length} Milestones completed`}
-        >
-          <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
-          <span className="font-mono font-tnum">{completedCLCount}/{checklistItems.length}</span>
-        </span>
-      )}
+      {/* Checklist progress lives in the inline checklist toggle bar below the
+          row (TaskListItem), so it's intentionally not repeated here. */}
 
       {/* Attachments count */}
       {task.attachments?.length > 0 && (
