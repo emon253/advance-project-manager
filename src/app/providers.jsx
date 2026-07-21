@@ -91,6 +91,7 @@ export function AppStateProvider({ children }) {
 
   const [automationRules, setAutomationRules] = useState([]);
   const [projectFiles, setProjectFiles] = useState({}); // per-project attachment lists (API-backed)
+  const [projectComments, setProjectComments] = useState({}); // per-project "Comments and activity" threads (API-backed)
 
   // --- async data lifecycle (useMockQuery contract) --------------------------
   const [dataLoading, setDataLoading] = useState(false);
@@ -993,6 +994,29 @@ export function AppStateProvider({ children }) {
     }
   };
 
+  // Project "Comments and activity" — API-backed, same shape as task comments.
+  const loadProjectComments = useCallback(async (projectId) => {
+    try {
+      const comments = await projectApi.comments.list(projectId);
+      setProjectComments((prev) => ({ ...prev, [projectId]: comments }));
+    } catch {
+      /* non-member or transient; panel shows empty */
+    }
+  }, []);
+
+  const addProjectComment = async (projectId, text) => {
+    if (!text?.trim()) return false;
+    try {
+      const comment = await projectApi.comments.add(projectId, text.trim());
+      setProjectComments((prev) => ({ ...prev, [projectId]: [...(prev[projectId] || []), comment] }));
+      refreshActivities();
+      return true;
+    } catch (err) {
+      toastError(err, "Could not post the comment.");
+      return false;
+    }
+  };
+
   // Automation rules — API-backed, Pro-gated server-side (402 on activation).
   const toggleAutomationRule = async (ruleId, active) => {
     try {
@@ -1175,6 +1199,7 @@ export function AppStateProvider({ children }) {
     taskStatuses, setTaskStatuses,
     invites,
     projectFiles,
+    projectComments,
     // async lifecycle
     bootLoading, dataLoading, dataError, refreshWorkspaceData, refreshNotifications,
     ensureActivities, ensureInvites, ensureAutomationRules, loadInvoices, refreshSubscription,
@@ -1218,6 +1243,7 @@ export function AppStateProvider({ children }) {
     addComment,
     attachFile, removeAttachment, downloadAttachment, getAttachmentBlobUrl,
     attachFileToProject, removeAttachmentFromProject, loadProjectFiles,
+    loadProjectComments, addProjectComment,
     addTaskStatus, updateTaskStatus, deleteTaskStatus,
     createTag,
     // notifications

@@ -186,6 +186,11 @@ export const projectApi = {
       return attachmentToUi(await http.post(`/projects/${projectId}/attachments`, form));
     },
   },
+
+  comments: {
+    list: async (projectId) => (await http.get(`/projects/${projectId}/comments`)).map(commentToUi),
+    add: async (projectId, body) => commentToUi(await http.post(`/projects/${projectId}/comments`, { body })),
+  },
 };
 
 export const templateApi = {

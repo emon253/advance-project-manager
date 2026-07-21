@@ -14,7 +14,6 @@ import { getIconComponent } from "../../../components/common/IconHelper";
 
 // Modular Imports
 import { ProjectDetailsTabs } from "../components/ProjectTabs";
-import { ProjectPerformanceCard } from "../components/ProjectPerformanceCard";
 import { ProjectMembersList } from "../components/ProjectMembersList";
 import { ProjectTaskLineup } from "../components/ProjectTaskLineup";
 import { ProjectFileCabinet } from "../components/ProjectFileCabinet";
@@ -22,6 +21,9 @@ import { ProjectAdminControls } from "../components/ProjectAdminControls";
 import { AttachmentPreviewModal } from "../components/AttachmentPreviewModal";
 import { RichTextEditor } from "../../../components/common/RichText/RichTextEditor";
 import { RichTextView } from "../../../components/common/RichText/RichTextView";
+import { AIEnhanceButton } from "../../../components/common/AIEnhanceButton";
+import { richTextToPlain, plainToRichText } from "../../../components/common/RichText/sanitizeHtml";
+import { ProjectDiscussionPanel } from "../components/ProjectDiscussionPanel";
 
 import {
   calculateCompletionPercentage,
@@ -96,7 +98,6 @@ export function ProjectDetailsPage() {
   // Tasks in this project
   const projectTasks = tasks.filter((t) => t.projectId === project.id);
   const completedTasks = projectTasks.filter((t) => t.status === "Completed");
-  const inProgressCount = projectTasks.filter((t) => t.status === "In Progress").length;
   const pendingTasks = projectTasks.filter((t) => t.status !== "Completed" && t.status !== "Cancelled");
 
   const completionPercentage = calculateCompletionPercentage(projectTasks);
@@ -199,6 +200,22 @@ export function ProjectDetailsPage() {
               <span className={`badge ${PROJECT_STATUS_STYLES[project.status] || PROJECT_STATUS_STYLES.Planning}`}>
                 {project.status}
               </span>
+              {/* Compact completion indicator (replaces the old Completion/Velocity cards). */}
+              <span
+                className="inline-flex items-center gap-1.5 h-6 px-2 rounded-full bg-primary/8 dark:bg-primary/15 border border-primary/20 text-primary text-[11px] font-semibold shrink-0"
+                title={`${completionPercentage}% of tasks completed`}
+              >
+                <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" aria-hidden="true">
+                  <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeOpacity="0.2" strokeWidth="3" />
+                  <circle
+                    cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="3"
+                    strokeDasharray={`${(completionPercentage / 100) * 40.8} 40.8`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 8 8)"
+                  />
+                </svg>
+                <span className="font-tnum">{completionPercentage}%</span>
+              </span>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 sm:mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
               <span>Created {new Date(project.createdAt || project.startDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
@@ -290,7 +307,14 @@ export function ProjectDetailsPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="edit-project-desc" className="label">Description</label>
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <label htmlFor="edit-project-desc" className="label mb-0">Description</label>
+                    <AIEnhanceButton
+                      value={richTextToPlain(editDesc)}
+                      onEnhance={(text) => setEditDesc(plainToRichText(text))}
+                      type="description"
+                    />
+                  </div>
                   <RichTextEditor
                     id="edit-project-desc"
                     value={editDesc}
@@ -348,11 +372,7 @@ export function ProjectDetailsPage() {
                   <RichTextView html={project.description} emptyText="No charter statement yet — edit the project to add one." />
                 </div>
 
-                {/* Progress and velocity metrics state cards */}
-                <ProjectPerformanceCard
-                  completionPercentage={completionPercentage}
-                  inProgressCount={inProgressCount}
-                />
+                <ProjectDiscussionPanel projectId={project.id} />
               </div>
 
               {/* Sidebar list of resources */}

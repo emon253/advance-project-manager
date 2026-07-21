@@ -54,23 +54,27 @@ export function ProjectTaskLineup({
           description="Add a task above, or deploy a workflow template to seed the backlog."
         />
       ) : (
-        <div className="card overflow-hidden">
-          <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-            {projectTasks.map((task) => {
-              const proj = activeWorkspaceProjects.find((p) => p.id === task.projectId);
-              const assign = users.find((u) => u.id === task.assigneeId);
-              return (
+        // Trello-inspired: each task is its own stacked card, not rows divided
+        // by hairlines — closer to a Trello list's individual card tiles.
+        <div className="space-y-2">
+          {projectTasks.map((task) => {
+            const proj = activeWorkspaceProjects.find((p) => p.id === task.projectId);
+            const assign = users.find((u) => u.id === task.assigneeId);
+            return (
+              <div
+                key={task.id}
+                className="card overflow-hidden hover:shadow-elevated hover:border-primary/20 dark:hover:border-primary/30 transition-all duration-150"
+              >
                 <TaskRow
-                  key={task.id}
                   task={task}
                   proj={proj}
                   assign={assign}
                   setActiveTaskId={setActiveTaskId}
                   updateTask={updateTask}
                 />
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
