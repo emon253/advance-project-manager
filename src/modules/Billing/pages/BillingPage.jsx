@@ -7,7 +7,6 @@ import React, { useState } from "react";
 import { useAppState } from "../../../app/providers";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { getIconComponent } from "../../../components/common/IconHelper";
-import { CheckoutSheet } from "../components/CheckoutSheet";
 import {
   PLANS,
   getPlan,
@@ -30,7 +29,6 @@ export function BillingPage() {
     activeWorkspace,
     activeWorkspaceProjects,
     activeSubscription,
-    changePlan,
     cancelSubscription,
     startTrial,
     can,
@@ -45,7 +43,6 @@ export function BillingPage() {
   React.useEffect(() => { refreshSubscription().then(loadInvoices); }, [refreshSubscription, loadInvoices]);
 
   const [interval, setInterval] = useState(activeSubscription?.interval === "yearly" ? "yearly" : "monthly");
-  const [checkoutPlan, setCheckoutPlan] = useState(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const wsId = activeWorkspace?.id;
@@ -162,8 +159,8 @@ export function BillingPage() {
               <span className="font-semibold text-primary">{trialDaysLeft(sub)} days left</span> in your {getPlan(sub.plan).name} trial.
               Add a payment method to keep these features.
             </p>
-            <button onClick={() => setCheckoutPlan(sub.plan)} className="btn btn-sm btn-primary shrink-0">
-              Subscribe now
+            <button onClick={() => handleSelectPlan(sub.plan)} className="btn btn-sm btn-primary shrink-0">
+              Contact us to subscribe
             </button>
           </div>
         )}
@@ -361,18 +358,6 @@ export function BillingPage() {
           )}
         </div>
       </div>
-
-      {/* Checkout */}
-      <CheckoutSheet
-        isOpen={!!checkoutPlan}
-        onClose={() => setCheckoutPlan(null)}
-        planId={checkoutPlan || "pro"}
-        interval={interval}
-        workspace={activeWorkspace}
-        initialSeats={Math.max(memberCount, sub?.seats || 1)}
-        maxSeats={checkoutPlan ? (getPlan(checkoutPlan).limits.members === Infinity ? 99 : getPlan(checkoutPlan).limits.members) : 99}
-        onConfirm={(planId, iv, seats) => changePlan(wsId, planId, iv, seats)}
-      />
     </div>
   );
 }
