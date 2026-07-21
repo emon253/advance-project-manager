@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Indexing is blocked with noindex/X-Robots-Tag headers. Crawlers must be
+# allowed to fetch pages so they can see those directives.

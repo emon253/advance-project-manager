@@ -6,6 +6,11 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use((req, res, next) => {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
+    next();
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
