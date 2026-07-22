@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Wand2, Loader2, X, AlertCircle, Sparkles } from "lucide-react";
 import { aiApi } from "../../api/endpoints";
 
@@ -55,9 +56,13 @@ export function AIEnhancerModal({ isOpen, onClose, initialValue, onApply, type =
     onClose();
   };
 
-  // No backdrop mask: a transparent layer only catches outside clicks / Escape;
-  // the panel floats on its own shadow so the page stays fully visible behind.
-  return (
+  // Portal to <body>: the trigger can live inside a transformed ancestor (e.g.
+  // the Tasks Lineup's framer-motion tab wrapper), which would otherwise make
+  // `position: fixed` resolve against that ancestor instead of the viewport and
+  // anchor the panel off-centre. No backdrop mask: a transparent layer only
+  // catches outside clicks / Escape; the panel floats on its own shadow so the
+  // page stays fully visible behind.
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
@@ -177,6 +182,7 @@ export function AIEnhancerModal({ isOpen, onClose, initialValue, onApply, type =
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
