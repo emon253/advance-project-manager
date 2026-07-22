@@ -10,7 +10,8 @@ import { ErrorState } from "../../../components/common/ErrorState";
 import { ListSkeleton } from "../../../components/common/Skeleton";
 import { getIconComponent } from "../../../components/common/IconHelper";
 import { Pager, ConfirmDialog, AccountStatusBadge, SubStatusBadge, fmtDate, timeAgo, fmtDateTime } from "./ownerUi";
-import { Search, ArrowUpDown, X, MailCheck, MailWarning, ShieldCheck } from "lucide-react";
+import { ManageSubscriptionModal } from "./ManageSubscriptionModal";
+import { Search, ArrowUpDown, X, MailCheck, MailWarning, ShieldCheck, SlidersHorizontal } from "lucide-react";
 
 const SORTS = [
   { id: "-createdAt", label: "Newest first" },
@@ -34,6 +35,8 @@ export function OwnerUsers() {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [catalog, setCatalog] = useState([]);      // owner plan catalog (for the subscription modal)
+  const [manageSub, setManageSub] = useState(null); // workspace being assigned a plan
   const debounce = useRef(null);
 
   const load = useCallback(() => {
@@ -42,6 +45,10 @@ export function OwnerUsers() {
       .then(setData)
       .catch(() => setError(true));
   }, [query, status, plan, sort, page]);
+
+  useEffect(() => {
+    ownerApi.plans.list().then(setCatalog).catch(() => {});
+  }, []);
 
   useEffect(() => {
     clearTimeout(debounce.current);
@@ -213,7 +220,19 @@ export function OwnerUsers() {
                           <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 truncate">{w.name}</span>
                           <span className="badge">{w.role}</span>
                         </span>
-                        <SubStatusBadge status={w.subscription.status} />
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          <SubStatusBadge status={w.subscription.status} />
+                          {w.subscription && (
+                            <button
+                              type="button"
+                              onClick={() => setManageSub(w)}
+                              className="btn btn-secondary btn-sm h-7 px-2 text-[11px]"
+                              title="Assign / manage this workspace's plan"
+                            >
+                              <SlidersHorizontal className="w-3 h-3" /> Manage
+                            </button>
+                          )}
+                        </span>
                       </div>
                       <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium mt-1.5">
                         <span className="capitalize">{w.subscription.planName}</span> · {w.members} members · {w.projects} projects
@@ -284,6 +303,19 @@ export function OwnerUsers() {
           </div>
         )}
       </ConfirmDialog>
+
+      {/* -------- assign / manage a workspace's plan (shared with the Subscriptions tab) -------- */}
+      {manageSub && (
+        <ManageSubscriptionModal
+          workspaceId={manageSub.workspaceId}
+          subscription={manageSub.subscription}
+          title={manageSub.name}
+          meta={`${manageSub.members} members · ${manageSub.projects} projects`}
+          catalog={catalog}
+          onClose={() => setManageSub(null)}
+          onUpdated={() => { if (detail?.user?.id) openDetail(detail.user.id); }}
+        />
+      )}
     </div>
   );
 }
