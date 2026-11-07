@@ -5,7 +5,6 @@
 
 import React, { useState } from "react";
 import { useAppState } from "../../../app/providers";
-import { PageHeader } from "../../../components/common/PageHeader";
 import { getIconComponent } from "../../../components/common/IconHelper";
 import {
   PLANS,
@@ -57,11 +56,7 @@ export function BillingPage() {
   // Members and Viewers can't manage the subscription — show context only
   if (!can("manageBilling")) {
     return (
-      <div className="space-y-3 sm:space-y-5 text-left" id="billing-page-root">
-        <PageHeader
-          title="Billing"
-          description="Manage the subscription, seats, and invoices for this workspace."
-        />
+      <div className="space-y-3 text-left" id="billing-page-root">
         <div className="card p-4 sm:p-6 flex flex-col items-center text-center gap-2">
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500">
             <Lock className="w-5 h-5" />
@@ -104,12 +99,7 @@ export function BillingPage() {
   ];
 
   return (
-    <div className="space-y-3 sm:space-y-5 text-left" id="billing-page-root">
-      <PageHeader
-        title="Billing"
-        description="Manage the subscription, seats, and invoices for this workspace."
-      />
-
+    <div className="space-y-3 text-left" id="billing-page-root">
       {/* Workspace context + current plan */}
       <div className="card p-3 sm:p-4">
         <div className="flex items-start gap-3">

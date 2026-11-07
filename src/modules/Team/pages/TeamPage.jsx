@@ -4,98 +4,49 @@
  */
 
 import React from "react";
+import { Link } from "react-router-dom";
+import { UserPlus } from "lucide-react";
 import { useAppState } from "../../../app/providers";
-import { PageHeader } from "../../../components/common/PageHeader";
-import { Plus, Check } from "lucide-react";
+import { UserAvatar } from "../../../components/common/UserAvatar";
+import { isOpenTask } from "../../Tasks/util/tasksUtils";
 
-// Modular Imports
-import { useTeamInvite } from "../hooks/useTeamInvite";
-import { InviteUserDialog } from "../components/InviteUserDialog";
-import { TeamList } from "../components/TeamList";
-import { UpgradeModal } from "../../../components/common/UpgradeModal";
-import { getPlanLimits } from "../../Billing/util/billingUtils";
-
+/** Who has what: one row per member with open and overdue counts. Inviting lives in Settings › Members. */
 export function TeamPage() {
-  const { users, activeWorkspaceTasks, canAddMember, activePlanId, can, ensureInvites } = useAppState();
+  const { users, activeWorkspaceTasks, taskStatuses, can } = useAppState();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
 
-  // Pending invites are team-screen data — fetched on first visit, not at boot.
-  React.useEffect(() => { ensureInvites(); }, [ensureInvites]);
-  const [showUpgrade, setShowUpgrade] = React.useState(false);
-
-  // Custom Invitation State Hook — creates pending invites via provider
-  const {
-    showInviteForm,
-    setShowInviteForm,
-    inviteEmail,
-    setInviteEmail,
-    inviteRole,
-    setInviteRole,
-    successBanner,
-    inviteError,
-    inviteBusy,
-    handleInviteUser
-  } = useTeamInvite();
+  const rows = users.map((u) => {
+    const open = activeWorkspaceTasks.filter((t) => t.assigneeId === u.id && isOpenTask(t, taskStatuses));
+    const late = open.filter((t) => t.dueDate && new Date(t.dueDate) < today).length;
+    return { ...u, open: open.length, late };
+  }).sort((a, b) => b.late - a.late || b.open - a.open);
+  const max = Math.max(1, ...rows.map((r) => r.open));
 
   return (
-    <div className="space-y-3 sm:space-y-5 text-left" id="team-page-root">
-      {/* 1. Page Header */}
-      <PageHeader
-        title="Team"
-        description="Review team workloads and invite new members to this workspace."
-      >
-        {can("manageMembers") && (
-          <button
-            onClick={() => {
-              if (!showInviteForm && !canAddMember()) {
-                setShowUpgrade(true);
-                return;
-              }
-              setShowInviteForm(!showInviteForm);
-            }}
-            type="button"
-            className="btn btn-primary"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Invite Associate</span>
-          </button>
-        )}
-      </PageHeader>
-
-      {/* 2. Success feedback banners */}
-      {successBanner && (
-        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-900/50 rounded-xl text-sm font-medium flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
-          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span>{successBanner}</span>
+    <div className="text-left max-w-[800px]" id="team-root">
+      <div className="flex items-center gap-3 mb-3">
+        <div>
+          <h1 className="page-title">Team</h1>
+          <p className="page-sub">{users.length} members · open work per person</p>
         </div>
-      )}
-
-      {/* 3. Invite member modal forms */}
-      {showInviteForm && (
-        <InviteUserDialog
-          handleInviteUser={handleInviteUser}
-          inviteEmail={inviteEmail}
-          setInviteEmail={setInviteEmail}
-          inviteRole={inviteRole}
-          setInviteRole={setInviteRole}
-          inviteError={inviteError}
-          inviteBusy={inviteBusy}
-          setShowInviteForm={setShowInviteForm}
-        />
-      )}
-
-      {/* 4. Grid team member profiles lists */}
-      <TeamList
-        users={users}
-        activeWorkspaceTasks={activeWorkspaceTasks}
-      />
-
-      {/* Plan limit paywall */}
-      <UpgradeModal
-        isOpen={showUpgrade}
-        onClose={() => setShowUpgrade(false)}
-        title="Member limit reached"
-        limitText={`The current plan includes up to ${getPlanLimits(activePlanId).members} members per workspace.`}
-      />
+        {can("manageMembers") && <Link to="/settings/members" className="btn btn-secondary ml-auto"><UserPlus className="w-4 h-4" /> Invite</Link>}
+      </div>
+      <div className="card">
+        {rows.map((u) => (
+          <Link key={u.id} to={`/my-tasks?scope=all&assignee=${u.id}`} className="flex items-center gap-3 h-12 px-3 border-t border-zinc-100 dark:border-zinc-800/80 first:border-t-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+            <UserAvatar user={u} size="sm" />
+            <span className="w-[180px] min-w-0">
+              <span className="block text-[13px] font-bold truncate">{u.name}</span>
+              <span className="block text-[11px] text-zinc-400 truncate">{u.role}</span>
+            </span>
+            <span className="flex-1 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden hidden sm:block">
+              <span className={`block h-full rounded-full ${u.late ? "bg-rose-500" : "bg-primary"}`} style={{ width: `${(u.open / max) * 100}%` }} />
+            </span>
+            <span className="text-xs font-semibold font-tnum w-16 text-right">{u.open} open</span>
+            <span className={`text-xs font-bold font-tnum w-20 text-right ${u.late ? "text-rose-700 dark:text-rose-400" : "text-zinc-400"}`}>{u.late ? `${u.late} overdue` : "—"}</span>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

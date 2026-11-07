@@ -45,7 +45,7 @@ export function OnboardingPage() {
     if (projectName.trim()) {
       addProject({ name: projectName.trim(), description: "First project — created during onboarding." });
     }
-    navigate("/dashboard");
+    navigate("/today");
   };
 
   const hasAnything = invitedEmails.length > 0 || projectName.trim();
@@ -132,7 +132,7 @@ export function OnboardingPage() {
               ? `Send ${invitedEmails.length} invite${invitedEmails.length > 1 ? "s" : ""} & continue`
               : "Continue"}
           </button>
-          <button onClick={() => navigate("/dashboard")} className="btn btn-ghost w-full">
+          <button onClick={() => navigate("/today")} className="btn btn-ghost w-full">
             Skip for now
           </button>
         </div>

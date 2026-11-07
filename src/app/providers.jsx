@@ -4,6 +4,7 @@
  */
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { matchPath, useLocation, useNavigate } from "react-router-dom";
 import { ApiError, setSessionExpiredHandler, tokenStore } from "../api/client";
 import {
   authApi,
@@ -83,8 +84,24 @@ export function AppStateProvider({ children }) {
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "light");
   const [quickAddTaskOpen, setQuickAddTaskOpen] = useState(false);
   const [aiPlannerOpen, setAiPlannerOpen] = useState(false);
-  const [activeTaskId, setActiveTaskId] = useState(null);
   const [activeToast, setActiveToast] = useState(null);
+
+  // The open task is URL state: /t/:taskId renders the task panel over the
+  // page it was opened from (kept in location.state.from), so a task has a
+  // link that can be pasted anywhere and reopened from the inbox.
+  const navigate = useNavigate();
+  const location = useLocation();
+  const taskMatch = matchPath("/t/:taskId", location.pathname);
+  const activeTaskId = taskMatch ? Number(taskMatch.params.taskId) : null;
+  const setActiveTaskId = useCallback((id) => {
+    if (id) {
+      const from = location.state?.from || (taskMatch ? null : { pathname: location.pathname, search: location.search });
+      navigate(`/t/${id}`, { state: from ? { from } : undefined });
+      return;
+    }
+    const from = location.state?.from;
+    navigate(from ? `${from.pathname}${from.search || ""}` : "/my-tasks", { replace: true });
+  }, [navigate, location, taskMatch]);
   const [simulateErrors, setSimulateErrorsState] = useState(() => localStorage.getItem(SIM_ERRORS_KEY) === "true");
   const [activeTimerTaskId, setActiveTimerTaskId] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -838,8 +855,11 @@ export function AppStateProvider({ children }) {
     }
   };
 
-  // Drawer detail hydration: children live behind separate endpoints.
+  // Panel detail hydration: children live behind separate endpoints. A task
+  // opened by direct link may not be in the 200-row list yet — add it.
+  const [taskDetailError, setTaskDetailError] = useState(null);
   const loadTaskDetail = useCallback(async (taskId) => {
+    setTaskDetailError(null);
     try {
       const [detail, comments, activityList, attachmentList] = await Promise.all([
         taskApi.get(taskId),
@@ -847,11 +867,14 @@ export function AppStateProvider({ children }) {
         taskApi.activity(taskId),
         taskApi.attachments.list(taskId).catch(() => []),
       ]);
-      setTasks((prev) => prev.map((t) => (t.id === taskId
-        ? { ...t, ...detail, comments, activities: activityList, attachments: attachmentList }
-        : t)));
-    } catch {
-      /* the drawer degrades to list data */
+      setTasks((prev) => {
+        const hydrated = { ...detail, comments, activities: activityList, attachments: attachmentList };
+        return prev.some((t) => t.id === taskId)
+          ? prev.map((t) => (t.id === taskId ? { ...t, ...hydrated } : t))
+          : [hydrated, ...prev];
+      });
+    } catch (err) {
+      setTaskDetailError(err instanceof ApiError ? err.message : "Could not load this task.");
     }
   }, []);
 
@@ -911,16 +934,64 @@ export function AppStateProvider({ children }) {
     }
   };
 
-  const addComment = async (taskId, text) => {
-    if (!text?.trim()) return;
+  /** `input` is a string (body only) or { text, mentionUserIds, attachmentIds }. */
+  const addComment = async (taskId, input) => {
+    const fields = typeof input === "string" ? { text: input } : (input || {});
+    if (!fields.text?.trim()) return null;
     try {
-      const comment = await taskApi.addComment(taskId, text.trim());
+      const comment = await taskApi.addComment(taskId, {
+        body: fields.text.trim(),
+        mentionUserIds: fields.mentionUserIds || [],
+        attachmentIds: fields.attachmentIds || [],
+      });
       setTasks((prev) => prev.map((t) => (t.id === taskId
-        ? { ...t, comments: [...(t.comments || []), comment], commentCount: (t.commentCount ?? 0) + 1 }
+        ? {
+            ...t,
+            comments: [...(t.comments || []), comment],
+            commentCount: (t.commentCount ?? 0) + 1,
+            attachments: (t.attachments || []).map((a) => (comment.attachments?.some((c) => c.id === a.id) ? { ...a, commentId: comment.id } : a)),
+          }
         : t)));
       refreshNotifications();
+      return comment;
     } catch (err) {
       toastError(err, "Could not post the comment.");
+      return null;
+    }
+  };
+
+  const updateComment = async (taskId, commentId, fields) => {
+    try {
+      const comment = await taskApi.updateComment(taskId, commentId, {
+        body: fields.text.trim(),
+        mentionUserIds: fields.mentionUserIds || [],
+        attachmentIds: fields.attachmentIds || [],
+      });
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? { ...t, comments: (t.comments || []).map((c) => (c.id === commentId ? comment : c)) }
+        : t)));
+      return comment;
+    } catch (err) {
+      toastError(err, "Could not update the comment.");
+      return null;
+    }
+  };
+
+  const deleteComment = async (taskId, commentId) => {
+    try {
+      await taskApi.deleteComment(taskId, commentId);
+      setTasks((prev) => prev.map((t) => (t.id === taskId
+        ? {
+            ...t,
+            comments: (t.comments || []).filter((c) => c.id !== commentId),
+            commentCount: Math.max(0, (t.commentCount ?? 1) - 1),
+            attachments: (t.attachments || []).map((a) => (a.commentId === commentId ? { ...a, commentId: null } : a)),
+          }
+        : t)));
+      return true;
+    } catch (err) {
+      toastError(err, "Could not delete the comment.");
+      return false;
     }
   };
 
@@ -1252,9 +1323,9 @@ export function AppStateProvider({ children }) {
     addProject, updateProject, deleteProject,
     addProjectMember, removeProjectMember,
     // tasks
-    addTask, updateTask, deleteTask, duplicateTask, loadTaskDetail, loadTaskChecklist,
+    addTask, updateTask, deleteTask, duplicateTask, loadTaskDetail, loadTaskChecklist, taskDetailError,
     addChecklistItem, toggleChecklistItem, deleteChecklistItem,
-    addComment,
+    addComment, updateComment, deleteComment,
     attachFile, removeAttachment, downloadAttachment, getAttachmentBlobUrl,
     attachFileToProject, removeAttachmentFromProject, loadProjectFiles,
     loadProjectComments, addProjectComment,

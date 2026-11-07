@@ -110,7 +110,7 @@ export function AuthPages() {
       const res = await login(email, password);
       setSubmitting(false);
       if (res.success) {
-        navigate("/dashboard");
+        navigate("/today");
       } else {
         setError(res.error || "Invalid email or password.");
       }
@@ -140,7 +140,7 @@ export function AuthPages() {
         setError(res.error || "Could not create the account.");
         return;
       }
-      const next = accountType === "company" ? "/welcome" : "/dashboard";
+      const next = accountType === "company" ? "/welcome" : "/today";
       navigate(`/verify-email?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`);
     } else if (isForgot) {
       setSubmitting(true);
@@ -181,7 +181,7 @@ export function AuthPages() {
     const res = await loginWithGoogle(credential);
     setSubmitting(false);
     if (res.success) {
-      navigate("/dashboard");
+      navigate("/today");
     } else {
       setError(res.error || "Google sign-in failed — please try again.");
     }

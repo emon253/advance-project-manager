@@ -45,7 +45,7 @@ export function UpgradeModal({ isOpen, onClose, title = "Upgrade to keep going",
           </button>
           <button
             type="button"
-            onClick={() => { onClose(); navigate("/billing"); }}
+            onClick={() => { onClose(); navigate("/settings/billing"); }}
             className="btn btn-primary flex-1"
           >
             See plans

@@ -53,7 +53,7 @@ export function InvitePage() {
     const res = await acceptInvite(token, credentials);
     setAccepting(false);
     if (res.success) {
-      navigate("/dashboard");
+      navigate("/today");
       return;
     }
     if (res.error === "credentials") {

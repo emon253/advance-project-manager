@@ -21,7 +21,7 @@ export function VerifyEmailPage() {
   const { verifyEmail, resendVerification, isAuthenticated, refreshCurrentUser } = useAppState();
 
   const email = params.get("email") || "your email";
-  const next = params.get("next") || "/dashboard";
+  const next = params.get("next") || "/today";
   const token = params.get("token");
 
   const [state, setState] = useState(token ? "verifying" : "waiting"); // verifying | verified | failed | waiting

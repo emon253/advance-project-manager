@@ -3,101 +3,85 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
-import { FlaskConical } from "lucide-react";
+import React from "react";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { useAppState } from "../../../app/providers";
-import { PageHeader } from "../../../components/common/PageHeader";
-
-// Modular Imports
-import { DatabaseRestorePanel } from "../components/DatabaseRestorePanel";
+import { WorkspaceGeneralSection } from "../sections/WorkspaceGeneralSection";
+import { MembersSection } from "../sections/MembersSection";
 import { StatusSettingsPanel } from "../components/StatusSettingsPanel";
-import { RulesEngine } from "../components/RulesEngine";
-import { UpgradeModal } from "../../../components/common/UpgradeModal";
+import { AutomationSection } from "../sections/AutomationSection";
+import { BillingPage } from "../../Billing/pages/BillingPage";
+import { ProfileSection, SecuritySection } from "../sections/ProfileSections";
+import { NotificationsSection } from "../sections/NotificationsSection";
 
-import "../style/settings.css";
+const SECTIONS = [
+  { group: "Workspace", items: [["general", "General"], ["members", "Members & invites"], ["statuses", "Task statuses"], ["automation", "Automation"], ["billing", "Plan & billing"]] },
+  { group: "You", items: [["profile", "Profile"], ["notifications", "Notifications"], ["security", "Password & security"]] },
+];
 
+/**
+ * One Settings page. Left: sections (workspace · you · platform). Right: the
+ * selected section. Members & invites is the only place to invite anyone.
+ */
 export function SettingsPage() {
-  const {
-    resetToDefaultData,
-    simulateErrors,
-    setSimulateErrors,
-    automationRules,
-    toggleAutomationRule,
-    ensureAutomationRules
-  } = useAppState();
+  const { section } = useParams();
+  const { activeWorkspace, activePlanId, isSystemOwner, can } = useAppState();
 
-  // Automation rules are settings-screen data — fetched on first visit, not at boot.
-  React.useEffect(() => { ensureAutomationRules(); }, [ensureAutomationRules]);
+  if (!section) return <Navigate to="/settings/general" replace />;
 
-  const [systemAlertMessage, setSystemAlertMessage] = useState("");
-  const [showUpgrade, setShowUpgrade] = useState(false);
+  const sections = SECTIONS.map((g) => ({
+    ...g,
+    items: g.items.filter(([id]) => (id === "billing" ? can("manageBilling") : true)),
+  }));
 
-  const handleToggleRule = async (ruleId) => {
-    const rule = automationRules.find((r) => r.id === ruleId);
-    if (!rule) return;
-    const res = await toggleAutomationRule(ruleId, !rule.active);
-    if (res?.error === "plan") setShowUpgrade(true);
-  };
+  const body = {
+    general: <WorkspaceGeneralSection />,
+    members: <MembersSection />,
+    statuses: <StatusSettingsPanel />,
+    automation: <AutomationSection />,
+    billing: <BillingPage embedded />,
+    profile: <ProfileSection />,
+    notifications: <NotificationsSection />,
+    security: <SecuritySection />,
+  }[section] || <Navigate to="/settings/general" replace />;
 
   return (
-    <div className="text-left max-w-4xl" id="settings-page-root">
-      <PageHeader
-        title="Settings"
-        description="Configure task workflows, state parameters, or restore the default demo database."
-      />
-
-      <div className="space-y-2.5 sm:space-y-5">
-        {systemAlertMessage && (
-          <div className="p-3 bg-primary/8 dark:bg-primary/15 border border-primary/20 text-primary text-xs font-semibold rounded-xl animate-in fade-in slide-in-from-top-1" role="status">
-            {systemAlertMessage}
-          </div>
-        )}
-
-        {/* Task workflow status configuration controller */}
-        <StatusSettingsPanel />
-
-        {/* Automation rules (Pro feature — activation is plan-gated server-side) */}
-        <RulesEngine automationRules={automationRules} handleToggleRule={handleToggleRule} />
-
-        {/* Demo Data Rehydration card */}
-        <DatabaseRestorePanel
-          resetToDefaultData={resetToDefaultData}
-          setSystemAlertMessage={setSystemAlertMessage}
-        />
-
-        {/* Developer demo toggles */}
-        <div className="card p-3 sm:p-4 text-left space-y-2.5 sm:space-y-4">
-          <h3 className="font-display font-semibold text-sm text-zinc-900 dark:text-white flex items-center gap-2">
-            <FlaskConical className="w-4 h-4 text-primary" /> Developer demo
-          </h3>
-
-          <div className="flex justify-between items-center gap-3 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 px-3 py-2.5 sm:py-3 rounded-lg">
-            <div className="min-w-0">
-              <span className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200">Simulate network errors</span>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Show the error/retry states that real API failures will trigger.</span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={!!simulateErrors}
-              aria-label="Simulate network errors"
-              onClick={() => setSimulateErrors((prev) => !prev)}
-              className="flex items-center justify-center h-10 w-12 -my-2 -mx-1.5 cursor-pointer shrink-0"
-            >
-              <span className={`relative w-9 h-5 rounded-full transition-colors ${simulateErrors ? "bg-primary" : "bg-zinc-300 dark:bg-zinc-600"}`}>
-                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-soft transition-transform ${simulateErrors ? "translate-x-4" : ""}`} />
-              </span>
-            </button>
-          </div>
+    <div className="text-left flex flex-wrap gap-6 items-start" id="settings-root">
+      <nav aria-label="Settings sections" className="flex-[0_0_184px] flex flex-col lg:pt-[46px] w-full lg:w-auto">
+        <div className="flex lg:flex-col gap-0.5 overflow-x-auto no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0">
+          {sections.map((g) => (
+            <React.Fragment key={g.group}>
+              <p className="hidden lg:block text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-2.5 pt-3 pb-1 first:pt-0">{g.group}</p>
+              {g.items.map(([id, label]) => (
+                <Link
+                  key={id}
+                  to={`/settings/${id}`}
+                  aria-current={section === id ? "page" : undefined}
+                  className={`shrink-0 flex items-center h-[30px] px-2.5 rounded-md text-[13px] whitespace-nowrap ${
+                    section === id ? "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white font-bold" : "text-zinc-600 dark:text-zinc-400 font-medium hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </React.Fragment>
+          ))}
+          {isSystemOwner && (
+            <>
+              <p className="hidden lg:block text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-2.5 pt-3 pb-1">Platform</p>
+              <Link to="/owner" className="shrink-0 flex items-center h-[30px] px-2.5 rounded-md text-[13px] whitespace-nowrap text-zinc-600 dark:text-zinc-400 font-medium hover:text-zinc-900 dark:hover:text-white">Owner console</Link>
+            </>
+          )}
         </div>
-      </div>
+      </nav>
 
-      <UpgradeModal
-        isOpen={showUpgrade}
-        onClose={() => setShowUpgrade(false)}
-        title="Automation is a Pro feature"
-        limitText="Automation rules run on the Pro and Business plans."
-      />
+      <section className="flex-[999_1_480px] min-w-0 flex flex-col gap-4">
+        <div>
+          <h1 className="page-title">Settings</h1>
+          <p className="page-sub">{activeWorkspace?.name} workspace · {activePlanId ? activePlanId.charAt(0).toUpperCase() + activePlanId.slice(1) : "Free"} plan</p>
+        </div>
+        {body}
+      </section>
     </div>
   );
 }

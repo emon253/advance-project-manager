@@ -3,148 +3,97 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAppState } from "../../../app/providers";
-import { PageHeader } from "../../../components/common/PageHeader";
 import { useMockQuery } from "../../../hooks/useMockQuery";
 import { ListSkeleton } from "../../../components/common/Skeleton";
 import { ErrorState } from "../../../components/common/ErrorState";
+import { TaskToolbar, applyTaskFilters } from "../components/TaskToolbar";
+import { TaskList } from "../components/TaskList";
+import { TaskBoard } from "../components/TaskBoard";
+import { groupByProject, groupByStatus, isOpenTask } from "../util/tasksUtils";
 
-// Modular Imports
-import { useTasksState } from "../hooks/useTasksState";
-import { QuickFilterAlert } from "../components/QuickFilterAlert";
-import { SegmentSelectorTabs } from "../components/SegmentSelectorTabs";
-import { TaskFiltersToolbar } from "../components/TaskFiltersToolbar";
-import { TasksQueueList } from "../components/TasksQueueList";
+const SCOPES = [
+  { value: "mine", label: "Assigned to me" },
+  { value: "watching", label: "Watching" },
+  { value: "all", label: "Everyone" },
+];
 
-import "../style/tasks.css";
-
-const PAGE_SIZE = 8;
-
+/**
+ * My Tasks: one list grouped by status, filters as chips (URL-backed so a
+ * filtered view can be shared), list/board toggle. Done stays collapsed.
+ */
 export function TasksPage() {
-  const { 
-    activeWorkspaceTasks, 
-    activeWorkspaceProjects, 
-    users, 
-    updateTask, 
-    setActiveTaskId,
-    currentUser
-  } = useAppState();
-
-  const {
-    activeSegment,
-    setActiveSegment,
-    quickFilter,
-    projectFilter,
-    setProjectFilter,
-    priorityFilter,
-    setPriorityFilter,
-    assigneeFilter,
-    setAssigneeFilter,
-    filteredTasks
-  } = useTasksState({ activeWorkspaceTasks, currentUser });
-
-  // Simulated fetch lifecycle for the tasks list (loading / error / retry)
+  const { activeWorkspaceTasks, activeWorkspaceProjects, users, currentUser, taskStatuses } = useAppState();
   const { isLoading, isError, retry } = useMockQuery();
+  const [params, setParams] = useSearchParams();
+  const [view, setView] = useState(() => localStorage.getItem("apm_tasks_view") || "list");
 
-  // Pagination over the FILTERED list
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-
-  // Reset pagination whenever the segment or any filter changes
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [activeSegment, quickFilter, projectFilter, priorityFilter, assigneeFilter]);
-
-  const visibleTasks = filteredTasks.slice(0, visibleCount);
-  const remainingCount = filteredTasks.length - visibleTasks.length;
-
-  const handleLoadMore = () => {
-    if (isLoadingMore) return;
-    setIsLoadingMore(true);
-    setTimeout(() => {
-      setVisibleCount((count) => count + PAGE_SIZE);
-      setIsLoadingMore(false);
-    }, 400);
+  const scope = params.get("scope") || "mine";
+  const groupBy = params.get("group") || "status";
+  const filters = {
+    projectId: params.get("project") || "",
+    assigneeId: params.get("assignee") || "",
+    priority: params.get("priority") || "",
+    due: params.get("due") || "",
   };
+  const setParam = (patch) => {
+    const next = new URLSearchParams(params);
+    Object.entries(patch).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)));
+    setParams(next, { replace: true });
+  };
+  const onFilter = (patch) => setParam({
+    project: patch.projectId, assignee: patch.assigneeId, priority: patch.priority, due: patch.due,
+  });
+
+  const scoped = useMemo(() => activeWorkspaceTasks.filter((t) => {
+    if (scope === "mine") return t.assigneeId === currentUser?.id;
+    if (scope === "watching") return (t.watchers || []).includes(currentUser?.id);
+    return true;
+  }), [activeWorkspaceTasks, scope, currentUser]);
+
+  const filtered = useMemo(() => applyTaskFilters(scoped, filters, taskStatuses), [scoped, filters.projectId, filters.assigneeId, filters.priority, filters.due, taskStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
+  const groups = useMemo(() => (
+    groupBy === "project" ? groupByProject(filtered, activeWorkspaceProjects, taskStatuses) : groupByStatus(filtered, taskStatuses)
+  ), [filtered, groupBy, activeWorkspaceProjects, taskStatuses]);
+
+  const openCount = scoped.filter((t) => isOpenTask(t, taskStatuses)).length;
+  const lateCount = scoped.filter((t) => isOpenTask(t, taskStatuses) && t.dueDate && new Date(t.dueDate) < new Date(new Date().setHours(0, 0, 0, 0))).length;
+
+  const changeView = (v) => { setView(v); localStorage.setItem("apm_tasks_view", v); };
 
   return (
-    <div className="space-y-2.5 sm:space-y-5 text-left" id="tasks-page-root">
-      
-      {/* Page Header */}
-      <PageHeader 
-        title={
-          quickFilter === "overdue" ? "Overdue Deliverables" :
-          quickFilter === "in-progress" ? "Tasks In Progress" :
-          quickFilter === "completed-this-week" ? "Completed This Week" :
-          activeSegment === "mine" ? "My Workspace Assignments" :
-          activeSegment === "today" ? "Schedules for Today" :
-          activeSegment === "upcoming" ? "Upcoming Milestones" :
-          "Archive Ledger: Completed"
-        } 
-        description="Review details, track progress, and update task status directly from the list."
-      />
+    <div className="text-left" id="tasks-page-root">
+      <div className="flex items-baseline gap-3 mb-3">
+        <h1 className="page-title">My Tasks</h1>
+        <p className="text-[13px] text-zinc-500 dark:text-zinc-400 font-medium font-tnum">
+          {openCount} open{lateCount > 0 && <> · <span className="text-rose-700 dark:text-rose-400 font-bold">{lateCount} overdue</span></>}
+        </p>
+      </div>
 
-      {/* Active Quick Filter Alert / Badge */}
-      <QuickFilterAlert quickFilter={quickFilter} />
-
-      {/* Segment Selector tabs */}
-      <SegmentSelectorTabs
-        activeSegment={activeSegment}
-        setActiveSegment={setActiveSegment}
-        quickFilter={quickFilter}
-      />
-
-      {/* Filter Toolbar */}
-      <TaskFiltersToolbar
-        projectFilter={projectFilter}
-        setProjectFilter={setProjectFilter}
-        activeWorkspaceProjects={activeWorkspaceProjects}
-        priorityFilter={priorityFilter}
-        setPriorityFilter={setPriorityFilter}
-        assigneeFilter={assigneeFilter}
-        setAssigneeFilter={setAssigneeFilter}
+      <TaskToolbar
+        scope={scope}
+        scopeOptions={SCOPES}
+        onScope={(v) => setParam({ scope: v === "mine" ? "" : v })}
+        filters={filters}
+        onFilter={onFilter}
+        projects={activeWorkspaceProjects}
         users={users}
+        showAssigneeFilter={scope !== "mine"}
+        groupBy={groupBy}
+        onGroupBy={(v) => setParam({ group: v === "status" ? "" : v })}
+        view={view}
+        onView={changeView}
       />
 
-      {/* Task Rows List layout (loading / error / paginated list) */}
-      {isLoading ? (
-        <ListSkeleton rows={4} />
-      ) : isError ? (
-        <ErrorState onRetry={retry} title="Couldn't load tasks" />
-      ) : (
-        <>
-          <TasksQueueList
-            filteredTasks={visibleTasks}
-            activeWorkspaceProjects={activeWorkspaceProjects}
-            users={users}
-            setActiveTaskId={setActiveTaskId}
-            updateTask={updateTask}
-          />
-
-          {remainingCount > 0 && (
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={handleLoadMore}
-                disabled={isLoadingMore}
-                className="btn btn-secondary btn-sm"
-              >
-                {isLoadingMore ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Loading…</span>
-                  </>
-                ) : (
-                  <span>Load more ({remainingCount} remaining)</span>
-                )}
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
+      <div className="mt-1">
+        {isLoading ? <ListSkeleton rows={6} /> : isError ? <ErrorState onRetry={retry} title="Couldn't load tasks" /> : view === "board" ? (
+          <div className="mt-4"><TaskBoard groups={groups} /></div>
+        ) : (
+          <TaskList groups={groups} emptyDescription={scope === "mine" ? "Nothing assigned to you matches these filters." : "No tasks match these filters."} />
+        )}
+      </div>
     </div>
   );
 }

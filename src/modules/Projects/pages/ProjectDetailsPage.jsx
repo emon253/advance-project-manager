@@ -3,438 +3,279 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { Plus, MoreHorizontal, Pencil, Users, Archive, RotateCcw, Trash2, FileLock, Paperclip, FileText, Image as ImageIcon, Eye, Download, Loader2 } from "lucide-react";
 import { useAppState } from "../../../app/providers";
-import { motion, AnimatePresence } from "motion/react";
-
-// Icons
-import { Archive, FileLock, Settings, Plus, X } from "lucide-react";
-import { getIconComponent } from "../../../components/common/IconHelper";
-
-// Modular Imports
-import { ProjectDetailsTabs } from "../components/ProjectTabs";
-import { ProjectMembersList } from "../components/ProjectMembersList";
-import { ProjectTaskLineup } from "../components/ProjectTaskLineup";
-import { ProjectFileCabinet } from "../components/ProjectFileCabinet";
-import { ProjectAdminControls } from "../components/ProjectAdminControls";
-import { AttachmentPreviewModal } from "../components/AttachmentPreviewModal";
-import { RichTextEditor } from "../../../components/common/RichText/RichTextEditor";
+import { UserAvatar } from "../../../components/common/UserAvatar";
 import { RichTextView } from "../../../components/common/RichText/RichTextView";
-import { AIEnhanceButton } from "../../../components/common/AIEnhanceButton";
-import { richTextToPlain, plainToRichText } from "../../../components/common/RichText/sanitizeHtml";
+import { richTextToPlain } from "../../../components/common/RichText/sanitizeHtml";
+import { AttachmentPreviewModal } from "../components/AttachmentPreviewModal";
+import { ProjectFormDialog } from "../components/ProjectFormDialog";
+import { ProjectMembersList } from "../components/ProjectMembersList";
 import { ProjectDiscussionPanel } from "../components/ProjectDiscussionPanel";
+import { TaskToolbar, applyTaskFilters } from "../../Tasks/components/TaskToolbar";
+import { TaskList } from "../../Tasks/components/TaskList";
+import { TaskBoard } from "../../Tasks/components/TaskBoard";
+import { defaultStatusName, formatDue, formatRelative, groupByStatus, isOpenTask } from "../../Tasks/util/tasksUtils";
 
-import {
-  calculateCompletionPercentage,
-  formatDetailedProjectDeadline
-} from "../util/projectUtils";
-
-import "../style/projects.css";
-
-const PROJECT_STATUS_STYLES = {
-  Planning: "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-400 dark:border-sky-500/20",
-  Active: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20",
-  "On Hold": "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20",
-  Completed: "bg-primary/8 text-primary border-primary/20 dark:bg-primary/15",
-  Archived: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700",
+const STATUS_STYLES = {
+  Planning: "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300",
+  Active: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
+  "On Hold": "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
+  Completed: "bg-primary/8 text-primary dark:bg-primary/15",
+  Archived: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
 };
+const TABS = [["tasks", "Tasks"], ["files", "Files"], ["activity", "Activity"]];
+const isImageType = (t) => (t || "").toLowerCase().startsWith("image/");
+const isPdfType = (t) => (t || "").toLowerCase().includes("pdf");
 
+/**
+ * Project page opens on Tasks. Header: icon · name · status · description ·
+ * Invite / Add task / ••• ; stat strip (progress, open, overdue, due, team).
+ * Tabs: Tasks · Files · Activity. Settings live under the ••• menu.
+ */
 export function ProjectDetailsPage() {
-  const { projectId } = useParams();
+  const { projectId, tab = "tasks" } = useParams();
   const navigate = useNavigate();
   const {
-    projects,
-    tasks,
-    users,
-    updateProject,
-    deleteProject,
-    addTask,
-    updateTask,
-    setActiveTaskId,
-    attachFileToProject,
-    removeAttachmentFromProject,
-    loadProjectFiles,
-    downloadAttachment,
-    getAttachmentBlobUrl,
-    projectFiles: useAppState_projectFiles,
-    can,
-      addProjectMember,
-    removeProjectMember,
+    projects, tasks, users, taskStatuses, can, addTask, updateProject, deleteProject,
+    addProjectMember, removeProjectMember, projectFiles, loadProjectFiles, attachFileToProject, removeAttachmentFromProject,
+    downloadAttachment, getAttachmentBlobUrl, pushNotification, activities, ensureActivities,
   } = useAppState();
 
-  const [activeTab, setActiveTab] = useState("overview"); // overview, tasks, files, settings
-
-  React.useEffect(() => {
-    if (projectId) loadProjectFiles(projectId);
-  }, [projectId, loadProjectFiles]);
-
-  const fileInputRef = useRef(null);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [filters, setFilters] = useState({ projectId: "", assigneeId: "", priority: "", due: "" });
+  const [view, setView] = useState(() => localStorage.getItem("apm_tasks_view") || "list");
   const [previewFile, setPreviewFile] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
 
-  // Quick project edit states
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editDesc, setEditDesc] = useState("");
-  const [editStage, setEditStage] = useState("");
-  const [inlineTaskTitle, setInlineTaskTitle] = useState("");
+  React.useEffect(() => { if (projectId) loadProjectFiles(projectId); }, [projectId, loadProjectFiles]);
+  React.useEffect(() => { if (tab === "activity") ensureActivities(); }, [tab, ensureActivities]);
 
   const project = projects.find((p) => String(p.id) === String(projectId));
+  const projectTasks = useMemo(() => tasks.filter((t) => t.projectId === project?.id), [tasks, project]);
+  const groups = useMemo(() => groupByStatus(applyTaskFilters(projectTasks, filters, taskStatuses), taskStatuses), [projectTasks, filters, taskStatuses]);
+
   if (!project) {
     return (
-      <div className="py-12 text-center max-w-md mx-auto space-y-4" id="project-not-found-state">
-        <FileLock className="w-12 h-12 mx-auto text-zinc-300 dark:text-zinc-700" />
-        <h2 className="font-display font-bold text-lg text-zinc-900 dark:text-white">Project not found</h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">This project is not available in the active workspace.</p>
-        <Link to="/projects" className="btn btn-primary inline-flex">
-          Return to portfolio
-        </Link>
+      <div className="py-12 text-center max-w-md mx-auto space-y-3">
+        <FileLock className="w-10 h-10 mx-auto text-zinc-300 dark:text-zinc-700" />
+        <h2 className="text-base font-bold text-zinc-900 dark:text-white">Project not found</h2>
+        <p className="text-[13px] text-zinc-500 dark:text-zinc-400">This project is not in the active workspace.</p>
+        <Link to="/projects" className="btn btn-primary inline-flex">Back to projects</Link>
       </div>
     );
   }
 
-  // Tasks in this project
-  const projectTasks = tasks.filter((t) => t.projectId === project.id);
-  const completedTasks = projectTasks.filter((t) => t.status === "Completed");
-  const pendingTasks = projectTasks.filter((t) => t.status !== "Completed" && t.status !== "Cancelled");
+  const open = projectTasks.filter((t) => isOpenTask(t, taskStatuses));
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const late = open.filter((t) => t.dueDate && new Date(t.dueDate) < today).length;
+  const done = projectTasks.length - open.length;
+  const pct = projectTasks.length ? Math.round((done / projectTasks.length) * 100) : 0;
+  const members = (project.members || []).map((id) => users.find((u) => u.id === id)).filter(Boolean);
+  const files = projectFiles[project.id] || [];
+  const projectActivity = activities.filter((a) => (a.text || "").includes(`'${project.name}'`));
+  const manage = can("manageProjects");
+  const initials = project.name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
-  const completionPercentage = calculateCompletionPercentage(projectTasks);
+  const addTaskHere = (title) => addTask({ title, projectId: project.id, status: defaultStatusName(taskStatuses), priority: "Medium" });
+  const changeView = (v) => { setView(v); localStorage.setItem("apm_tasks_view", v); };
 
-  // Project files come from the attachments API (S3/local behind the backend).
-  const projectFiles = useAppState_projectFiles[project.id] || [];
-
-  const handleRealFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    // Server caps uploads at 10MB.
-    const limit = 10 * 1024 * 1024;
-    if (file.size > limit) {
-      setErrorMsg("File is larger than the 10MB upload limit. Please choose a smaller file.");
-      setTimeout(() => setErrorMsg(""), 6000);
-      return;
+  const handleUpload = async (e) => {
+    const list = Array.from(e.target.files || []);
+    e.target.value = "";
+    setUploading(true);
+    for (const f of list) {
+      if (f.size > 10 * 1024 * 1024) { pushNotification("Files can be at most 10MB.", "update", null, null, "File too large"); continue; }
+      // eslint-disable-next-line no-await-in-loop
+      await attachFileToProject(project.id, f);
     }
-    attachFileToProject(project.id, file);
-    e.target.value = ""; // reset
+    setUploading(false);
   };
-
-  const handleDownloadFile = (file) => {
-    if (!file.base64) {
-      downloadAttachment(file);
-      return;
-    }
-    const a = document.createElement("a");
-    a.href = file.base64;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
-  const handleUpdateDetails = (e) => {
-    e.preventDefault();
-    updateProject(project.id, {
-      name: editName || project.name,
-      description: editDesc || project.description,
-      status: editStage || project.status,
-    });
-    setIsEditing(false);
-  };
-
-  const handleDeleteProject = () => {
-    deleteProject(project.id);
-    navigate("/projects");
-  };
-
-
-  const deadlineStr = formatDetailedProjectDeadline(project.deadline);
-
-  // Quick Inline Add Task to this project
-  const handleInlineAddTask = (e) => {
-    e.preventDefault();
-    if (!inlineTaskTitle.trim()) return;
-    addTask({
-      title: inlineTaskTitle.trim(),
-      projectId: project.id,
-      status: "To Do",
-      priority: "Medium",
-    });
-    setInlineTaskTitle("");
+  const openPreview = async (file) => {
+    const url = await getAttachmentBlobUrl(file);
+    if (url) setPreviewFile({ ...file, base64: url });
   };
 
   return (
-    <div className="space-y-3 sm:space-y-5 text-left" id="project-details-page-root">
+    <div className="text-left" id="project-details-root">
+      <nav aria-label="Breadcrumb" className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mb-2">
+        <Link to="/projects" className="hover:text-zinc-900 dark:hover:text-white">Projects</Link> <span aria-hidden="true">›</span> {project.name}
+      </nav>
 
-      {/* 1. Archive Warning Banner */}
       {project.status === "Archived" && (
-        <div className="p-3 sm:p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
-          <div className="flex items-start gap-2.5 text-amber-800 dark:text-amber-400">
-            <Archive className="w-5 h-5 shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <span className="font-semibold">This project is archived</span>
-              <p className="text-xs opacity-90 mt-0.5">Archived projects are hidden from your active portfolio. You can restore it here or under Administrative Controls.</p>
-            </div>
-          </div>
-          <button
-            onClick={() => updateProject(project.id, { status: "Active" })}
-            type="button"
-            className="btn btn-sm btn-secondary self-start sm:self-auto shrink-0"
-          >
-            Restore Project
-          </button>
+        <div className="mb-3 px-3 py-2 rounded-md bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center gap-2">
+          <Archive className="w-3.5 h-3.5" /> This project is archived.
+          {manage && <button type="button" onClick={() => updateProject(project.id, { status: "Active" })} className="ml-auto underline cursor-pointer">Restore</button>}
         </div>
       )}
 
-      {/* 2. Page Header with Settings quick buttons */}
-      <div className="card p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-4 relative">
-        <div className="flex items-start gap-2.5 sm:gap-3.5 min-w-0">
-          <span className="bg-primary/8 dark:bg-primary/15 border border-primary/20 text-primary rounded-xl flex items-center justify-center w-9 h-9 sm:w-12 sm:h-12 shrink-0">
-            {getIconComponent(project.icon, "w-4 h-4 sm:w-6 sm:h-6")}
-          </span>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display font-bold text-base sm:text-lg md:text-xl text-zinc-900 dark:text-white leading-tight truncate">
-                {project.name}
-              </h1>
-              <span className={`badge ${PROJECT_STATUS_STYLES[project.status] || PROJECT_STATUS_STYLES.Planning}`}>
-                {project.status}
-              </span>
-              {/* Compact completion indicator (replaces the old Completion/Velocity cards). */}
-              <span
-                className="inline-flex items-center gap-1.5 h-6 px-2 rounded-full bg-primary/8 dark:bg-primary/15 border border-primary/20 text-primary text-[11px] font-semibold shrink-0"
-                title={`${completionPercentage}% of tasks completed`}
-              >
-                <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" aria-hidden="true">
-                  <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeOpacity="0.2" strokeWidth="3" />
-                  <circle
-                    cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="3"
-                    strokeDasharray={`${(completionPercentage / 100) * 40.8} 40.8`}
-                    strokeLinecap="round"
-                    transform="rotate(-90 8 8)"
-                  />
-                </svg>
-                <span className="font-tnum">{completionPercentage}%</span>
-              </span>
-            </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 sm:mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
-              <span>Created {new Date(project.createdAt || project.startDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
-              <span aria-hidden="true">•</span>
-              <span>Deadline {deadlineStr}</span>
-            </p>
+      <div className="flex items-start gap-3 mb-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-[10px] text-sm font-extrabold shrink-0" style={{ backgroundColor: `${project.color}1f`, color: project.color }}>{initials}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="page-title md:truncate">{project.name}</h1>
+            <span className={`inline-flex items-center h-5 px-2 rounded-full text-[11px] font-bold ${STATUS_STYLES[project.status] || STATUS_STYLES.Planning}`}>{project.status}</span>
           </div>
+          {richTextToPlain(project.description) && (
+            <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-0.5 max-w-[640px] line-clamp-2">{richTextToPlain(project.description)}</p>
+          )}
         </div>
-
-        {/* Templates quick deployment dropdown — managers only */}
-        {can("manageProjects") && (
-        /* Finding #4: on mobile the gear pins to the header's top-right corner. */
-        <div className="absolute top-3 right-3 sm:static shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setEditName(project.name);
-              setEditDesc(project.description);
-              setEditStage(project.status);
-              setIsEditing(!isEditing);
-            }}
-            className="btn-icon border border-zinc-200 dark:border-zinc-700"
-            title="Edit project"
-            aria-label="Edit project"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+        <div className="flex items-center gap-1.5 shrink-0 relative">
+          {manage && <button type="button" onClick={() => setMembersOpen(true)} className="btn btn-secondary hidden sm:inline-flex"><Users className="w-4 h-4" /> Members</button>}
+          {can("editTasks") && <button type="button" onClick={() => { const el = document.getElementById("add-task-" + (groups.find((g) => g.kind === "open")?.key || "")); if (el) el.focus(); else navigate(`/projects/${project.id}/tasks`); }} className="btn btn-primary"><Plus className="w-4 h-4" /> Add task</button>}
+          {manage && (
+            <button type="button" onClick={() => setMenuOpen((v) => !v)} className="btn-icon" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Project menu: edit, members, archive, delete">
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+          )}
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => { setMenuOpen(false); setConfirmDelete(false); }} aria-hidden="true" />
+              <div role="menu" className="menu-panel absolute right-0 top-9 z-40 w-52 p-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                {[
+                  ["edit", <Pencil className="w-4 h-4" />, "Edit project", () => setEditOpen(true)],
+                  ["members", <Users className="w-4 h-4" />, "Members", () => setMembersOpen(true)],
+                  ["archive", project.status === "Archived" ? <RotateCcw className="w-4 h-4" /> : <Archive className="w-4 h-4" />, project.status === "Archived" ? "Restore" : "Archive", () => updateProject(project.id, { status: project.status === "Archived" ? "Active" : "Archived" })],
+                ].map(([key, icon, label, fn]) => (
+                  <button key={key} type="button" role="menuitem" onClick={() => { setMenuOpen(false); fn(); }} className="w-full flex items-center gap-2 h-8 px-2 rounded-md text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                    {icon} {label}
+                  </button>
+                ))}
+                {!confirmDelete ? (
+                  <button type="button" role="menuitem" onClick={() => setConfirmDelete(true)} className="w-full flex items-center gap-2 h-8 px-2 rounded-md text-[13px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 cursor-pointer">
+                    <Trash2 className="w-4 h-4" /> Delete project…
+                  </button>
+                ) : (
+                  <div className="p-2 mt-1 rounded-md bg-rose-50 dark:bg-rose-500/10">
+                    <p className="text-xs font-semibold text-rose-700 dark:text-rose-300 mb-1.5">Delete the project and all {projectTasks.length} tasks?</p>
+                    <div className="flex gap-1.5">
+                      <button type="button" onClick={() => { setMenuOpen(false); setConfirmDelete(false); }} className="btn btn-sm btn-secondary flex-1">Cancel</button>
+                      <button type="button" onClick={async () => { setMenuOpen(false); await deleteProject(project.id); navigate("/projects"); }} className="btn btn-sm btn-danger flex-1">Delete</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
-        )}
       </div>
 
-      {/* Inline editing charter form */}
-      {isEditing && (
-        <div className="modal-overlay" id="project-edit-modal-container" onClick={() => setIsEditing(false)}>
-          <div
-            className="modal-panel max-w-lg"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="project-edit-dialog-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sheet-grabber" />
-            <form onSubmit={handleUpdateDetails} className="flex flex-col min-h-0 flex-1">
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
-                <h3 id="project-edit-dialog-title" className="font-display font-semibold text-base text-zinc-900 dark:text-white flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-primary" />
-                  Edit Project
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="btn-icon"
-                  aria-label="Close dialog"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+      <div className="card flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 mb-3">
+        <div className="flex-[1_1_220px] flex flex-col gap-1.5">
+          <div className="flex justify-between text-xs font-bold text-zinc-500 dark:text-zinc-400"><span>Progress</span><span className="font-tnum">{done} of {projectTasks.length} done · {pct}%</span></div>
+          <div className="h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden"><span className={`block h-full rounded-full ${pct === 100 && projectTasks.length ? "bg-emerald-500" : "bg-primary"}`} style={{ width: `${pct}%` }} /></div>
+        </div>
+        {[["Open", open.length, ""], ["Overdue", late, late ? "text-rose-700 dark:text-rose-400" : ""], ["Due", project.deadline ? formatDue(project.deadline) : "—", ""]].map(([l, v, cls]) => (
+          <div key={l} className="flex flex-col"><span className="label mb-0">{l}</span><span className={`text-sm font-bold font-tnum ${cls}`}>{v}</span></div>
+        ))}
+        <div className="flex flex-col"><span className="label mb-0">Team</span><span className="inline-flex -space-x-1.5 mt-0.5">{members.slice(0, 5).map((m) => <span key={m.id} className="ring-2 ring-white dark:ring-zinc-900 rounded-full"><UserAvatar user={m} size="xs" /></span>)}{members.length === 0 && <span className="text-xs text-zinc-400">None</span>}</span></div>
+      </div>
 
-              {/* Body */}
-              <div className="flex-1 overflow-y-auto px-4 py-3.5 sm:px-5 sm:py-4 space-y-4 text-left">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="edit-project-name" className="label">Project Name</label>
-                    <input
-                      id="edit-project-name"
-                      type="text"
-                      required
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="field"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="edit-project-stage" className="label">Project Stage</label>
-                    <select
-                      id="edit-project-stage"
-                      value={editStage}
-                      onChange={(e) => setEditStage(e.target.value)}
-                      className="field"
-                    >
-                      <option value="Planning">Planning</option>
-                      <option value="Active">Active</option>
-                      <option value="On Hold">On Hold</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Archived">Archived</option>
-                    </select>
-                  </div>
+      <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800 mb-2" role="tablist">
+        {TABS.map(([id, label]) => (
+          <Link key={id} to={`/projects/${project.id}${id === "tasks" ? "" : `/${id}`}`} role="tab" aria-selected={tab === id}
+            className={`inline-flex items-center gap-1.5 h-9 px-2.5 text-[13px] font-semibold border-b-2 -mb-px ${tab === id ? "border-primary text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"}`}>
+            {label}
+            <span className="text-xs text-zinc-400 font-tnum">{id === "tasks" ? open.length : id === "files" ? files.length : ""}</span>
+          </Link>
+        ))}
+      </div>
+
+      {tab === "tasks" && (
+        <>
+          <TaskToolbar filters={filters} onFilter={(p) => setFilters((f) => ({ ...f, ...p }))} users={members.length ? members : users} showProjectFilter={false} view={view} onView={changeView} />
+          <div className="mt-1">
+            {view === "board" ? <div className="mt-4"><TaskBoard groups={groups} showProject={false} /></div> : (
+              <TaskList groups={groups} showProject={false} onAddTask={can("editTasks") ? addTaskHere : undefined} addPlaceholder={`Add a task to ${project.name}… press Enter`} />
+            )}
+          </div>
+        </>
+      )}
+
+      {tab === "files" && (
+        <div className="card">
+          <div className="flex items-center gap-2 px-3 h-11 border-b border-zinc-100 dark:border-zinc-800">
+            <h2 className="text-[13px] font-bold">Files <span className="text-zinc-400 font-semibold font-tnum">{files.length}</span></h2>
+            {can("editTasks") && (
+              <>
+                <input ref={fileRef} type="file" multiple className="hidden" onChange={handleUpload} />
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="btn btn-sm btn-secondary ml-auto">
+                  {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Paperclip className="w-3.5 h-3.5" />} Upload
+                </button>
+              </>
+            )}
+          </div>
+          {files.length === 0 ? <p className="px-3 py-6 text-xs text-zinc-400 text-center">No files yet. Up to 10MB each.</p> : files.map((file) => (
+            <div key={file.id} className="group/file flex items-center gap-2.5 h-11 px-3 border-t border-zinc-100 dark:border-zinc-800/80 first:border-t-0">
+              <span className={`flex h-[30px] w-[30px] items-center justify-center rounded-md shrink-0 ${isPdfType(file.type) ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10" : "bg-primary/8 text-primary dark:bg-primary/15"}`}>
+                {isImageType(file.type) ? <ImageIcon className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-[13px] font-semibold truncate">{file.name}</span>
+                <span className="block text-[11px] text-zinc-400 truncate">{file.size}{file.author ? ` · ${file.author}` : ""}{file.createdAt ? ` · ${formatRelative(file.createdAt)}` : ""}</span>
+              </span>
+              <span className="flex items-center md:opacity-0 md:group-hover/file:opacity-100 focus-within:opacity-100 transition-opacity">
+                {(isImageType(file.type) || isPdfType(file.type)) && <button type="button" onClick={() => openPreview(file)} className="btn-icon h-7 w-7" aria-label={`Preview ${file.name}`}><Eye className="w-3.5 h-3.5" /></button>}
+                <button type="button" onClick={() => downloadAttachment(file)} className="btn-icon h-7 w-7" aria-label={`Download ${file.name}`}><Download className="w-3.5 h-3.5" /></button>
+                {can("editTasks") && <button type="button" onClick={() => removeAttachmentFromProject(project.id, file.id)} className="btn-icon h-7 w-7 hover:text-rose-600" aria-label={`Delete ${file.name}`}><Trash2 className="w-3.5 h-3.5" /></button>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "activity" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
+          <div className="lg:col-span-2 flex flex-col gap-3">
+            <ProjectDiscussionPanel projectId={project.id} />
+            <div className="card p-3">
+              <h2 className="text-[13px] font-bold mb-2">Recent activity</h2>
+              {projectActivity.length === 0 ? <p className="text-xs text-zinc-400">No activity recorded for this project yet.</p> : (
+                <div className="flex flex-col gap-2">
+                  {projectActivity.slice(0, 20).map((a) => (
+                    <div key={a.id} className="flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+                      <UserAvatar user={users.find((u) => u.id === a.userId)} size="xs" />
+                      <span className="flex-1 leading-relaxed">{a.text}</span>
+                      <span className="text-zinc-400 font-tnum shrink-0">{formatRelative(a.timestamp)}</span>
+                    </div>
+                  ))}
                 </div>
-
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <label htmlFor="edit-project-desc" className="label mb-0">Description</label>
-                    <AIEnhanceButton
-                      value={richTextToPlain(editDesc)}
-                      onEnhance={(text) => setEditDesc(plainToRichText(text))}
-                      type="description"
-                    />
-                  </div>
-                  <RichTextEditor
-                    id="edit-project-desc"
-                    value={editDesc}
-                    onChange={setEditDesc}
-                    placeholder="Outline the charter, goals, or scope… use the toolbar to format."
-                  />
-                </div>
-              </div>
-
-              {/* Sticky footer */}
-              <div className="flex items-center justify-end gap-2 px-5 pt-3.5 border-t border-zinc-200 dark:border-zinc-800 shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="btn btn-secondary flex-1 sm:flex-none"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary flex-1 sm:flex-none">
-                  Save Changes
-                </button>
-              </div>
-            </form>
+              )}
+            </div>
+          </div>
+          <div className="card p-3">
+            <div className="flex items-center mb-2"><h2 className="text-[13px] font-bold">Overview</h2>{manage && <button type="button" onClick={() => setEditOpen(true)} className="ml-auto text-xs font-semibold text-primary hover:underline cursor-pointer">Edit</button>}</div>
+            <RichTextView html={project.description} emptyText="No description yet." />
+            <dl className="mt-3 grid grid-cols-2 gap-y-1.5 text-xs">
+              <dt className="text-zinc-400">Created</dt><dd className="font-semibold">{project.createdAt ? new Date(project.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"}</dd>
+              <dt className="text-zinc-400">Due</dt><dd className="font-semibold">{project.deadline ? new Date(project.deadline).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"}</dd>
+              <dt className="text-zinc-400">Status</dt><dd className="font-semibold">{project.status}</dd>
+            </dl>
           </div>
         </div>
       )}
 
-      {/* 3. Tabs navigation panel */}
-      <ProjectDetailsTabs
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        pendingTasksCount={pendingTasks.length}
-        showAdminTab={can("manageProjects")}
-      />
-
-      {/* 4. Tab Content panes with motion transitions */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.18, ease: "easeInOut" }}
-          className="space-y-2.5 sm:space-y-4"
-          id="project-details-tab-content"
-        >
-
-          {/* EXECUTIVE SUMMARY */}
-          {activeTab === "overview" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4">
-
-              <div className="md:col-span-2 space-y-2.5 sm:space-y-4">
-                <div className="card p-3 sm:p-4">
-                  <p className="text-[10px] sm:text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1.5 sm:mb-2">Charter Statement</p>
-                  <RichTextView html={project.description} emptyText="No charter statement yet — edit the project to add one." />
-                </div>
-
-                <ProjectDiscussionPanel projectId={project.id} />
-              </div>
-
-              {/* Sidebar list of resources */}
-              <div className="space-y-2.5 sm:space-y-4">
-                <ProjectMembersList project={project} users={users} addProjectMember={addProjectMember} removeProjectMember={removeProjectMember} />
-              </div>
-
+      <ProjectFormDialog isOpen={editOpen} onClose={() => setEditOpen(false)} project={project} onUpdate={updateProject} />
+      {membersOpen && (
+        <div className="modal-overlay" onClick={() => setMembersOpen(false)}>
+          <div className="modal-panel sm:max-w-md" role="dialog" aria-modal="true" aria-label="Project members" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet-grabber" />
+            <div className="flex-1 overflow-y-auto p-1">
+              <ProjectMembersList project={project} users={users} addProjectMember={addProjectMember} removeProjectMember={removeProjectMember} />
             </div>
-          )}
-
-          {/* TASKS LINEUP */}
-          {activeTab === "tasks" && (
-            <ProjectTaskLineup
-              projectTasks={projectTasks}
-              users={users}
-              inlineTaskTitle={inlineTaskTitle}
-              setInlineTaskTitle={setInlineTaskTitle}
-              handleInlineAddTask={handleInlineAddTask}
-              updateTask={updateTask}
-              setActiveTaskId={setActiveTaskId}
-            />
-          )}
-
-          {/* FILE CABINET */}
-          {activeTab === "files" && (
-            <ProjectFileCabinet
-              project={project}
-              projectFiles={projectFiles}
-              fileInputRef={fileInputRef}
-              handleRealFileUpload={handleRealFileUpload}
-              errorMsg={errorMsg}
-              setPreviewFile={async (file) => {
-                if (file.base64) { setPreviewFile(file); return; }
-                const url = await getAttachmentBlobUrl(file);
-                if (url) setPreviewFile({ ...file, base64: url });
-              }}
-              handleDownloadFile={handleDownloadFile}
-              removeAttachmentFromProject={removeAttachmentFromProject}
-            />
-          )}
-
-          {/* ADMINISTRATIVE CONTROLS */}
-          {activeTab === "settings" && (
-            <ProjectAdminControls
-              project={project}
-              updateProject={updateProject}
-              showDeleteConfirm={showDeleteConfirm}
-              setShowDeleteConfirm={setShowDeleteConfirm}
-              handleDeleteProject={handleDeleteProject}
-            />
-          )}
-
-        </motion.div>
-      </AnimatePresence>
-
-      {/* 5. Attachment Preview Modal */}
-      <AttachmentPreviewModal
-        previewFile={previewFile}
-        setPreviewFile={setPreviewFile}
-        handleDownloadFile={handleDownloadFile}
-      />
-
+            <div className="flex justify-end px-4 py-3 border-t border-zinc-200 dark:border-zinc-800 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <button type="button" onClick={() => setMembersOpen(false)} className="btn btn-secondary">Done</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <AttachmentPreviewModal previewFile={previewFile} setPreviewFile={setPreviewFile} handleDownloadFile={(f) => downloadAttachment(f)} />
     </div>
   );
 }

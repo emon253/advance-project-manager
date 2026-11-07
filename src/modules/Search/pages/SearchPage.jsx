@@ -3,62 +3,53 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Search, SearchX } from "lucide-react";
 import { useAppState } from "../../../app/providers";
-import { PageHeader } from "../../../components/common/PageHeader";
+import { TaskRow } from "../../Tasks/components/TaskRow";
+import { EmptyState } from "../../../components/common/EmptyState";
+import { ChipSelect } from "../../Tasks/components/TaskToolbar";
+import { filterTasksBySearch, sortSearchedTasks } from "../util/searchUtils";
 
-// Modular Imports
-import { useSearchQuery } from "../hooks/useSearchQuery";
-import { SearchInput } from "../components/SearchInput";
-import { SearchFilters } from "../components/SearchFilters";
-import { SearchList } from "../components/SearchList";
-
-import "../style/search.css";
-
+/** Workspace search: the same task rows as everywhere else. */
 export function SearchPage() {
-  const { activeWorkspaceTasks, activeWorkspaceProjects, users, setActiveTaskId } = useAppState();
+  const { activeWorkspaceTasks, activeWorkspaceProjects, users } = useAppState();
+  const [params, setParams] = useSearchParams();
+  const q = params.get("q") || "";
+  const [term, setTerm] = useState(q);
+  const [sort, setSort] = useState("dueDate");
+  useEffect(() => setTerm(q), [q]);
 
-  // Custom search query hook
-  const {
-    searchTerm,
-    setSearchTerm,
-    sortParam,
-    setSortParam,
-    handleSearchSubmit,
-    sortedTasks
-  } = useSearchQuery(activeWorkspaceTasks);
+  const results = sortSearchedTasks(filterTasksBySearch(activeWorkspaceTasks, q), sort);
 
   return (
-    <div className="space-y-2.5 sm:space-y-5 text-left" id="search-page-portfolio-root">
-      {/* 1. Page Header */}
-      <PageHeader 
-        title="Search" 
-        description="Filter specific deliverables, priorities, or commentaries across the active workspace."
-      />
-
-      {/* 2. Search Input */}
-      <SearchInput
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        handleSearchSubmit={handleSearchSubmit}
-      />
-
-      {/* 3. Search Filters & Match summaries */}
-      <SearchFilters
-        sortParam={sortParam}
-        setSortParam={setSortParam}
-        matchCount={sortedTasks.length}
-      />
-
-      {/* 4. Display list catalog */}
-      <SearchList
-        sortedTasks={sortedTasks}
-        activeWorkspaceProjects={activeWorkspaceProjects}
-        users={users}
-        setActiveTaskId={setActiveTaskId}
-      />
-
+    <div className="text-left max-w-[800px]" id="search-root">
+      <h1 className="page-title mb-3">Search</h1>
+      <form onSubmit={(e) => { e.preventDefault(); setParams(term.trim() ? { q: term.trim() } : {}); }} className="flex gap-2 mb-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+          <input type="search" autoFocus value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Search tasks by title or description" aria-label="Search" className="field pl-8" />
+        </div>
+        <button type="submit" className="btn btn-primary">Search</button>
+      </form>
+      {q && (
+        <div className="flex items-center gap-2 mb-1">
+          <ChipSelect label="Sort" value={sort} onChange={(v) => setSort(v || "dueDate")} options={[{ value: "dueDate", label: "Due date" }, { value: "priority", label: "Priority" }, { value: "title", label: "Title" }]} allLabel="Due date" />
+          <span className="ml-auto text-xs text-zinc-500 font-tnum">{results.length} {results.length === 1 ? "match" : "matches"}</span>
+        </div>
+      )}
+      {!q ? (
+        <EmptyState icon={<Search className="w-6 h-6" />} title="Search your workspace" description="Find tasks by title or description." />
+      ) : results.length === 0 ? (
+        <EmptyState icon={<SearchX className="w-6 h-6" />} title="No matches" description="Try a shorter or different keyword." />
+      ) : (
+        <div className="card overflow-hidden">
+          {results.map((t) => (
+            <TaskRow key={t.id} task={t} project={activeWorkspaceProjects.find((p) => p.id === t.projectId)} assignee={users.find((u) => u.id === t.assigneeId)} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-

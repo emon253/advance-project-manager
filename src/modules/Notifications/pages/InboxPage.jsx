@@ -3,255 +3,97 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { CheckCheck, Trash2, Search, X, Settings } from "lucide-react";
 import { useAppState } from "../../../app/providers";
 import { useMockQuery } from "../../../hooks/useMockQuery";
 import { ListSkeleton } from "../../../components/common/Skeleton";
 import { ErrorState } from "../../../components/common/ErrorState";
+import { NotificationItem } from "../components/NotificationItem";
+import { NotificationEmptyState } from "../components/NotificationEmptyState";
+import { ChipSelect } from "../../Tasks/components/TaskToolbar";
+import { parseNotifications } from "../util/notificationUtils";
 
-// Modular imports
-import { useNotificationFilters } from "../hooks/useNotificationFilters";
-import { InboxHeader } from "../components/InboxHeader";
-import { InboxTabs } from "../components/InboxTabs";
-import { InboxFilters } from "../components/InboxFilters";
-import { NotificationList } from "../components/NotificationList";
-import { NotificationDetailsDrawer } from "../components/NotificationDetailsDrawer";
-import { NotificationSettingsPanel } from "../components/NotificationSettingsPanel";
+const TYPES = [
+  ["assigned", "Assigned"], ["mention", "Mentions"], ["comment", "Comments"], ["status_changed", "Status changes"],
+  ["file_attached", "Files"], ["due_soon", "Due soon"], ["overdue", "Overdue"], ["milestone_rescheduled", "Rescheduled"],
+  ["project_update", "Project updates"], ["reminder", "Reminders"],
+];
 
-import "../style/notifications.css";
-
-const PAGE_SIZE = 8;
-
+/**
+ * Inbox: every row opens what it's about — the task panel for task
+ * notifications, the project page otherwise. Preferences live in Settings.
+ */
 export function InboxPage() {
-  const {
-    notifications,
-    setNotificationRead,
-    markAllNotificationsRead,
-    clearReadNotifications,
-    deleteNotification,
-    notificationSettings,
-    setNotificationSettings,
-    projects,
-    tasks,
-    setActiveTaskId
-  } = useAppState();
-
-  const navigate = useNavigate();
-
-  // Custom filters hook
-  const {
-    activeTab,
-    setActiveTab,
-    selectedType,
-    setSelectedType,
-    searchQuery,
-    setSearchQuery,
-    selectedNotif,
-    setSelectedNotif,
-    filteredNotifications,
-  } = useNotificationFilters(notifications);
-
-  // Simulated fetch lifecycle for the inbox feed (loading / error / retry)
+  const { notifications, setNotificationRead, markAllNotificationsRead, clearReadNotifications, deleteNotification, projects, setActiveTaskId } = useAppState();
   const { isLoading, isError, retry } = useMockQuery();
+  const navigate = useNavigate();
+  const [tab, setTab] = useState("all");
+  const [type, setType] = useState("");
+  const [query, setQuery] = useState("");
 
-  // Pagination over the FILTERED notification list
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-
-  // Reset pagination whenever the tab or any filter changes
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [activeTab, selectedType, searchQuery]);
-
-  const visibleNotifications = filteredNotifications.slice(0, visibleCount);
-  const remainingCount = filteredNotifications.length - visibleNotifications.length;
-
-  const handleLoadMore = () => {
-    if (isLoadingMore) return;
-    setIsLoadingMore(true);
-    setTimeout(() => {
-      setVisibleCount((count) => count + PAGE_SIZE);
-      setIsLoadingMore(false);
-    }, 400);
-  };
-
-  // Action: Mark single read/unread toggle (provider persists via the API)
-  const handleToggleRead = (id, forceRead = null) => {
-    const current = notifications.find((n) => n.id === id);
-    const nextRead = forceRead !== null ? forceRead : !(current?.read);
-    setNotificationRead(id, nextRead);
-    if (selectedNotif && selectedNotif.id === id) {
-      setSelectedNotif((prev) => ({ ...prev, read: nextRead }));
+  const items = useMemo(() => parseNotifications(notifications).filter((n) => {
+    if (tab === "unread" && n.read) return false;
+    if (type && !(n.type === type || (type === "project_update" && n.type === "update") || (type === "file_attached" && n.type === "file"))) return false;
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      return n.title?.toLowerCase().includes(q) || n.message?.toLowerCase().includes(q);
     }
-  };
+    return true;
+  }), [notifications, tab, type, query]);
 
-  // Action: Mark single read only
-  const handleMarkRead = (id) => {
-    const current = notifications.find((n) => n.id === id);
-    if (current && !current.read) setNotificationRead(id, true);
-    if (selectedNotif && selectedNotif.id === id) {
-      setSelectedNotif((prev) => ({ ...prev, read: true }));
-    }
-  };
+  const unread = notifications.filter((n) => !n.read).length;
 
-  // Action: Mark all read
-  const handleMarkAllRead = () => {
-    markAllNotificationsRead();
-    if (selectedNotif) {
-      setSelectedNotif((prev) => ({ ...prev, read: true }));
-    }
+  const open = (n) => {
+    if (!n.read) setNotificationRead(n.id, true);
+    if (n.taskId) setActiveTaskId(n.taskId);
+    else if (n.projectId) navigate(`/projects/${n.projectId}`);
   };
-
-  // Action: Clear all read notifications
-  const handleClearRead = () => {
-    clearReadNotifications();
-    if (selectedNotif && selectedNotif.read) {
-      setSelectedNotif(null);
-    }
-  };
-
-  // Action: Delete notification
-  const handleDeleteNotification = (id) => {
-    deleteNotification(id);
-    if (selectedNotif && selectedNotif.id === id) {
-      setSelectedNotif(null);
-    }
-  };
-
-  const handleNotificationClick = (item) => {
-    handleMarkRead(item.id);
-    setSelectedNotif(item);
-  };
-
-  const handleTogglePreference = (key) => {
-    setNotificationSettings((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
-  // Helper: Retrieve Task details dynamically
-  const getTaskInfo = (taskId) => {
-    if (!taskId) return null;
-    return tasks.find((t) => t.id === taskId);
-  };
-
-  // Helper: Retrieve Project details dynamically
-  const getProjectInfo = (projectId) => {
-    if (!projectId) return null;
-    return projects.find((p) => p.id === projectId);
-  };
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <div className="space-y-2.5 sm:space-y-5 text-left" id="inbox-page-root">
-      
-      {/* 1. Page Header with compact, balanced bulk actions */}
-      <InboxHeader
-        activeTab={activeTab}
-        notifications={notifications}
-        handleMarkAllRead={handleMarkAllRead}
-        handleClearRead={handleClearRead}
-      />
+    <div className="text-left max-w-[800px]" id="inbox-root">
+      <div className="flex items-center gap-3 mb-3">
+        <div>
+          <h1 className="page-title">Inbox</h1>
+          <p className="page-sub font-tnum">{unread > 0 ? `${unread} unread` : "All caught up"}</p>
+        </div>
+        <div className="ml-auto flex items-center gap-1.5">
+          {unread > 0 && <button type="button" onClick={markAllNotificationsRead} className="btn btn-sm btn-secondary"><CheckCheck className="w-3.5 h-3.5" /><span className="hidden sm:inline">Mark all read</span></button>}
+          {notifications.some((n) => n.read) && <button type="button" onClick={clearReadNotifications} className="btn btn-sm btn-secondary"><Trash2 className="w-3.5 h-3.5" /><span className="hidden sm:inline">Clear read</span></button>}
+          <Link to="/settings/notifications" className="btn-icon" aria-label="Notification settings" title="Notification settings"><Settings className="w-4 h-4" /></Link>
+        </div>
+      </div>
 
-      {/* 2. Responsive Tabs */}
-      <InboxTabs
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        totalCount={notifications.length}
-        unreadCount={unreadCount}
-      />
+      <div className="flex flex-wrap items-center gap-1.5 mb-2">
+        <div className="seg" role="group" aria-label="Filter">
+          <button type="button" aria-pressed={tab === "all"} onClick={() => setTab("all")}>All <span className="text-zinc-400 font-tnum">{notifications.length}</span></button>
+          <button type="button" aria-pressed={tab === "unread"} onClick={() => setTab("unread")}>Unread <span className="text-zinc-400 font-tnum">{unread}</span></button>
+        </div>
+        <ChipSelect label="Type" value={type} onChange={setType} options={TYPES.map(([v, l]) => ({ value: v, label: l }))} allLabel="All types" />
+        <div className="relative ml-auto w-full sm:w-56">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" />
+          <input type="text" placeholder="Search inbox" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search notifications" className="field h-7 pl-8 pr-7 text-xs" />
+          {query && <button type="button" onClick={() => setQuery("")} className="absolute right-1 top-1/2 -translate-y-1/2 btn-icon h-5 w-5" aria-label="Clear search"><X className="w-3 h-3" /></button>}
+        </div>
+      </div>
 
-      {activeTab === "preferences" ? (
-        /* ======================== PREFERENCES PANEL ======================== */
-        <NotificationSettingsPanel
-          notificationSettings={notificationSettings}
-          handleTogglePreference={handleTogglePreference}
-        />
+      {isLoading ? <ListSkeleton rows={6} /> : isError ? <ErrorState onRetry={retry} title="Couldn't load your inbox" /> : items.length === 0 ? (
+        <NotificationEmptyState searchQuery={query} setSearchQuery={setQuery} setSelectedType={() => setType("")} activeTab={tab} />
       ) : (
-        /* ======================== FEED LIST LAYOUT ======================== */
-        <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-5 items-start animate-in fade-in duration-200" id="inbox-alert-body">
-
-          {/* Main List Column */}
-          <div className="flex-1 w-full space-y-2.5 sm:space-y-3.5">
-            
-            {/* 3. Sleek compact filters and search queries */}
-            <InboxFilters
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              selectedType={selectedType}
-              setSelectedType={setSelectedType}
+        <div className="card overflow-hidden">
+          {items.map((n) => (
+            <NotificationItem
+              key={n.id}
+              item={n}
+              relatedProject={projects.find((p) => p.id === n.projectId)}
+              onOpen={() => open(n)}
+              onToggleRead={() => setNotificationRead(n.id, !n.read)}
+              onDelete={() => deleteNotification(n.id)}
             />
-
-            {/* Notification items container (loading / error / paginated list) */}
-            {isLoading ? (
-              <ListSkeleton rows={5} />
-            ) : isError ? (
-              <ErrorState onRetry={retry} title="Couldn't load your inbox" />
-            ) : (
-              <>
-                <div
-                  id="inbox-alert-cards-container"
-                  className="sm:bg-white sm:dark:bg-zinc-900 sm:border sm:border-zinc-200/80 sm:dark:border-zinc-800 sm:rounded-xl sm:shadow-soft sm:p-2"
-                >
-                  <NotificationList
-                    notifications={visibleNotifications}
-                    selectedNotif={selectedNotif}
-                    getTaskInfo={getTaskInfo}
-                    getProjectInfo={getProjectInfo}
-                    handleNotificationClick={handleNotificationClick}
-                    handleToggleRead={handleToggleRead}
-                    handleDeleteNotification={handleDeleteNotification}
-                    setActiveTaskId={setActiveTaskId}
-                    navigate={navigate}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    setSelectedType={setSelectedType}
-                    activeTab={activeTab}
-                  />
-                </div>
-
-                {remainingCount > 0 && (
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      onClick={handleLoadMore}
-                      disabled={isLoadingMore}
-                      className="btn btn-secondary btn-sm"
-                    >
-                      {isLoadingMore ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Loading…</span>
-                        </>
-                      ) : (
-                        <span>Load more ({remainingCount} remaining)</span>
-                      )}
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* 4. Elegant responsive Slide drawer detail side panel */}
-          <NotificationDetailsDrawer
-            selectedNotif={selectedNotif}
-            setSelectedNotif={setSelectedNotif}
-            getTaskInfo={getTaskInfo}
-            getProjectInfo={getProjectInfo}
-            setActiveTaskId={setActiveTaskId}
-            navigate={navigate}
-            handleToggleRead={handleToggleRead}
-            handleDeleteNotification={handleDeleteNotification}
-          />
-
+          ))}
         </div>
       )}
-
     </div>
   );
 }

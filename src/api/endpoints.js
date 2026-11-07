@@ -290,7 +290,11 @@ export const taskApi = {
   removeChecklistItem: (itemId) => http.delete(`/checklist/${itemId}`),
 
   comments: async (taskId) => (await http.get(`/tasks/${taskId}/comments`)).map(commentToUi),
-  addComment: async (taskId, body) => commentToUi(await http.post(`/tasks/${taskId}/comments`, { body })),
+  /** `fields`: { body, mentionUserIds: [], attachmentIds: [] } */
+  addComment: async (taskId, fields) => commentToUi(await http.post(`/tasks/${taskId}/comments`, fields)),
+  updateComment: async (taskId, commentId, fields) =>
+    commentToUi(await http.patch(`/tasks/${taskId}/comments/${commentId}`, fields)),
+  deleteComment: (taskId, commentId) => http.delete(`/tasks/${taskId}/comments/${commentId}`),
 
   addWatcher: (taskId, userId) => http.put(`/tasks/${taskId}/watchers/${userId}`),
   removeWatcher: (taskId, userId) => http.delete(`/tasks/${taskId}/watchers/${userId}`),

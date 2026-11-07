@@ -43,7 +43,7 @@ export function OwnerConsolePage({ tab = "dashboard" }) {
           The Owner Console manages plans, users, and subscriptions across the whole platform.
           Your account doesn't have System Owner access.
         </p>
-        <Link to="/dashboard" className="btn btn-primary mt-6">Back to your workspace</Link>
+        <Link to="/today" className="btn btn-primary mt-6">Back to your workspace</Link>
       </div>
     );
   }

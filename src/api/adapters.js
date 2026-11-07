@@ -132,6 +132,9 @@ export function commentToUi(c) {
     author: userToUi(c.author),
     text: c.body,
     timestamp: iso(c.createdAt),
+    editedAt: iso(c.editedAt),
+    mentions: (c.mentions || []).map(userToUi),
+    attachments: (c.attachments || []).map(attachmentToUi),
   };
 }
 
@@ -145,6 +148,7 @@ export function attachmentToUi(a) {
     timestamp: iso(a.createdAt),
     createdAt: iso(a.createdAt),
     author: a.uploadedBy?.name || "",
+    commentId: a.commentId ?? null,
   };
 }
 
@@ -257,6 +261,7 @@ export function notificationToUi(n) {
     time: iso(n.createdAt),
     taskId: n.taskId ?? null,
     projectId: n.projectId ?? null,
+    commentId: n.commentId ?? null,
     workspaceId: n.workspaceId,
   };
 }
