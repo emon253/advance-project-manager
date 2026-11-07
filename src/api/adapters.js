@@ -5,6 +5,10 @@
 
 import { BASE_URL } from "./client";
 
+/** Colour classes stored before the rebrand still carry the old purple; swap to Carbarn blue. */
+const brand = (cls) => cls?.replaceAll("#533afd", "#0073ea");
+
+
 /**
  * Wire ⇄ UI adapters (BACKEND_PLAN.md §9.7).
  *
@@ -64,7 +68,7 @@ export function userToUi(u) {
     name: u.name,
     email: u.email ?? null,
     avatar: u.avatarInitials || u.name?.slice(0, 2).toUpperCase(),
-    color: u.avatarColor || "bg-primary text-white",
+    color: brand(u.avatarColor) || "bg-primary text-white",
     role: u.role ? roleToUi(u.role) : undefined,
     phone: u.phone ?? null,
     emailVerified: u.emailVerified,
@@ -200,9 +204,9 @@ export function taskStatusToUi(s) {
   return {
     id: s.id,
     name: s.name,
-    bg: s.bgStyle || STATUS_STYLE_FALLBACK.bg,
-    text: s.textStyle || STATUS_STYLE_FALLBACK.text,
-    border: s.borderStyle || STATUS_STYLE_FALLBACK.border,
+    bg: brand(s.bgStyle) || STATUS_STYLE_FALLBACK.bg,
+    text: brand(s.textStyle) || STATUS_STYLE_FALLBACK.text,
+    border: brand(s.borderStyle) || STATUS_STYLE_FALLBACK.border,
     darkBg: s.darkBgStyle || STATUS_STYLE_FALLBACK.darkBg,
     darkText: s.darkTextStyle || STATUS_STYLE_FALLBACK.darkText,
     darkBorder: s.darkBorderStyle || STATUS_STYLE_FALLBACK.darkBorder,
@@ -217,7 +221,7 @@ export function taskStatusToUi(s) {
 }
 
 export function tagToUi(t) {
-  return { id: t.id, name: t.name, color: t.colorStyle || "bg-primary/8 text-primary border-primary/20" };
+  return { id: t.id, name: t.name, color: brand(t.colorStyle) || "bg-primary/8 text-primary border-primary/20" };
 }
 
 // --- invitations / activity --------------------------------------------------
@@ -340,7 +344,7 @@ export function dashboardToUi(d) {
       userId: w.userId,
       name: w.name,
       avatar: w.avatarInitials,
-      color: w.avatarColor,
+      color: brand(w.avatarColor),
       avatarUrl: toAvatarUrl(w.avatarUrl),
       activeTaskCount: w.activeTaskCount,
     })),
@@ -357,7 +361,7 @@ export function searchToUi(s) {
       id: h.id, name: h.name, icon: h.iconKey, color: h.color, status: projectStatusToUi(h.status),
     })),
     people: (s.peopleHits || []).map((h) => ({
-      id: h.id, name: h.name, email: h.email, avatar: h.avatarInitials, color: h.avatarColor, avatarUrl: toAvatarUrl(h.avatarUrl),
+      id: h.id, name: h.name, email: h.email, avatar: h.avatarInitials, color: brand(h.avatarColor), avatarUrl: toAvatarUrl(h.avatarUrl),
     })),
   };
 }
@@ -415,7 +419,7 @@ export function adminUserRowToUi(u) {
     email: u.email,
     initials: u.avatarInitials,
     avatarUrl: toAvatarUrl(u.avatarUrl),
-    color: u.avatarColor,
+    color: brand(u.avatarColor),
     emailVerified: !!u.emailVerified,
     systemRole: u.systemRole,
     enabled: !!u.enabled,

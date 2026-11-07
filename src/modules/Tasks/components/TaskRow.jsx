@@ -118,8 +118,13 @@ export function TaskRow({ task, project, assignee, showProject = true, selected 
         </div>
       </div>
 
-      <span className="shrink-0 mt-0.5 md:mt-0">
-        {assignee ? <UserAvatar user={assignee} size="xs" /> : <span className="block h-6 w-6 rounded-full border border-dashed border-zinc-300 dark:border-zinc-600" aria-label="Unassigned" />}
+      <span className="shrink-0 mt-0.5 md:mt-0 inline-flex items-center gap-1.5 min-w-[64px] justify-end" title={assignee?.name}>
+        {assignee ? (
+          <>
+            <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 truncate max-w-[72px]">{assignee.name.split(" ")[0]}</span>
+            <UserAvatar user={assignee} size="xs" />
+          </>
+        ) : <span className="block h-6 w-6 rounded-full border border-dashed border-zinc-300 dark:border-zinc-600" aria-label="Unassigned" />}
       </span>
     </div>
   );

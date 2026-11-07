@@ -130,7 +130,7 @@ export function TaskBoard({ groups, showProject = true, onAddTask }) {
                         {files > 0 && <span className="inline-flex items-center gap-0.5 font-tnum"><Paperclip className="w-3 h-3" />{files}</span>}
                         <span className="ml-auto flex items-center gap-1.5">
                           {showProject && project && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: project.color }} title={project.name} />}
-                          {assignee ? <UserAvatar user={assignee} size="xs" /> : <span className="h-6 w-6 rounded-full border border-dashed border-zinc-300 dark:border-zinc-600" />}
+                          {assignee ? <span className="inline-flex items-center gap-1.5" title={assignee.name}><span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 truncate max-w-[64px]">{assignee.name.split(" ")[0]}</span><UserAvatar user={assignee} size="xs" /></span> : <span className="h-6 w-6 rounded-full border border-dashed border-zinc-300 dark:border-zinc-600" />}
                         </span>
                       </div>
                     </motion.div>

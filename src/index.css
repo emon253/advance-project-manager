@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Source+Code+Pro:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+/* Colour classes the API sends as strings (avatars, statuses, tags) must exist in the bundle. */
+@source inline("bg-[#0073ea] text-[#0073ea] border-[#0073ea] bg-[#0073ea]/5 bg-[#0073ea]/10 border-[#0073ea]/20 bg-amber-600 bg-rose-600 bg-emerald-600 bg-sky-600 bg-violet-600 bg-teal-600 bg-orange-600 bg-pink-600 bg-indigo-600 bg-cyan-600 text-white");
 
 @variant dark (&:where(.dark, .dark *));
 
