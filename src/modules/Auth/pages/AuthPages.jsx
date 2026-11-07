@@ -48,7 +48,7 @@ function BrandPanel() {
           {[
             { Icon: LayoutDashboard, title: "Plan with boards & timelines", sub: "Statuses, priorities, and workloads at a glance" },
             { Icon: BellRing, title: "Know the moment work moves", sub: "Real-time notifications across every device" },
-            { Icon: Users, title: "Built for teams", sub: "Roles, invitations, and per-seat billing included" },
+            { Icon: Users, title: "Built for teams", sub: "Roles, invitations, and shared workspaces" },
           ].map(({ Icon, title, sub }) => (
             <li key={title} className="flex items-start gap-3.5">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/12 border border-white/15">
@@ -64,7 +64,7 @@ function BrandPanel() {
       </div>
 
       <p className="relative text-[13px] font-medium text-white/55">
-        Free plan available · Pro &amp; Business for growing teams
+        Carbarn's project workspace
       </p>
     </div>
   );
@@ -247,7 +247,7 @@ export function AuthPages() {
                     <div className="grid grid-cols-2 gap-2.5 mb-4" role="radiogroup" aria-labelledby="auth-account-type-label">
                       {[
                         { id: "personal", Icon: User, title: "For myself", sub: "Personal projects & tasks" },
-                        { id: "company", Icon: Building2, title: "With my team", sub: "Invites & per-seat billing" },
+                        { id: "company", Icon: Building2, title: "With my team", sub: "Invite teammates and share projects" },
                       ].map(({ id, Icon, title: optTitle, sub }) => {
                         const active = accountType === id;
                         return (
