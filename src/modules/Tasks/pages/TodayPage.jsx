@@ -107,8 +107,8 @@ export function TodayPage() {
   );
 
   return (
-    <div className="flex flex-wrap gap-6 items-start text-left" id="today-root">
-      <section className="flex-[999_1_520px] min-w-0 max-w-[800px]">
+    <div className="flex flex-wrap gap-6 2xl:gap-8 items-start text-left" id="today-root">
+      <section className="flex-[999_1_520px] min-w-0">
         <div className="mb-3">
           <h1 className="page-title">Today</h1>
           <p className="page-sub font-tnum">
@@ -166,7 +166,7 @@ export function TodayPage() {
         )}
       </section>
 
-      <aside className="flex-[1_1_260px] max-w-[300px] flex flex-col gap-3 lg:pt-[52px]">
+      <aside className="flex-[1_1_280px] max-w-[340px] 2xl:max-w-[380px] flex flex-col gap-3 lg:pt-[52px]">
         <div className="card p-3">
           <div className="flex items-center mb-2.5">
             <h3 className="text-[13px] font-bold text-zinc-900 dark:text-white">Projects</h3>

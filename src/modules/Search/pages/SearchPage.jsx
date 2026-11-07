@@ -24,7 +24,7 @@ export function SearchPage() {
   const results = sortSearchedTasks(filterTasksBySearch(activeWorkspaceTasks, q), sort);
 
   return (
-    <div className="text-left max-w-[800px]" id="search-root">
+    <div className="text-left" id="search-root">
       <h1 className="page-title mb-3">Search</h1>
       <form onSubmit={(e) => { e.preventDefault(); setParams(term.trim() ? { q: term.trim() } : {}); }} className="flex gap-2 mb-2">
         <div className="relative flex-1">

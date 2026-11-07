@@ -23,7 +23,7 @@ export function TeamPage() {
   const max = Math.max(1, ...rows.map((r) => r.open));
 
   return (
-    <div className="text-left max-w-[800px]" id="team-root">
+    <div className="text-left" id="team-root">
       <div className="flex items-center gap-3 mb-3">
         <div>
           <h1 className="page-title">Team</h1>
