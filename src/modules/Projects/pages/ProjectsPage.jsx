@@ -5,7 +5,8 @@
 
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, MoreHorizontal, Archive, RotateCcw } from "lucide-react";
+import { Plus, MoreHorizontal, Archive, RotateCcw, CheckCircle2 } from "lucide-react";
+import { getIconComponent } from "../../../components/common/IconHelper";
 import { useAppState } from "../../../app/providers";
 import { useMockQuery } from "../../../hooks/useMockQuery";
 import { ListSkeleton } from "../../../components/common/Skeleton";
@@ -53,8 +54,10 @@ export function ProjectsPage() {
     return { ...p, total: tasks.length, open: open.length, late, pct: tasks.length ? Math.round((done / tasks.length) * 100) : 0, members, lastActivity, deadlineLate, stale: tasks.length === 0 && p.deadline && startOfDay(p.deadline) < today };
   }), [activeWorkspaceProjects, activeWorkspaceTasks, taskStatuses, users, activities, today]);
 
+  const bucket = (p) => (p.status === "Archived" ? "archived" : p.status === "Completed" ? "closed" : "active");
+  const counts = { active: rows.filter((p) => bucket(p) === "active").length, closed: rows.filter((p) => bucket(p) === "closed").length, archived: rows.filter((p) => bucket(p) === "archived").length };
   const shown = rows
-    .filter((p) => (tab === "active" ? p.status !== "Archived" : p.status === "Archived"))
+    .filter((p) => bucket(p) === tab)
     .filter((p) => !owner || p.members.some((m) => String(m.id) === String(owner)))
     .sort((a, b) => {
       if (sort === "overdue") return b.late - a.late || b.open - a.open || a.name.localeCompare(b.name);
@@ -63,7 +66,7 @@ export function ProjectsPage() {
       return a.name.localeCompare(b.name);
     });
 
-  const activeRows = rows.filter((p) => p.status !== "Archived");
+  const activeRows = rows.filter((p) => bucket(p) === "active");
   const kpis = [
     { label: "Active", value: activeRows.length },
     { label: "Open tasks", value: activeRows.reduce((n, p) => n + p.open, 0) },
@@ -101,8 +104,9 @@ export function ProjectsPage() {
 
       <div className="flex flex-wrap items-center gap-1.5 mb-2">
         <div className="seg" role="group" aria-label="Status">
-          <button type="button" aria-pressed={tab === "active"} onClick={() => setTab("active")}>Active <span className="text-zinc-400 font-tnum">{rows.filter((p) => p.status !== "Archived").length}</span></button>
-          <button type="button" aria-pressed={tab === "archived"} onClick={() => setTab("archived")}>Archived <span className="text-zinc-400 font-tnum">{rows.filter((p) => p.status === "Archived").length}</span></button>
+          <button type="button" aria-pressed={tab === "active"} onClick={() => setTab("active")}>Active <span className="text-zinc-400 font-tnum">{counts.active}</span></button>
+          <button type="button" aria-pressed={tab === "closed"} onClick={() => setTab("closed")}>Closed <span className="text-zinc-400 font-tnum">{counts.closed}</span></button>
+          <button type="button" aria-pressed={tab === "archived"} onClick={() => setTab("archived")}>Archived <span className="text-zinc-400 font-tnum">{counts.archived}</span></button>
         </div>
         <ChipSelect label="Member" value={owner} onChange={setOwner} options={users.map((u) => ({ value: u.id, label: u.name }))} allLabel="Anyone" />
         <div className="ml-auto">
@@ -117,7 +121,7 @@ export function ProjectsPage() {
       </div>
 
       {isLoading ? <ListSkeleton rows={5} /> : isError ? <ErrorState onRetry={retry} title="Couldn't load projects" /> : shown.length === 0 ? (
-        <EmptyState icon={<Archive className="w-6 h-6" />} title={tab === "active" ? "No active projects" : "No archived projects"} description={tab === "active" ? "Create a project to start tracking tasks." : "Archived projects will show up here."} buttonText={tab === "active" && can("manageProjects") ? "New project" : undefined} onButtonClick={openForm} />
+        <EmptyState icon={<Archive className="w-6 h-6" />} title={tab === "active" ? "No active projects" : tab === "closed" ? "No closed projects" : "No archived projects"} description={tab === "active" ? "Create a project to start tracking tasks." : tab === "closed" ? "Close a project from its page once the work is done." : "Archived projects will show up here."} buttonText={tab === "active" && can("manageProjects") ? "New project" : undefined} onButtonClick={openForm} />
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full border-collapse min-w-[760px]">
@@ -131,8 +135,8 @@ export function ProjectsPage() {
                 <tr key={p.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                   <td className={`${td} !whitespace-normal min-w-[240px]`}>
                     <Link to={`/projects/${p.id}`} className="flex items-center gap-2.5 text-zinc-900 dark:text-white font-bold hover:text-primary">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-md shrink-0 text-[11px] font-extrabold" style={{ backgroundColor: `${p.color}1f`, color: p.color }}>
-                        {p.name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}
+                      <span className="flex h-7 w-7 items-center justify-center rounded-md shrink-0" style={{ backgroundColor: `${p.color}1f`, color: p.color }}>
+                        {getIconComponent(p.icon, "w-3.5 h-3.5")}
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate max-w-[320px]">{p.name}</span>
@@ -168,9 +172,21 @@ export function ProjectsPage() {
                           <>
                             <div className="fixed inset-0 z-30" onClick={() => setMenuFor(null)} aria-hidden="true" />
                             <div role="menu" className="menu-panel absolute right-2 top-9 z-40 w-44 p-1">
-                              <button type="button" role="menuitem" onClick={() => { setMenuFor(null); updateProject(p.id, { status: p.status === "Archived" ? "Active" : "Archived" }); }} className="w-full flex items-center gap-2 h-8 px-2 rounded-md text-[13px] font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
-                                {p.status === "Archived" ? <><RotateCcw className="w-4 h-4" /> Restore</> : <><Archive className="w-4 h-4" /> Archive</>}
-                              </button>
+                              {bucket(p) === "active" && (
+                                <button type="button" role="menuitem" onClick={() => { setMenuFor(null); updateProject(p.id, { status: "Completed" }); }} className="w-full flex items-center gap-2 h-8 px-2 rounded-md text-[13px] font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                                  <CheckCircle2 className="w-4 h-4" /> Close project
+                                </button>
+                              )}
+                              {bucket(p) !== "active" && (
+                                <button type="button" role="menuitem" onClick={() => { setMenuFor(null); updateProject(p.id, { status: "Active" }); }} className="w-full flex items-center gap-2 h-8 px-2 rounded-md text-[13px] font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                                  <RotateCcw className="w-4 h-4" /> Reopen
+                                </button>
+                              )}
+                              {bucket(p) !== "archived" && (
+                                <button type="button" role="menuitem" onClick={() => { setMenuFor(null); updateProject(p.id, { status: "Archived" }); }} className="w-full flex items-center gap-2 h-8 px-2 rounded-md text-[13px] font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                                  <Archive className="w-4 h-4" /> Archive
+                                </button>
+                              )}
                             </div>
                           </>
                         )}

@@ -712,6 +712,12 @@ export function AppStateProvider({ children }) {
       refreshActivities();
       refreshSubscription();
       pushNotification(`Project '${project.name}' created.`, "update", null, project.id, "Project Created");
+      // Icon + colour are chosen by the model from the name/description — in
+      // the background, so creating never waits on OpenAI; the card updates
+      // when the answer lands (and keeps the defaults if AI isn't configured).
+      projectApi.aiStyle(project.id)
+        .then((styled) => setProjects((prev) => prev.map((p) => (p.id === styled.id ? { ...p, icon: styled.icon, color: styled.color } : p))))
+        .catch(() => {});
       return project;
     } catch (err) {
       toastError(err, "Could not create the project.");

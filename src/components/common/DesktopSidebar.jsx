@@ -30,7 +30,7 @@ export function DesktopSidebar() {
   }).length;
 
   const pinned = activeWorkspaceProjects
-    .filter((p) => p.status !== "Archived")
+    .filter((p) => p.status !== "Archived" && p.status !== "Completed")
     .slice(0, 3);
 
   const items = [

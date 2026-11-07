@@ -72,7 +72,7 @@ export function TodayPage() {
   }, [mine, taskStatuses, today]);
 
   const projectsAtRisk = useMemo(() => activeWorkspaceProjects
-    .filter((p) => p.status !== "Archived")
+    .filter((p) => p.status !== "Archived" && p.status !== "Completed")
     .map((p) => {
       const tasks = activeWorkspaceTasks.filter((t) => t.projectId === p.id);
       const open = tasks.filter((t) => isOpenTask(t, taskStatuses));
@@ -90,7 +90,7 @@ export function TodayPage() {
   const submitQuickAdd = async (e) => {
     e.preventDefault();
     if (!draft.trim()) return;
-    const projectId = activeWorkspaceProjects.find((p) => p.status !== "Archived")?.id;
+    const projectId = activeWorkspaceProjects.find((p) => p.status !== "Archived" && p.status !== "Completed")?.id;
     if (!projectId) return;
     const created = await addTask({
       title: draft.trim(), projectId, status: defaultStatusName(taskStatuses), priority: "Medium",
@@ -170,7 +170,7 @@ export function TodayPage() {
         <div className="card p-3">
           <div className="flex items-center mb-2.5">
             <h3 className="text-[13px] font-bold text-zinc-900 dark:text-white">Projects</h3>
-            <Link to="/projects" className="ml-auto text-xs font-semibold text-primary hover:underline">All {activeWorkspaceProjects.filter((p) => p.status !== "Archived").length}</Link>
+            <Link to="/projects" className="ml-auto text-xs font-semibold text-primary hover:underline">All {activeWorkspaceProjects.filter((p) => p.status !== "Archived" && p.status !== "Completed").length}</Link>
           </div>
           <div className="flex flex-col gap-2.5">
             {projectsAtRisk.map((p) => (

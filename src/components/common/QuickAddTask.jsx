@@ -19,7 +19,7 @@ export function QuickAddTask({ isOpen, onClose, defaultProjectId }) {
   const [projectId, setProjectId] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const activeProjects = activeWorkspaceProjects.filter((p) => p.status !== "Archived");
+  const activeProjects = activeWorkspaceProjects.filter((p) => p.status !== "Archived" && p.status !== "Completed");
   useEffect(() => {
     if (isOpen) setProjectId(String(defaultProjectId || activeProjects[0]?.id || ""));
     // eslint-disable-next-line react-hooks/exhaustive-deps

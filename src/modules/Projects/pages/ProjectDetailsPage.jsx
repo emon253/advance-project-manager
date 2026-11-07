@@ -5,11 +5,12 @@
 
 import React, { useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { Plus, MoreHorizontal, Pencil, Users, Archive, RotateCcw, Trash2, FileLock, Paperclip, FileText, Image as ImageIcon, Eye, Download, Loader2 } from "lucide-react";
+import { Plus, MoreHorizontal, Pencil, Users, Archive, RotateCcw, Trash2, FileLock, Paperclip, FileText, Image as ImageIcon, Eye, Download, Loader2, CheckCircle2, Pause, Play } from "lucide-react";
 import { useAppState } from "../../../app/providers";
 import { UserAvatar } from "../../../components/common/UserAvatar";
 import { RichTextView } from "../../../components/common/RichText/RichTextView";
 import { richTextToPlain } from "../../../components/common/RichText/sanitizeHtml";
+import { getIconComponent } from "../../../components/common/IconHelper";
 import { AttachmentPreviewModal } from "../components/AttachmentPreviewModal";
 import { ProjectFormDialog } from "../components/ProjectFormDialog";
 import { ProjectMembersList } from "../components/ProjectMembersList";
@@ -73,6 +74,7 @@ export function ProjectDetailsPage() {
   }
 
   const open = projectTasks.filter((t) => isOpenTask(t, taskStatuses));
+  const isOpenProject = project.status !== "Completed" && project.status !== "Archived";
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const late = open.filter((t) => t.dueDate && new Date(t.dueDate) < today).length;
   const done = projectTasks.length - open.length;
@@ -81,7 +83,6 @@ export function ProjectDetailsPage() {
   const files = projectFiles[project.id] || [];
   const projectActivity = activities.filter((a) => (a.text || "").includes(`'${project.name}'`));
   const manage = can("manageProjects");
-  const initials = project.name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
   const addTaskHere = (title) => addTask({ title, projectId: project.id, status: defaultStatusName(taskStatuses), priority: "Medium" });
   const changeView = (v) => { setView(v); localStorage.setItem("apm_tasks_view", v); };
@@ -109,26 +110,45 @@ export function ProjectDetailsPage() {
       </nav>
 
       {project.status === "Archived" && (
-        <div className="mb-3 px-3 py-2 rounded-md bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center gap-2">
-          <Archive className="w-3.5 h-3.5" /> This project is archived.
-          {manage && <button type="button" onClick={() => updateProject(project.id, { status: "Active" })} className="ml-auto underline cursor-pointer">Restore</button>}
+        <div className="mb-3 px-3 h-10 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-2">
+          <Archive className="w-3.5 h-3.5" /> This project is archived. It's hidden from lists and read-only.
+          {manage && <button type="button" onClick={() => updateProject(project.id, { status: open.length ? "Active" : "Completed" })} className="btn btn-sm btn-secondary ml-auto"><RotateCcw className="w-3.5 h-3.5" /> Restore</button>}
+        </div>
+      )}
+      {project.status === "Completed" && (
+        <div className="mb-3 px-3 h-10 rounded-md bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+          <CheckCircle2 className="w-3.5 h-3.5" /> This project is closed{open.length > 0 ? ` with ${open.length} open task${open.length > 1 ? "s" : ""}` : ""}.
+          {manage && (
+            <span className="ml-auto flex items-center gap-1.5">
+              <button type="button" onClick={() => updateProject(project.id, { status: "Active" })} className="btn btn-sm btn-secondary"><RotateCcw className="w-3.5 h-3.5" /> Reopen</button>
+              <button type="button" onClick={() => updateProject(project.id, { status: "Archived" })} className="btn btn-sm btn-secondary"><Archive className="w-3.5 h-3.5" /> Archive</button>
+            </span>
+          )}
+        </div>
+      )}
+      {isOpenProject && manage && projectTasks.length > 0 && open.length === 0 && (
+        <div className="mb-3 px-3 h-10 rounded-md bg-primary/[0.06] dark:bg-primary/10 text-zinc-800 dark:text-zinc-100 text-xs font-semibold flex items-center gap-2">
+          <CheckCircle2 className="w-3.5 h-3.5 text-primary" /> All {projectTasks.length} tasks are done. Close this project?
+          <button type="button" onClick={() => updateProject(project.id, { status: "Completed" })} className="btn btn-sm btn-primary ml-auto">Close project</button>
         </div>
       )}
 
       <div className="flex items-start gap-3 mb-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-[10px] text-sm font-extrabold shrink-0" style={{ backgroundColor: `${project.color}1f`, color: project.color }}>{initials}</span>
+        <span className="flex h-10 w-10 items-center justify-center rounded-[10px] shrink-0" style={{ backgroundColor: `${project.color}1f`, color: project.color }}>{getIconComponent(project.icon, "w-[18px] h-[18px]")}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="page-title md:truncate">{project.name}</h1>
-            <span className={`inline-flex items-center h-5 px-2 rounded-full text-[11px] font-bold ${STATUS_STYLES[project.status] || STATUS_STYLES.Planning}`}>{project.status}</span>
+            <span className={`inline-flex items-center gap-1.5 h-5 px-2 rounded-full text-[11px] font-bold ${STATUS_STYLES[project.status] || STATUS_STYLES.Planning}`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />{project.status === "Completed" ? "Closed" : project.status}
+            </span>
           </div>
           {richTextToPlain(project.description) && (
             <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-0.5 max-w-[640px] line-clamp-2">{richTextToPlain(project.description)}</p>
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0 relative">
-          {manage && <button type="button" onClick={() => setMembersOpen(true)} className="btn btn-secondary hidden sm:inline-flex"><Users className="w-4 h-4" /> Members</button>}
-          {can("editTasks") && <button type="button" onClick={() => { const el = document.getElementById("add-task-" + (groups.find((g) => g.kind === "open")?.key || "")); if (el) el.focus(); else navigate(`/projects/${project.id}/tasks`); }} className="btn btn-primary"><Plus className="w-4 h-4" /> Add task</button>}
+          {manage && isOpenProject && <button type="button" onClick={() => setMembersOpen(true)} className="btn btn-secondary hidden sm:inline-flex"><Users className="w-4 h-4" /> Members</button>}
+          {can("editTasks") && isOpenProject && <button type="button" onClick={() => { const el = document.getElementById("add-task-" + (groups.find((g) => g.kind === "open")?.key || "")); if (el) el.focus(); else navigate(`/projects/${project.id}`); }} className="btn btn-primary"><Plus className="w-4 h-4" /> Add task</button>}
           {manage && (
             <button type="button" onClick={() => setMenuOpen((v) => !v)} className="btn-icon" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Project menu: edit, members, archive, delete">
               <MoreHorizontal className="w-4 h-4" />
@@ -141,7 +161,17 @@ export function ProjectDetailsPage() {
                 {[
                   ["edit", <Pencil className="w-4 h-4" />, "Edit project", () => setEditOpen(true)],
                   ["members", <Users className="w-4 h-4" />, "Members", () => setMembersOpen(true)],
-                  ["archive", project.status === "Archived" ? <RotateCcw className="w-4 h-4" /> : <Archive className="w-4 h-4" />, project.status === "Archived" ? "Restore" : "Archive", () => updateProject(project.id, { status: project.status === "Archived" ? "Active" : "Archived" })],
+                  ...(isOpenProject ? [
+                    project.status === "On Hold"
+                      ? ["resume", <Play className="w-4 h-4" />, "Resume", () => updateProject(project.id, { status: "Active" })]
+                      : ["hold", <Pause className="w-4 h-4" />, "Put on hold", () => updateProject(project.id, { status: "On Hold" })],
+                    ["close", <CheckCircle2 className="w-4 h-4" />, "Close project", () => updateProject(project.id, { status: "Completed" })],
+                  ] : [
+                    ["reopen", <RotateCcw className="w-4 h-4" />, "Reopen", () => updateProject(project.id, { status: "Active" })],
+                  ]),
+                  project.status === "Archived"
+                    ? ["restore", <RotateCcw className="w-4 h-4" />, "Restore", () => updateProject(project.id, { status: open.length ? "Active" : "Completed" })]
+                    : ["archive", <Archive className="w-4 h-4" />, "Archive", () => updateProject(project.id, { status: "Archived" })],
                 ].map(([key, icon, label, fn]) => (
                   <button key={key} type="button" role="menuitem" onClick={() => { setMenuOpen(false); fn(); }} className="w-full flex items-center gap-2 h-8 px-2 rounded-md text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
                     {icon} {label}
@@ -191,8 +221,10 @@ export function ProjectDetailsPage() {
         <>
           <TaskToolbar filters={filters} onFilter={(p) => setFilters((f) => ({ ...f, ...p }))} users={members.length ? members : users} showProjectFilter={false} view={view} onView={changeView} />
           <div className="mt-1">
-            {view === "board" ? <div className="mt-4"><TaskBoard groups={groups} showProject={false} /></div> : (
-              <TaskList groups={groups} showProject={false} onAddTask={can("editTasks") ? addTaskHere : undefined} addPlaceholder={`Add a task to ${project.name}… press Enter`} />
+            {view === "board" ? (
+              <div className="mt-3"><TaskBoard groups={groups} showProject={false} onAddTask={can("editTasks") && isOpenProject ? (title, status) => addTask({ title, projectId: project.id, status, priority: "Medium" }) : undefined} /></div>
+            ) : (
+              <TaskList groups={groups} showProject={false} onAddTask={can("editTasks") && isOpenProject ? addTaskHere : undefined} addPlaceholder={`Add a task to ${project.name}… press Enter`} />
             )}
           </div>
         </>

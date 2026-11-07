@@ -177,6 +177,8 @@ export const projectApi = {
   addMember: (id, userId) => http.post(`/projects/${id}/members/${userId}`),
   removeMember: (id, userId) => http.delete(`/projects/${id}/members/${userId}`),
   instantiateTemplate: (id, templateId) => http.post(`/projects/${id}/instantiate-template/${templateId}`),
+  /** Chat model picks the icon + colour from the name/description (400 when AI isn't configured). */
+  aiStyle: async (id) => projectToUi(await http.post(`/projects/${id}/ai-style`)),
 
   attachments: {
     list: async (projectId) => (await http.get(`/projects/${projectId}/attachments`)).map(attachmentToUi),
