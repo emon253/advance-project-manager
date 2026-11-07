@@ -10,7 +10,7 @@ import { StatusBadge } from "../../../components/common/StatusBadge";
 
 const COLOR_PRESETS = [
   { name: "Gray", bg: "bg-zinc-100", text: "text-zinc-700", border: "border-zinc-200", darkBg: "dark:bg-zinc-800", darkText: "dark:text-zinc-300", darkBorder: "dark:border-zinc-700", colorClass: "bg-zinc-500" },
-  { name: "Brand", bg: "bg-[#533afd]/5", text: "text-[#533afd]", border: "border-[#533afd]/20", darkBg: "dark:bg-[#533afd]/10", darkText: "dark:text-[#533afd]", darkBorder: "dark:border-[#533afd]/20", colorClass: "bg-[#533afd]" },
+  { name: "Brand", bg: "bg-[#0073ea]/5", text: "text-[#0073ea]", border: "border-[#0073ea]/20", darkBg: "dark:bg-[#0073ea]/10", darkText: "dark:text-[#0073ea]", darkBorder: "dark:border-[#0073ea]/20", colorClass: "bg-[#0073ea]" },
   { name: "Green", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", darkBg: "dark:bg-emerald-500/10", darkText: "dark:text-emerald-400", darkBorder: "dark:border-emerald-500/20", colorClass: "bg-emerald-500" },
   { name: "Yellow", bg: "bg-amber-100", text: "text-amber-800", border: "border-amber-200", darkBg: "dark:bg-amber-500/10", darkText: "dark:text-amber-400", darkBorder: "dark:border-amber-500/20", colorClass: "bg-amber-500" },
   { name: "Red", bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200", darkBg: "dark:bg-rose-500/10", darkText: "dark:text-rose-400", darkBorder: "dark:border-rose-500/20", colorClass: "bg-rose-500" },

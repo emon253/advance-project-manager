@@ -347,7 +347,7 @@ export function OwnerPlans() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {[["ai", "AI features"], ["customStatuses", "Custom statuses"], ["automation", "Automation"], ["highlight", "Highlight card"], ["visible", "Visible on pricing"]].map(([key, label]) => (
                   <label key={key} className="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                    <input type="checkbox" className="accent-[#533afd]" checked={!!editor.form[key]} {...{ onChange: field(key).onChange }} />
+                    <input type="checkbox" className="accent-[#0073ea]" checked={!!editor.form[key]} {...{ onChange: field(key).onChange }} />
                     {label}
                   </label>
                 ))}

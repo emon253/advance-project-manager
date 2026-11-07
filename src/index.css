@@ -10,9 +10,9 @@
 
   /* Brand palette — use `primary` utilities (bg-primary, text-primary, border-primary/20, …)
      instead of hardcoded hex values. */
-  --color-primary: #533afd;
-  --color-primary-hover: #4430e0;
-  --color-primary-active: #3a28c4;
+  --color-primary: #0073ea;
+  --color-primary-hover: #0062c7;
+  --color-primary-active: #0052a8;
   --color-accent: #ea2261;
 
   /* Elevation — kept deliberately restrained for a flat, premium feel.

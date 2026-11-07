@@ -145,11 +145,11 @@ export function groupByProject(tasks, projects, taskStatuses) {
 /* ---------- status dot colours ---------- */
 
 const DOT_BY_KIND = { done: "#15803d", cancelled: "#a1a1aa", open: "#a1a1aa" };
-const DOT_BY_NAME = { "In Progress": "#533afd", "In Review": "#b45309", Blocked: "#be123c" };
+const DOT_BY_NAME = { "In Progress": "#0073ea", "In Review": "#b45309", Blocked: "#be123c" };
 export function statusDot(statusName, taskStatuses) {
   if (DOT_BY_NAME[statusName]) return DOT_BY_NAME[statusName];
   const s = taskStatuses?.find((x) => x.name === statusName);
-  if (s?.isStarted) return "#533afd";
+  if (s?.isStarted) return "#0073ea";
   return DOT_BY_KIND[statusKind(statusName, taskStatuses)];
 }
 

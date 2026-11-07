@@ -14,7 +14,7 @@ const formatDate = (offsetDays = 0, hourOffset = 0) => {
 };
 
 export const mockUsers = [
-  { id: "u1", name: "Yasin Chowdhury", email: "yasin@company.com", avatar: "YC", color: "bg-[#533afd] text-white", role: "Owner" },
+  { id: "u1", name: "Yasin Chowdhury", email: "yasin@company.com", avatar: "YC", color: "bg-[#0073ea] text-white", role: "Owner" },
   { id: "u2", name: "Rakib Hasan", email: "rakib@company.com", avatar: "RH", color: "bg-emerald-600 text-white", role: "Admin" },
   { id: "u3", name: "Nadia Islam", email: "nadia@company.com", avatar: "NI", color: "bg-amber-600 text-white", role: "Manager" },
   { id: "u4", name: "Mehnaz Taj", email: "mehnaz@company.com", avatar: "MT", color: "bg-rose-600 text-white", role: "Member" },
@@ -22,7 +22,7 @@ export const mockUsers = [
 ];
 
 export const mockWorkspaces = [
-  { id: "ws1", name: "Junction Auction Group", logo: "🏎️", ownerId: "u1", description: "All design & development for custom automotive bidding solutions." },
+  { id: "ws1", name: "Carbarn Auction Group", logo: "🏎️", ownerId: "u1", description: "All design & development for custom automotive bidding solutions." },
   { id: "ws2", name: "Personal Space", logo: "🏡", ownerId: "u1", description: "Individual tracks, learning, and private task boards." },
   { id: "ws3", name: "Innovate Labs", logo: "🧪", ownerId: "u2", description: "R&D workspace for greenfield experimental features." },
 ];
@@ -31,7 +31,7 @@ export const mockProjects = [
   {
     id: "p1",
     workspaceId: "ws1",
-    name: "Junction Auction Platform",
+    name: "Carbarn Auction Platform",
     description: "Developing the real-time online bidder portal & auction host screens.",
     icon: "🏎️",
     color: "#4f46e5", // Indigo
@@ -101,7 +101,7 @@ export const mockProjects = [
 ];
 
 export const mockTags = [
-  { id: "t1", name: "Frontend", color: "bg-[#533afd]/10 text-[#533afd] border-[#533afd]/20" },
+  { id: "t1", name: "Frontend", color: "bg-[#0073ea]/10 text-[#0073ea] border-[#0073ea]/20" },
   { id: "t2", name: "Backend", color: "bg-purple-50 text-purple-700 border-purple-200" },
   { id: "t3", name: "Urgent", color: "bg-rose-50 text-rose-700 border-rose-200" },
   { id: "t4", name: "Bug", color: "bg-red-50 text-red-700 border-red-200" },

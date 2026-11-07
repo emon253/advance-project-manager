@@ -18,8 +18,8 @@ export default defineConfig(() => {
         includeAssets: ['favicon.svg', 'favicon-32.png', 'favicon-16.png', 'apple-touch-icon.png'],
         manifest: {
           id: '/',
-          name: 'Junction — Project & Task Management',
-          short_name: 'Junction',
+          name: 'Carbarn — Project & Task Management',
+          short_name: 'Carbarn',
           description: 'Plan, assign, and track work across your team — projects, tasks, and real-time updates in one workspace.',
           lang: 'en',
           start_url: '/',
@@ -27,7 +27,7 @@ export default defineConfig(() => {
           display: 'standalone',
           orientation: 'any',
           background_color: '#ffffff',
-          theme_color: '#533afd',
+          theme_color: '#0073ea',
           categories: ['productivity', 'business'],
           icons: [
             {src: '/pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any'},

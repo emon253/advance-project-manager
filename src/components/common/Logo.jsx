@@ -6,70 +6,27 @@
 import React from "react";
 
 /**
- * Junction brand mark: three routes meeting at a central node — a junction.
- * Monochrome and stroke-based (inherits `currentColor`), so it renders white
- * on a primary tile, primary on a light tile, and stays crisp from 20px
- * (favicon) up to hero sizes. Keep this in sync with the favicon in
- * index.html and the inline SVG in the backend MailTemplates.
- */
-export function JunctionMark({ className = "w-full h-full" }) {
-  return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <line x1="16" y1="16" x2="16" y2="6.5" />
-      <line x1="16" y1="16" x2="7.8" y2="21.7" />
-      <line x1="16" y1="16" x2="24.2" y2="21.7" />
-      <circle cx="16" cy="16" r="3.4" fill="currentColor" stroke="none" />
-      <circle cx="16" cy="6.5" r="2.2" fill="currentColor" stroke="none" />
-      <circle cx="7.8" cy="21.7" r="2.2" fill="currentColor" stroke="none" />
-      <circle cx="24.2" cy="21.7" r="2.2" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-/**
- * The brand mark on its rounded primary tile. `size` is a Tailwind size pair
- * for the tile; the mark sits at 58% of it. Kept for compact icon contexts
- * (favicon parity, PWA); the in-app logo is the {@link Wordmark}.
- */
-export function LogoTile({
-  size = "h-9 w-9",
-  rounded = "rounded-xl",
-  className = "bg-primary text-white shadow-soft",
-  markClassName = "w-[58%] h-[58%]",
-}) {
-  return (
-    <span className={`inline-flex shrink-0 items-center justify-center ${size} ${rounded} ${className}`}>
-      <JunctionMark className={markClassName} />
-    </span>
-  );
-}
-
-/**
- * Junction wordmark — the primary logo. Plus Jakarta Sans ExtraBold, tight
- * tracking, with the leading "J" in the brand primary and the rest in the
- * foreground tone. Pass `inverted` on a primary/dark background (e.g. the auth
- * brand panel), where the whole word goes white so the "J" doesn't disappear.
- * Size is controlled by the caller via `className` (font-size).
+ * CARBARN wordmark (official logo paths, 173.12 × 24.06). Fills with
+ * `currentColor`, so it is brand blue by default and white when `inverted`.
+ * The SVG is 1em tall: size it with a font-size class (`text-base`, `text-2xl`).
  */
 export function Wordmark({ className = "text-xl", inverted = false }) {
-  const base = `font-display font-extrabold tracking-[-0.022em] leading-none select-none whitespace-nowrap ${className}`;
-  if (inverted) {
-    return <span className={`${base} text-white`}>Junction</span>;
-  }
   return (
-    <span className={base}>
-      <span className="text-primary">J</span>
-      <span className="text-zinc-900 dark:text-white">unction</span>
-    </span>
+    <svg
+      viewBox="0 0 173.12 24.06"
+      fill="currentColor"
+      style={{ height: "1em", width: "auto" }}
+      className={`shrink-0 select-none ${inverted ? "text-white" : "text-primary"} ${className}`}
+      role="img"
+      aria-label="Carbarn"
+    >
+      <path d="m0,12.1v-.07C0,5.29,5.19,0,12.2,0c4.73,0,7.77,1.98,9.82,4.83l-4.83,3.73c-1.32-1.65-2.84-2.71-5.06-2.71-3.24,0-5.52,2.74-5.52,6.11v.07c0,3.47,2.28,6.18,5.52,6.18,2.41,0,3.83-1.12,5.22-2.81l4.83,3.44c-2.18,3.01-5.12,5.22-10.25,5.22C5.32,24.06,0,19,0,12.1Z" />
+      <path d="m32.92.3h6.18l9.85,23.3h-6.87l-1.69-4.13h-8.92l-1.65,4.13h-6.74L32.92.3Zm5.62,14.18l-2.58-6.58-2.61,6.58h5.19Z" />
+      <path d="m51.2.46h10.94c3.54,0,5.98.93,7.54,2.51,1.35,1.32,2.05,3.11,2.05,5.39v.07c0,3.54-1.88,5.88-4.76,7.11l5.52,8.06h-7.4l-4.66-7.01h-2.81v7.01h-6.41V.46Zm10.64,11.1c2.18,0,3.44-1.06,3.44-2.74v-.07c0-1.82-1.32-2.74-3.47-2.74h-4.2v5.55h4.23Z" />
+      <path d="m76.28.46h11.86c2.91,0,4.96.73,6.31,2.08.93.93,1.49,2.15,1.49,3.73v.07c0,2.68-1.52,4.26-3.57,5.16,2.81.93,4.59,2.51,4.59,5.65v.07c0,3.97-3.24,6.38-8.76,6.38h-11.93V.46Zm10.28,9.22c1.95,0,3.04-.66,3.04-2.02v-.07c0-1.26-.99-1.98-2.91-1.98h-4.16v4.07h4.03Zm.93,8.76c1.95,0,3.07-.76,3.07-2.12v-.07c0-1.26-.99-2.08-3.14-2.08h-4.89v4.26h4.96Z" />
+      <path d="m107.91.3h6.18l9.85,23.3h-6.87l-1.69-4.13h-8.92l-1.65,4.13h-6.74L107.91.3Zm5.62,14.18l-2.58-6.58-2.61,6.58h5.19Z" />
+      <path d="m126.19.46h10.94c3.54,0,5.98.93,7.54,2.51,1.35,1.32,2.05,3.11,2.05,5.39v.07c0,3.54-1.88,5.88-4.76,7.11l5.52,8.06h-7.4l-4.66-7.01h-2.81v7.01h-6.41V.46Zm10.64,11.1c2.18,0,3.44-1.06,3.44-2.74v-.07c0-1.82-1.32-2.74-3.47-2.74h-4.2v5.55h4.23Z" />
+      <path d="m151.28.46h5.98l9.52,12.23V.46h6.35v23.14h-5.62l-9.88-12.69v12.69h-6.35V.46Z" />
+    </svg>
   );
 }

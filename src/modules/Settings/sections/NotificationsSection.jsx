@@ -9,7 +9,7 @@ import { useAppState } from "../../../app/providers";
 const ROWS = [
   { group: "Delivery", items: [
     ["inApp", "In-app inbox", "Keep alerts in the inbox"],
-    ["pushMock", "Browser push", "Desktop alerts when Junction is in the background"],
+    ["pushMock", "Browser push", "Desktop alerts when Carbarn is in the background"],
     ["emailMock", "Email copies", "Send a digest to your email"],
   ] },
   { group: "What to send", items: [

@@ -243,7 +243,7 @@ export function AuthPages() {
               <form onSubmit={handleFormSubmit} className="space-y-4">
                 {isRegister && (
                   <div>
-                    <span className="label" id="auth-account-type-label">How will you use Junction?</span>
+                    <span className="label" id="auth-account-type-label">How will you use Carbarn?</span>
                     <div className="grid grid-cols-2 gap-2.5 mb-4" role="radiogroup" aria-labelledby="auth-account-type-label">
                       {[
                         { id: "personal", Icon: User, title: "For myself", sub: "Personal projects & tasks" },
@@ -284,7 +284,7 @@ export function AuthPages() {
                         <input
                           id="auth-company"
                           type="text"
-                          placeholder="e.g. Junction Labs"
+                          placeholder="e.g. Carbarn Auctions"
                           value={companyName}
                           onChange={(e) => setCompanyName(e.target.value)}
                           className="field"
@@ -390,7 +390,7 @@ export function AuthPages() {
               <div className="mt-7 text-center text-sm text-zinc-500 dark:text-zinc-400 font-medium">
                 {isLogin && (
                   <p>
-                    New to Junction?{" "}
+                    New to Carbarn?{" "}
                     <Link to="/register" className="font-semibold text-primary hover:underline">
                       Create an account
                     </Link>
