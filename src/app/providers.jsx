@@ -93,10 +93,11 @@ export function AppStateProvider({ children }) {
   const location = useLocation();
   const taskMatch = matchPath("/t/:taskId", location.pathname);
   const activeTaskId = taskMatch ? Number(taskMatch.params.taskId) : null;
-  const setActiveTaskId = useCallback((id) => {
+  /** `opts.commentId` opens the panel scrolled to that comment (/t/:id#c:commentId). */
+  const setActiveTaskId = useCallback((id, opts = {}) => {
     if (id) {
       const from = location.state?.from || (taskMatch ? null : { pathname: location.pathname, search: location.search });
-      navigate(`/t/${id}`, { state: from ? { from } : undefined });
+      navigate(`/t/${id}${opts.commentId ? `#c${opts.commentId}` : ""}`, { state: from ? { from } : undefined });
       return;
     }
     const from = location.state?.from;

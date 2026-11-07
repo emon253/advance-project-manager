@@ -5,13 +5,12 @@
 
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, ChevronRight } from "lucide-react";
+import { Plus, ChevronRight, MessageSquare } from "lucide-react";
 import { useAppState } from "../../../app/providers";
 import { useMockQuery } from "../../../hooks/useMockQuery";
 import { ListSkeleton } from "../../../components/common/Skeleton";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { TaskRow } from "../components/TaskRow";
-import { UserAvatar } from "../../../components/common/UserAvatar";
 import { defaultStatusName, isDoneTask, isOpenTask, sortTasks } from "../util/tasksUtils";
 
 const startOfDay = (d = new Date()) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
@@ -216,8 +215,8 @@ export function TodayPage() {
           {needsReply.length === 0 ? <p className="text-xs text-zinc-400">No unread mentions.</p> : (
             <div className="flex flex-col gap-2">
               {needsReply.map((n) => (
-                <button key={n.id} type="button" onClick={() => setActiveTaskId(n.taskId)} className="flex items-start gap-2 text-left text-xs leading-snug cursor-pointer hover:text-primary">
-                  <UserAvatar user={currentUser} size="xs" />
+                <button key={n.id} type="button" onClick={() => setActiveTaskId(n.taskId, { commentId: n.commentId })} className="flex items-start gap-2 text-left text-xs leading-snug cursor-pointer hover:text-primary">
+                  <MessageSquare className="w-3.5 h-3.5 text-sky-600 shrink-0 mt-0.5" />
                   <span className="text-zinc-600 dark:text-zinc-300 line-clamp-2">{n.message}</span>
                 </button>
               ))}

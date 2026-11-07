@@ -81,6 +81,7 @@ export function ProjectsPage() {
 
   const th = "text-left text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 px-2.5 py-[7px] bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800 whitespace-nowrap";
   const td = "px-2.5 h-10 border-t border-zinc-100 dark:border-zinc-800/80 align-middle whitespace-nowrap text-[13px]";
+  const wide = "hidden md:table-cell";
 
   return (
     <div className="text-left" id="projects-page-root">
@@ -124,27 +125,27 @@ export function ProjectsPage() {
         <EmptyState icon={<Archive className="w-6 h-6" />} title={tab === "active" ? "No active projects" : tab === "closed" ? "No closed projects" : "No archived projects"} description={tab === "active" ? "Create a project to start tracking tasks." : tab === "closed" ? "Close a project from its page once the work is done." : "Archived projects will show up here."} buttonText={tab === "active" && can("manageProjects") ? "New project" : undefined} onButtonClick={openForm} />
       ) : (
         <div className="card overflow-x-auto">
-          <table className="w-full border-collapse min-w-[760px]">
+          <table className="w-full border-collapse md:min-w-[760px]">
             <thead>
               <tr>
-                <th className={th}>Project</th><th className={th}>Progress</th><th className={th}>Open</th><th className={th}>Overdue</th><th className={th}>Due</th><th className={th}>Team</th><th className={th}>Last activity</th><th className={th}><span className="sr-only">Actions</span></th>
+                <th className={th}>Project</th><th className={`${th} ${wide}`}>Progress</th><th className={`${th} ${wide}`}>Open</th><th className={th}>Overdue</th><th className={th}>Due</th><th className={`${th} ${wide}`}>Team</th><th className={`${th} ${wide}`}>Last activity</th><th className={th}><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
               {shown.map((p) => (
                 <tr key={p.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
-                  <td className={`${td} !whitespace-normal min-w-[240px]`}>
+                  <td className={`${td} !whitespace-normal md:min-w-[240px]`}>
                     <Link to={`/projects/${p.id}`} className="flex items-center gap-2.5 text-zinc-900 dark:text-white font-bold hover:text-primary">
                       <span className="flex h-7 w-7 items-center justify-center rounded-md shrink-0" style={{ backgroundColor: `${p.color}1f`, color: p.color }}>
                         {getIconComponent(p.icon, "w-3.5 h-3.5")}
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate max-w-[320px]">{p.name}</span>
-                        {richTextToPlain(p.description) && <span className="block text-[11.5px] font-medium text-zinc-500 dark:text-zinc-400 truncate max-w-[320px] leading-tight">{richTextToPlain(p.description)}</span>}
+                        <span className="block truncate max-w-[calc(100vw-13.5rem)] md:max-w-[320px]">{p.name}</span>
+                        {richTextToPlain(p.description) && <span className="block text-[11.5px] font-medium text-zinc-500 dark:text-zinc-400 truncate max-w-[calc(100vw-13.5rem)] md:max-w-[320px] leading-tight">{richTextToPlain(p.description)}</span>}
                       </span>
                     </Link>
                   </td>
-                  <td className={td}>
+                  <td className={`${td} ${wide}`}>
                     {p.total === 0 ? <span className="text-xs text-zinc-400">No tasks yet</span> : (
                       <span className="inline-flex items-center gap-2">
                         <span className="w-[100px] h-[5px] rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden"><span className={`block h-full rounded-full ${p.pct === 100 ? "bg-emerald-500" : "bg-primary"}`} style={{ width: `${p.pct}%` }} /></span>
@@ -152,16 +153,16 @@ export function ProjectsPage() {
                       </span>
                     )}
                   </td>
-                  <td className={`${td} font-tnum`}>{p.total > 0 && p.open === 0 ? <span className="text-emerald-700 dark:text-emerald-400 font-bold">Done</span> : <span className={p.open ? "" : "text-zinc-400"}>{p.open}</span>}</td>
+                  <td className={`${td} ${wide} font-tnum`}>{p.total > 0 && p.open === 0 ? <span className="text-emerald-700 dark:text-emerald-400 font-bold">Done</span> : <span className={p.open ? "" : "text-zinc-400"}>{p.open}</span>}</td>
                   <td className={`${td} font-tnum`}>{p.late ? <span className="text-rose-700 dark:text-rose-400 font-bold">{p.late}</span> : <span className="text-zinc-400">—</span>}</td>
                   <td className={`${td} font-tnum ${p.deadlineLate || p.stale ? "text-rose-700 dark:text-rose-400 font-bold" : p.deadline ? "" : "text-zinc-400"}`}>{p.deadline ? formatDue(p.deadline) : "—"}</td>
-                  <td className={td}>
+                  <td className={`${td} ${wide}`}>
                     <span className="inline-flex -space-x-1.5">
                       {p.members.slice(0, 4).map((m) => <span key={m.id} className="ring-2 ring-white dark:ring-zinc-900 rounded-full"><UserAvatar user={m} size="xs" /></span>)}
                       {p.members.length > 4 && <span className="h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 ring-2 ring-white dark:ring-zinc-900 text-[10px] font-bold flex items-center justify-center font-tnum">+{p.members.length - 4}</span>}
                     </span>
                   </td>
-                  <td className={`${td} text-zinc-500 dark:text-zinc-400`}>{p.lastActivity ? formatRelative(p.lastActivity) : "—"}</td>
+                  <td className={`${td} ${wide} text-zinc-500 dark:text-zinc-400`}>{p.lastActivity ? formatRelative(p.lastActivity) : "—"}</td>
                   <td className={`${td} relative`}>
                     {can("manageProjects") && (
                       <>

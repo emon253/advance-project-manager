@@ -196,15 +196,67 @@ export function ProjectDetailsPage() {
         </div>
       </div>
 
-      <div className="card flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 mb-3">
-        <div className="flex-[1_1_220px] flex flex-col gap-1.5">
-          <div className="flex justify-between text-xs font-bold text-zinc-500 dark:text-zinc-400"><span>Progress</span><span className="font-tnum">{done} of {projectTasks.length} done · {pct}%</span></div>
-          <div className="h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden"><span className={`block h-full rounded-full ${pct === 100 && projectTasks.length ? "bg-emerald-500" : "bg-primary"}`} style={{ width: `${pct}%` }} /></div>
+      <div className="card grid grid-cols-2 md:grid-cols-[minmax(0,1fr)_repeat(4,auto)] divide-y md:divide-y-0 md:divide-x divide-zinc-100 dark:divide-zinc-800 mb-3 overflow-hidden">
+        {/* Progress: ring + status breakdown */}
+        <div className="col-span-2 md:col-span-1 flex items-center gap-4 px-4 py-3 min-w-0">
+          <svg className="w-12 h-12 shrink-0 -rotate-90" viewBox="0 0 48 48" role="img" aria-label={`${pct}% complete`}>
+            <circle cx="24" cy="24" r="20" fill="none" strokeWidth="5" className="stroke-zinc-200 dark:stroke-zinc-800" />
+            <circle cx="24" cy="24" r="20" fill="none" strokeWidth="5" strokeLinecap="round" className={pct === 100 && projectTasks.length ? "stroke-emerald-500" : "stroke-primary"} strokeDasharray={`${(pct / 100) * 125.66} 125.66`} style={{ transition: "stroke-dasharray .4s ease" }} />
+            <text x="24" y="24" transform="rotate(90 24 24)" textAnchor="middle" dominantBaseline="central" className="fill-zinc-900 dark:fill-white font-bold" fontSize="11">{pct}%</text>
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-bold text-zinc-900 dark:text-white font-tnum">
+              {projectTasks.length === 0 ? "No tasks yet" : `${done} of ${projectTasks.length} done`}
+              {projectTasks.length > 0 && open.length === 0 && <span className="ml-2 text-xs font-bold text-emerald-700 dark:text-emerald-400">All done</span>}
+            </p>
+            {projectTasks.length > 0 && (() => {
+              const started = open.filter((t) => taskStatuses.find((s) => s.name === t.status)?.isStarted).length;
+              const todo = open.length - started;
+              const seg = (n) => `${(n / projectTasks.length) * 100}%`;
+              return (
+                <>
+                  <div className="mt-1.5 h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex">
+                    <span className="h-full bg-emerald-500 transition-[width] duration-300" style={{ width: seg(done) }} />
+                    <span className="h-full bg-primary transition-[width] duration-300" style={{ width: seg(started) }} />
+                    <span className="h-full bg-rose-400 transition-[width] duration-300" style={{ width: seg(late) }} />
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 font-tnum">
+                    <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />{done} done</span>
+                    <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" />{started} in progress</span>
+                    <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />{todo} to do</span>
+                    {late > 0 && <span className="inline-flex items-center gap-1 text-rose-700 dark:text-rose-400"><span className="w-2 h-2 rounded-full bg-rose-400" />{late} overdue</span>}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
         </div>
-        {[["Open", open.length, ""], ["Overdue", late, late ? "text-rose-700 dark:text-rose-400" : ""], ["Due", project.deadline ? formatDue(project.deadline) : "—", ""]].map(([l, v, cls]) => (
-          <div key={l} className="flex flex-col"><span className="label mb-0">{l}</span><span className={`text-sm font-bold font-tnum ${cls}`}>{v}</span></div>
-        ))}
-        <div className="flex flex-col"><span className="label mb-0">Team</span><span className="inline-flex -space-x-1.5 mt-0.5">{members.slice(0, 5).map((m) => <span key={m.id} className="ring-2 ring-white dark:ring-zinc-900 rounded-full"><UserAvatar user={m} size="xs" /></span>)}{members.length === 0 && <span className="text-xs text-zinc-400">None</span>}</span></div>
+
+        <button type="button" onClick={() => setFilters((f) => ({ ...f, due: "" }))} className="flex flex-col justify-center px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer min-w-[96px]">
+          <span className="label mb-0.5">Open</span>
+          <span className="text-lg font-bold leading-none font-tnum text-zinc-900 dark:text-white">{open.length}</span>
+        </button>
+        <button type="button" onClick={() => setFilters((f) => ({ ...f, due: f.due === "late" ? "" : "late" }))} aria-pressed={filters.due === "late"} className={`flex flex-col justify-center px-4 py-3 text-left cursor-pointer min-w-[96px] transition-colors ${filters.due === "late" ? "bg-rose-50 dark:bg-rose-500/10" : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"}`}>
+          <span className="label mb-0.5">Overdue</span>
+          <span className={`text-lg font-bold leading-none font-tnum ${late ? "text-rose-700 dark:text-rose-400" : "text-zinc-400"}`}>{late}</span>
+        </button>
+        <div className="flex flex-col justify-center px-4 py-3 min-w-[110px]">
+          <span className="label mb-0.5">Due</span>
+          {project.deadline ? (
+            <span className={`text-[13px] font-bold leading-tight font-tnum ${new Date(project.deadline) < today && open.length ? "text-rose-700 dark:text-rose-400" : "text-zinc-900 dark:text-white"}`}>
+              {new Date(project.deadline).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+              <span className="block text-[11px] font-semibold text-zinc-400">{new Date(project.deadline) < today ? (open.length ? "past due" : "met") : formatDue(project.deadline)}</span>
+            </span>
+          ) : <span className="text-[13px] font-semibold text-zinc-400">Not set</span>}
+        </div>
+        <button type="button" onClick={() => manage && setMembersOpen(true)} className={`flex flex-col justify-center px-4 py-3 text-left min-w-[120px] ${manage ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer" : "cursor-default"}`}>
+          <span className="label mb-1">Team <span className="normal-case tracking-normal text-zinc-400 font-tnum">{members.length}</span></span>
+          <span className="inline-flex -space-x-1.5">
+            {members.slice(0, 5).map((m) => <span key={m.id} className="ring-2 ring-white dark:ring-zinc-900 rounded-full"><UserAvatar user={m} size="xs" /></span>)}
+            {members.length > 5 && <span className="h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 ring-2 ring-white dark:ring-zinc-900 text-[10px] font-bold flex items-center justify-center font-tnum">+{members.length - 5}</span>}
+            {members.length === 0 && <span className="text-xs text-zinc-400">{manage ? "Add people" : "None"}</span>}
+          </span>
+        </button>
       </div>
 
       <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800 mb-2" role="tablist">

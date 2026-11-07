@@ -47,7 +47,7 @@ export function InboxPage() {
 
   const open = (n) => {
     if (!n.read) setNotificationRead(n.id, true);
-    if (n.taskId) setActiveTaskId(n.taskId);
+    if (n.taskId) setActiveTaskId(n.taskId, { commentId: n.commentId });
     else if (n.projectId) navigate(`/projects/${n.projectId}`);
   };
 

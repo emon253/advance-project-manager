@@ -314,3 +314,12 @@
   color: #a1a1aa;
   pointer-events: none;
 }
+
+/* Mobile density: 4px page gutter (routes.jsx) + 4px inside any card.
+   ponytail: unlayered override of inner paddings instead of touching every row; move to per-component classes if a card ever needs more room on phones. */
+@media (max-width: 767px) {
+  .card.px-2, .card.px-2\.5, .card.px-3, .card.px-3\.5, .card.px-4,
+  .card .px-2, .card .px-2\.5, .card .px-3, .card .px-3\.5, .card .px-4 { padding-left: 0.25rem; padding-right: 0.25rem; }
+  .card .pl-3, .card .pl-4 { padding-left: 0.25rem; }
+  .card .pr-3, .card .pr-4 { padding-right: 0.25rem; }
+}

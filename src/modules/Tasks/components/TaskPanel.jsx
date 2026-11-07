@@ -4,10 +4,10 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   X, Check, Link2, MoreHorizontal, Copy, Trash2, ArrowLeft, Paperclip, Eye, Download,
-  FileText, Image as ImageIcon, Loader2, Pencil, CornerUpLeft,
+  FileText, Image as ImageIcon, Loader2, Pencil, CornerUpLeft, History,
 } from "lucide-react";
 import { useAppState } from "../../../app/providers";
 import { UserAvatar } from "../../../components/common/UserAvatar";
@@ -68,6 +68,11 @@ export function TaskPanel() {
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [confirmCommentId, setConfirmCommentId] = useState(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  // System events (status/date/assignee changes) are hidden behind a toggle
+  // so the stream reads as a conversation; the choice sticks per browser.
+  const [showHistory, setShowHistory] = useState(() => localStorage.getItem("apm_task_history") === "1");
+  const [flashCommentId, setFlashCommentId] = useState(null);
+  const location = useLocation();
   const titleRef = useRef(null);
   const descRef = useRef(null);
   const composerRef = useRef(null);
@@ -104,16 +109,34 @@ export function TaskPanel() {
     return () => window.removeEventListener("keydown", onKey);
   }, [activeTaskId, previewFile, setActiveTaskId]);
 
-  // One stream: comments + activity (minus the "added a comment" echoes), oldest first.
+  // Comments, oldest first; the system log is merged in only when history is on.
   const stream = useMemo(() => {
     if (!task) return [];
     const comments = (task.comments || []).map((c) => ({ kind: "comment", id: `c${c.id}`, at: c.timestamp, comment: c }));
-    const activity = (task.activities || [])
-      .filter((a) => !/added a comment$/i.test(a.text || ""))
-      .map((a) => ({ kind: "activity", id: `a${a.id}`, at: a.timestamp, activity: a }));
+    const activity = showHistory
+      ? (task.activities || [])
+        .filter((a) => !/added a comment$/i.test(a.text || ""))
+        .map((a) => ({ kind: "activity", id: `a${a.id}`, at: a.timestamp, activity: a }))
+      : [];
     return [...comments, ...activity].sort((a, b) => new Date(a.at) - new Date(b.at));
-  }, [task]);
+  }, [task, showHistory]);
+  const historyCount = (task?.activities || []).filter((a) => !/added a comment$/i.test(a.text || "")).length;
   const mentionNames = useMemo(() => users.map((u) => u.name).filter(Boolean), [users]);
+
+  // Opened from a notification (/t/:id#c123): scroll to that comment and flash it.
+  const targetCommentId = location.hash.startsWith("#c") ? Number(location.hash.slice(2)) : null;
+  const hasTargetComment = !!targetCommentId && (task?.comments || []).some((c) => c.id === targetCommentId);
+  useEffect(() => {
+    if (!hasTargetComment) return undefined;
+    const el = document.getElementById(`comment-${targetCommentId}`);
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    setFlashCommentId(targetCommentId);
+    const t = setTimeout(() => setFlashCommentId(null), 2500);
+    return () => clearTimeout(t);
+  }, [hasTargetComment, targetCommentId]);
+  const toggleHistory = () => {
+    setShowHistory((v) => { localStorage.setItem("apm_task_history", v ? "0" : "1"); return !v; });
+  };
 
   if (!activeTaskId) return null;
 
@@ -231,6 +254,11 @@ export function TaskPanel() {
               <button type="button" role="menuitem" onClick={async () => { setMenuOpen(false); const copy = await duplicateTask(task.id); if (copy) setActiveTaskId(copy.id); }} className="w-full flex items-center gap-2 h-8 px-2 rounded-md text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
                 <Copy className="w-4 h-4" /> Duplicate
               </button>
+              <button type="button" role="menuitemcheckbox" aria-checked={showHistory} onClick={() => { setMenuOpen(false); toggleHistory(); }} className="w-full flex items-center gap-2 h-8 px-2 rounded-md text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer">
+                <History className="w-4 h-4" /> {showHistory ? "Hide activity log" : "Show activity log"}
+                {historyCount > 0 && <span className="ml-auto text-[11px] text-zinc-400 font-tnum">{historyCount}</span>}
+              </button>
+              <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
               {!confirmDelete ? (
                 <button type="button" role="menuitem" onClick={() => setConfirmDelete(true)} className="w-full flex items-center gap-2 h-8 px-2 rounded-md text-[13px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 cursor-pointer">
                   <Trash2 className="w-4 h-4" /> Delete task…
@@ -299,7 +327,7 @@ export function TaskPanel() {
       </div>
 
       {/* Properties */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <div>
           <label htmlFor="tp-status" className="label">Status</label>
           <div className="relative">
@@ -402,11 +430,20 @@ export function TaskPanel() {
         )}
       </div>
 
-      {/* Activity + comments */}
+      {/* Comments (+ the system log when history is on) */}
       <div>
-        <h3 className="text-[13px] font-bold text-zinc-900 dark:text-white mb-2">Activity</h3>
+        <div className="flex items-center gap-2 mb-2">
+          <h3 className="text-[13px] font-bold text-zinc-900 dark:text-white">
+            Comments{task.comments?.length > 0 && <span className="ml-1.5 font-semibold text-zinc-400 font-tnum">{task.comments.length}</span>}
+          </h3>
+          {historyCount > 0 && (
+            <button type="button" onClick={toggleHistory} aria-pressed={showHistory} className={`ml-auto inline-flex items-center gap-1 h-6 px-2 rounded-md text-[11px] font-semibold cursor-pointer transition-colors ${showHistory ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100" : "text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}>
+              <History className="w-3 h-3" /> {showHistory ? "Hide" : "History"}{!showHistory && <span className="font-tnum">· {historyCount}</span>}
+            </button>
+          )}
+        </div>
         {stream.length === 0 ? (
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">No comments yet.</p>
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">No comments yet. Say something, @mention a teammate, or paste a screenshot.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {stream.map((entry) => {
@@ -424,7 +461,7 @@ export function TaskPanel() {
               const author = c.author || users.find((u) => u.id === c.userId);
               const editing = editingCommentId === c.id;
               return (
-                <div key={entry.id} className="flex items-start gap-2 group/cm">
+                <div key={entry.id} id={`comment-${c.id}`} className={`flex items-start gap-2 group/cm rounded-md transition-shadow ${flashCommentId === c.id ? "ring-2 ring-primary/60 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950" : ""}`}>
                   <UserAvatar user={author} size="xs" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-1.5 text-xs">

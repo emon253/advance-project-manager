@@ -57,7 +57,7 @@ function AppLayout({ children }) {
         {!isMobile && <DesktopSidebar />}
         <main className={`flex-1 min-w-0 flex flex-col ${isMobile ? "pb-nav" : ""} ${!isMobile && activeTaskId ? "lg:pr-[520px]" : ""} transition-[padding] duration-200`}>
           <VerifyEmailBanner />
-          <div className={`flex-1 min-w-0 w-full ${isMobile ? "px-4 pt-3.5" : "px-7 py-5 2xl:px-10 2xl:py-6"}`}>
+          <div className={`flex-1 min-w-0 w-full ${isMobile ? "px-1 pt-3" : "px-7 py-5 2xl:px-10 2xl:py-6"}`}>
             <div className="w-full h-full">{children}</div>
           </div>
         </main>
