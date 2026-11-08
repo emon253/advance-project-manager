@@ -46,7 +46,7 @@ export function PwaUpdatePrompt() {
         </h4>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-normal mt-0.5">
           {needRefresh
-            ? "A newer version of Carbarn has been downloaded."
+            ? "A newer version of Carbarn Hub has been downloaded."
             : "The app shell is cached for faster loads."}
         </p>
         {needRefresh && (

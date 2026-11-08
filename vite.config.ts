@@ -18,9 +18,9 @@ export default defineConfig(() => {
         includeAssets: ['favicon.svg', 'favicon-32.png', 'favicon-16.png', 'apple-touch-icon.png'],
         manifest: {
           id: '/',
-          name: 'Carbarn — Project & Task Management',
-          short_name: 'Carbarn',
-          description: 'Plan, assign, and track work across your team — projects, tasks, and real-time updates in one workspace.',
+          name: 'Carbarn Hub',
+          short_name: 'Carbarn Hub',
+          description: 'Plan, track and deliver every Carbarn project together.',
           lang: 'en',
           start_url: '/',
           scope: '/',

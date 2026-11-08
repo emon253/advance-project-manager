@@ -41,9 +41,13 @@ function AppLayout({ children }) {
 
   if (bootLoading) {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center gap-3 bg-zinc-50 dark:bg-zinc-950">
-        <Wordmark className="text-2xl" />
-        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Loading your workspace…</p>
+      <div className="min-h-dvh flex flex-col items-center justify-center px-8 text-center bg-zinc-50 dark:bg-zinc-950">
+        <Wordmark className="text-3xl" />
+        <p className="mt-2 text-[13px] font-bold uppercase tracking-[0.3em] text-zinc-400">Hub</p>
+        <p className="mt-6 max-w-[280px] text-[15px] leading-relaxed font-medium text-zinc-600 dark:text-zinc-300">Plan, track and deliver every Carbarn project together.</p>
+        <span className="mt-8 h-1 w-24 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden" role="progressbar" aria-label="Loading">
+          <span className="block h-full w-1/3 rounded-full bg-primary animate-[splash_1.1s_ease-in-out_infinite]" />
+        </span>
       </div>
     );
   }

@@ -39,6 +39,11 @@
   padding-right: env(safe-area-inset-right);
 }
 /* Content padding that clears the fixed mobile bottom nav (64px) */
+@keyframes splash {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
 @utility pb-nav {
   padding-bottom: calc(6rem + env(safe-area-inset-bottom));
 }

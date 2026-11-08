@@ -64,7 +64,7 @@ function BrandPanel() {
       </div>
 
       <p className="relative text-[13px] font-medium text-white/55">
-        Carbarn's project workspace
+        Carbarn Hub · Carbarn's project workspace
       </p>
     </div>
   );
@@ -243,7 +243,7 @@ export function AuthPages() {
               <form onSubmit={handleFormSubmit} className="space-y-4">
                 {isRegister && (
                   <div>
-                    <span className="label" id="auth-account-type-label">How will you use Carbarn?</span>
+                    <span className="label" id="auth-account-type-label">How will you use Carbarn Hub?</span>
                     <div className="grid grid-cols-2 gap-2.5 mb-4" role="radiogroup" aria-labelledby="auth-account-type-label">
                       {[
                         { id: "personal", Icon: User, title: "For myself", sub: "Personal projects & tasks" },
@@ -390,7 +390,7 @@ export function AuthPages() {
               <div className="mt-7 text-center text-sm text-zinc-500 dark:text-zinc-400 font-medium">
                 {isLogin && (
                   <p>
-                    New to Carbarn?{" "}
+                    New to Carbarn Hub?{" "}
                     <Link to="/register" className="font-semibold text-primary hover:underline">
                       Create an account
                     </Link>
