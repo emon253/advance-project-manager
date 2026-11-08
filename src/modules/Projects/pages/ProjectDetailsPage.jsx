@@ -105,9 +105,6 @@ export function ProjectDetailsPage() {
 
   return (
     <div className="text-left" id="project-details-root">
-      <nav aria-label="Breadcrumb" className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mb-2">
-        <Link to="/projects" className="hover:text-zinc-900 dark:hover:text-white">Projects</Link> <span aria-hidden="true">›</span> {project.name}
-      </nav>
 
       {project.status === "Archived" && (
         <div className="mb-3 px-3 h-10 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-semibold flex items-center gap-2">
@@ -133,22 +130,22 @@ export function ProjectDetailsPage() {
         </div>
       )}
 
-      <div className="flex items-start gap-3 mb-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-[10px] shrink-0" style={{ backgroundColor: `${project.color}1f`, color: project.color }}>{getIconComponent(project.icon, "w-[18px] h-[18px]")}</span>
+      <div className="flex items-start gap-3 mb-4">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl shrink-0" style={{ backgroundColor: `${project.color}1f`, color: project.color }}>{getIconComponent(project.icon, "w-5 h-5")}</span>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="page-title md:truncate">{project.name}</h1>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+            <h1 className="text-[19px] md:text-[22px] font-bold tracking-tight leading-tight text-zinc-900 dark:text-white line-clamp-2 md:line-clamp-1 break-words min-w-0">{project.name}</h1>
             <span className={`inline-flex items-center gap-1.5 h-5 px-2 rounded-full text-[11px] font-bold ${STATUS_STYLES[project.status] || STATUS_STYLES.Planning}`}>
               <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />{project.status === "Completed" ? "Closed" : project.status}
             </span>
           </div>
           {richTextToPlain(project.description) && (
-            <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-0.5 max-w-[640px] line-clamp-2">{richTextToPlain(project.description)}</p>
+            <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400 mt-1 max-w-[720px] line-clamp-2">{richTextToPlain(project.description)}</p>
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0 relative">
-          {manage && isOpenProject && <button type="button" onClick={() => setMembersOpen(true)} className="btn btn-secondary hidden sm:inline-flex"><Users className="w-4 h-4" /> Members</button>}
-          {can("editTasks") && isOpenProject && <button type="button" onClick={() => { const el = document.getElementById("add-task-" + (groups.find((g) => g.kind === "open")?.key || "")); if (el) el.focus(); else navigate(`/projects/${project.id}`); }} className="btn btn-primary"><Plus className="w-4 h-4" /> Add task</button>}
+          {manage && isOpenProject && <button type="button" onClick={() => setMembersOpen(true)} className="btn btn-secondary hidden lg:inline-flex"><Users className="w-4 h-4" /> Members</button>}
+          {can("editTasks") && isOpenProject && <button type="button" onClick={() => { const el = document.getElementById("add-task-" + (groups.find((g) => g.kind === "open")?.key || "")); if (el) el.focus(); else navigate(`/projects/${project.id}`); }} className="btn btn-primary hidden lg:inline-flex"><Plus className="w-4 h-4" /> Add task</button>}
           {manage && (
             <button type="button" onClick={() => setMenuOpen((v) => !v)} className="btn-icon" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Project menu: edit, members, archive, delete">
               <MoreHorizontal className="w-4 h-4" />
@@ -196,9 +193,9 @@ export function ProjectDetailsPage() {
         </div>
       </div>
 
-      <div className="card grid grid-cols-2 md:grid-cols-[minmax(0,1fr)_repeat(4,auto)] divide-y md:divide-y-0 md:divide-x divide-zinc-100 dark:divide-zinc-800 mb-3 overflow-hidden">
+      <div className="card flex flex-col md:flex-row mb-4 overflow-hidden">
         {/* Progress: ring + status breakdown */}
-        <div className="col-span-2 md:col-span-1 flex items-center gap-4 px-4 py-3 min-w-0">
+        <div className="md:flex-1 flex items-center gap-4 px-4 py-3.5 md:py-3 min-w-0">
           <svg className="w-12 h-12 shrink-0 -rotate-90" viewBox="0 0 48 48" role="img" aria-label={`${pct}% complete`}>
             <circle cx="24" cy="24" r="20" fill="none" strokeWidth="5" className="stroke-zinc-200 dark:stroke-zinc-800" />
             <circle cx="24" cy="24" r="20" fill="none" strokeWidth="5" strokeLinecap="round" className={pct === 100 && projectTasks.length ? "stroke-emerald-500" : "stroke-primary"} strokeDasharray={`${(pct / 100) * 125.66} 125.66`} style={{ transition: "stroke-dasharray .4s ease" }} />
@@ -232,15 +229,16 @@ export function ProjectDetailsPage() {
           </div>
         </div>
 
-        <button type="button" onClick={() => setFilters((f) => ({ ...f, due: "" }))} className="flex flex-col justify-center px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer min-w-[96px]">
+        <div className="grid grid-cols-4 md:flex border-t md:border-t-0 md:border-l border-zinc-100 dark:border-zinc-800 divide-x divide-zinc-100 dark:divide-zinc-800">
+        <button type="button" onClick={() => setFilters((f) => ({ ...f, due: "" }))} className="flex flex-col items-center md:items-start justify-center text-center md:text-left px-1 md:px-4 py-2.5 md:py-3 md:min-w-[96px] hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer">
           <span className="label mb-0.5">Open</span>
           <span className="text-lg font-bold leading-none font-tnum text-zinc-900 dark:text-white">{open.length}</span>
         </button>
-        <button type="button" onClick={() => setFilters((f) => ({ ...f, due: f.due === "late" ? "" : "late" }))} aria-pressed={filters.due === "late"} className={`flex flex-col justify-center px-4 py-3 text-left cursor-pointer min-w-[96px] transition-colors ${filters.due === "late" ? "bg-rose-50 dark:bg-rose-500/10" : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"}`}>
+        <button type="button" onClick={() => setFilters((f) => ({ ...f, due: f.due === "late" ? "" : "late" }))} aria-pressed={filters.due === "late"} className={`flex flex-col items-center md:items-start justify-center text-center md:text-left px-1 md:px-4 py-2.5 md:py-3 md:min-w-[96px] cursor-pointer transition-colors ${filters.due === "late" ? "bg-rose-50 dark:bg-rose-500/10" : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"}`}>
           <span className="label mb-0.5">Overdue</span>
           <span className={`text-lg font-bold leading-none font-tnum ${late ? "text-rose-700 dark:text-rose-400" : "text-zinc-400"}`}>{late}</span>
         </button>
-        <div className="flex flex-col justify-center px-4 py-3 min-w-[110px]">
+        <div className="flex flex-col items-center md:items-start justify-center text-center md:text-left px-1 md:px-4 py-2.5 md:py-3 md:min-w-[110px]">
           <span className="label mb-0.5">Due</span>
           {project.deadline ? (
             <span className={`text-[13px] font-bold leading-tight font-tnum ${new Date(project.deadline) < today && open.length ? "text-rose-700 dark:text-rose-400" : "text-zinc-900 dark:text-white"}`}>
@@ -249,17 +247,18 @@ export function ProjectDetailsPage() {
             </span>
           ) : <span className="text-[13px] font-semibold text-zinc-400">Not set</span>}
         </div>
-        <button type="button" onClick={() => manage && setMembersOpen(true)} className={`flex flex-col justify-center px-4 py-3 text-left min-w-[120px] ${manage ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer" : "cursor-default"}`}>
+        <button type="button" onClick={() => manage && setMembersOpen(true)} className={`flex flex-col items-center md:items-start justify-center text-center md:text-left px-1 md:px-4 py-2.5 md:py-3 md:min-w-[120px] ${manage ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer" : "cursor-default"}`}>
           <span className="label mb-1">Team <span className="normal-case tracking-normal text-zinc-400 font-tnum">{members.length}</span></span>
           <span className="inline-flex -space-x-1.5">
-            {members.slice(0, 5).map((m) => <span key={m.id} className="ring-2 ring-white dark:ring-zinc-900 rounded-full"><UserAvatar user={m} size="xs" /></span>)}
-            {members.length > 5 && <span className="h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 ring-2 ring-white dark:ring-zinc-900 text-[10px] font-bold flex items-center justify-center font-tnum">+{members.length - 5}</span>}
+            {members.slice(0, 3).map((m) => <span key={m.id} className="ring-2 ring-white dark:ring-zinc-900 rounded-full"><UserAvatar user={m} size="xs" /></span>)}
+            {members.length > 3 && <span className="h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 ring-2 ring-white dark:ring-zinc-900 text-[10px] font-bold flex items-center justify-center font-tnum">+{members.length - 3}</span>}
             {members.length === 0 && <span className="text-xs text-zinc-400">{manage ? "Add people" : "None"}</span>}
           </span>
         </button>
+        </div>
       </div>
 
-      <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800 mb-2" role="tablist">
+      <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800 mb-3" role="tablist">
         {TABS.map(([id, label]) => (
           <Link key={id} to={`/projects/${project.id}${id === "tasks" ? "" : `/${id}`}`} role="tab" aria-selected={tab === id}
             className={`inline-flex items-center gap-1.5 h-9 px-2.5 text-[13px] font-semibold border-b-2 -mb-px ${tab === id ? "border-primary text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"}`}>

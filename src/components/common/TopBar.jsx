@@ -45,7 +45,7 @@ export function TopBar({ onOpenQuickAdd }) {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-30 pt-[env(safe-area-inset-top)] border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-      <div className="h-12 flex items-center gap-3 px-4">
+      <div className="h-12 flex items-center gap-3 px-3 lg:px-4">
         {/* Brand — matches the 220px sidebar column on desktop */}
         <Link to="/today" className="flex items-center min-w-0 rounded-md lg:w-[204px] shrink-0">
           <Wordmark className="text-base" />
@@ -82,7 +82,7 @@ export function TopBar({ onOpenQuickAdd }) {
 
           <Link
             to="/inbox"
-            className="btn-icon relative ml-1"
+            className="btn-icon relative ml-1 hidden lg:inline-flex"
             aria-label={unreadCount > 0 ? `Inbox, ${unreadCount} unread` : "Inbox"}
             title="Inbox"
           >

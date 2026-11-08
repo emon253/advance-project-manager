@@ -4,13 +4,20 @@
  */
 
 import React, { useState } from "react";
-import { ChevronDown, Check, List, LayoutGrid, X } from "lucide-react";
+import { ChevronDown, Check, List, LayoutGrid, X, Layers, CircleDot, Folder } from "lucide-react";
 
 /** Chip that opens a small single-select menu. `options`: [{ value, label }]. */
-export function ChipSelect({ label, value, options, onChange, allLabel = "Any" }) {
+/**
+ * Filter chip with a dropdown. `clearable` (filters) shows "Label: value ×"
+ * in the brand tint once set. Settings that always have a value (group by,
+ * sort) pass `clearable={false}` and an `icon`: they render as a plain
+ * dropdown "icon Label value ˅" with no clear button and no "any" row.
+ */
+export function ChipSelect({ label, value, options, onChange, allLabel = "Any", clearable = true, icon: Icon, align = "left" }) {
   const [open, setOpen] = useState(false);
   const current = options.find((o) => String(o.value) === String(value));
-  const active = value !== "" && value != null;
+  const active = clearable && value !== "" && value != null;
+  const items = clearable ? [{ value: "", label: allLabel }, ...options] : options;
   return (
     <div className="relative">
       <button
@@ -18,20 +25,26 @@ export function ChipSelect({ label, value, options, onChange, allLabel = "Any" }
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`chip ${active ? "chip-on" : ""}`}
+        className={`chip ${active ? "chip-on" : ""} ${open ? "border-primary/50" : ""}`}
       >
-        {active ? `${label}: ${current?.label ?? value}` : label}
+        {Icon && <Icon className="w-3.5 h-3.5 text-zinc-400" />}
+        {clearable ? (active ? `${label}: ${current?.label ?? value}` : label) : (
+          <>
+            <span className="text-zinc-500 dark:text-zinc-400 font-medium">{label}</span>
+            <span className="text-primary dark:text-sky-300">{current?.label ?? allLabel}</span>
+          </>
+        )}
         {active ? (
           <X className="w-3.5 h-3.5" onClick={(e) => { e.stopPropagation(); onChange(""); setOpen(false); }} />
         ) : (
-          <ChevronDown className="w-3.5 h-3.5" />
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
         )}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} aria-hidden="true" />
-          <ul role="listbox" className="menu-panel absolute left-0 top-8 z-40 min-w-[180px] max-h-64 overflow-y-auto p-1 animate-in fade-in slide-in-from-top-1 duration-150">
-            {[{ value: "", label: allLabel }, ...options].map((o) => {
+          <ul role="listbox" className={`menu-panel absolute ${align === "right" ? "right-0" : "left-0"} top-8 z-40 min-w-[180px] max-h-64 overflow-y-auto p-1 animate-in fade-in slide-in-from-top-1 duration-150`}>
+            {items.map((o) => {
               const sel = String(o.value) === String(value ?? "");
               return (
                 <li key={String(o.value)}>
@@ -42,6 +55,7 @@ export function ChipSelect({ label, value, options, onChange, allLabel = "Any" }
                     onClick={() => { onChange(o.value); setOpen(false); }}
                     className={`w-full flex items-center gap-2 h-8 px-2 rounded-md text-left text-[13px] font-medium cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 ${sel ? "text-primary font-bold" : "text-zinc-700 dark:text-zinc-200"}`}
                   >
+                    {o.icon && <o.icon className="w-4 h-4 shrink-0 text-zinc-400" />}
                     {o.color && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: o.color }} />}
                     <span className="truncate flex-1">{o.label}</span>
                     {sel && <Check className="w-3.5 h-3.5 shrink-0" />}
@@ -75,10 +89,10 @@ export function TaskToolbar({
   groupBy, onGroupBy, view, onView,
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-2">
       {scopeOptions && (
         <>
-          <div className="seg" role="group" aria-label="Scope">
+          <div className="seg w-full sm:w-auto h-8 sm:h-7 [&>button]:flex-1 [&>button]:justify-center sm:[&>button]:flex-none" role="group" aria-label="Scope">
             {scopeOptions.map((o) => (
               <button key={o.value} type="button" aria-pressed={scope === o.value} onClick={() => onScope(o.value)}>
                 {o.label}
@@ -110,13 +124,16 @@ export function TaskToolbar({
       <ChipSelect label="Priority" value={filters.priority} onChange={(v) => onFilter({ priority: v })} options={PRIORITY_OPTIONS} allLabel="Any" />
       <ChipSelect label="Due" value={filters.due} onChange={(v) => onFilter({ due: v })} options={DUE_OPTIONS} allLabel="Any time" />
 
-      <div className="ml-auto flex items-center gap-1.5">
+      <div className="ml-auto flex items-center gap-2">
         {onGroupBy && (
           <ChipSelect
-            label="Group"
+            label="Group by"
+            icon={Layers}
+            clearable={false}
+            align="right"
             value={groupBy}
             onChange={(v) => onGroupBy(v || "status")}
-            options={[{ value: "status", label: "Status" }, { value: "project", label: "Project" }]}
+            options={[{ value: "status", label: "Status", icon: CircleDot }, { value: "project", label: "Project", icon: Folder }]}
             allLabel="Status"
           />
         )}

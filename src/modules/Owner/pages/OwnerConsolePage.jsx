@@ -52,9 +52,9 @@ export function OwnerConsolePage({ tab = "dashboard" }) {
     <div className="text-left" id="owner-console-root">
       <PageHeader
         title={
-          <span className="inline-flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/8 dark:bg-primary/15 text-primary">
-              <ShieldCheck className="w-4.5 h-4.5" />
+          <span className="inline-flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/8 dark:bg-primary/15 text-primary">
+              <ShieldCheck className="w-4 h-4" />
             </span>
             Owner Console
           </span>
@@ -63,7 +63,7 @@ export function OwnerConsolePage({ tab = "dashboard" }) {
       />
 
       {/* Tab navigation — scrollable on mobile */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800 -mx-3 px-3 sm:mx-0 sm:px-0 mb-3 sm:mb-5 overflow-x-auto">
+      <div className="border-b border-zinc-200 dark:border-zinc-800 mb-4 overflow-x-auto">
         <nav className="flex gap-1 min-w-max" aria-label="Owner console sections">
           {TABS.map(({ id, label, icon: Icon, path }) => {
             const active = tab === id || location.pathname === path;
@@ -71,7 +71,7 @@ export function OwnerConsolePage({ tab = "dashboard" }) {
               <Link
                 key={id}
                 to={path}
-                className={`inline-flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${
+                className={`inline-flex items-center gap-1.5 h-9 px-2.5 text-[13px] font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap ${
                   active
                     ? "border-primary text-primary"
                     : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"

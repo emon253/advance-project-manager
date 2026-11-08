@@ -78,7 +78,7 @@ export function sanitizeHtml(dirty) {
 export function richTextToPlain(html) {
   if (!html || typeof html !== "string") return "";
   const doc = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
-  return (doc.body.textContent || "").replace(/ /g, " ").replace(/\s+/g, " ").trim();
+  return (doc.body.textContent || "").replace(/ /g, " ").replace(/(\*\*|__)(.+?)\1/g, "$2").replace(/\s+/g, " ").trim();
 }
 
 /** True when the markup carries no visible text (handles "", "<p><br></p>", etc.). */

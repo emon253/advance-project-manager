@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, SearchX } from "lucide-react";
+import { Search, SearchX, ArrowUpDown } from "lucide-react";
 import { useAppState } from "../../../app/providers";
 import { TaskRow } from "../../Tasks/components/TaskRow";
 import { EmptyState } from "../../../components/common/EmptyState";
@@ -35,7 +35,7 @@ export function SearchPage() {
       </form>
       {q && (
         <div className="flex items-center gap-2 mb-1">
-          <ChipSelect label="Sort" value={sort} onChange={(v) => setSort(v || "dueDate")} options={[{ value: "dueDate", label: "Due date" }, { value: "priority", label: "Priority" }, { value: "title", label: "Title" }]} allLabel="Due date" />
+          <ChipSelect label="Sort" icon={ArrowUpDown} clearable={false} align="right" value={sort} onChange={(v) => setSort(v || "dueDate")} options={[{ value: "dueDate", label: "Due date" }, { value: "priority", label: "Priority" }, { value: "title", label: "Title" }]} allLabel="Due date" />
           <span className="ml-auto text-xs text-zinc-500 font-tnum">{results.length} {results.length === 1 ? "match" : "matches"}</span>
         </div>
       )}

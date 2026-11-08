@@ -122,10 +122,10 @@ export function TaskBoard({ groups, showProject = true, onAddTask }) {
                       <div className="mt-2 flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 min-h-[24px]">
                         {hot && (
                           <span className={`inline-flex items-center gap-0.5 font-bold ${task.priority === "Urgent" ? "text-rose-700 dark:text-rose-400" : "text-amber-700 dark:text-amber-400"}`}>
-                            <Flag className="w-3 h-3" />{task.priority}
+                            <Flag className="w-3 h-3" />{task.priority} priority
                           </span>
                         )}
-                        {task.dueDate && <span className={`font-tnum ${due === "late" ? "text-rose-700 dark:text-rose-400 font-bold" : due === "today" ? "font-semibold text-zinc-800 dark:text-zinc-100" : ""}`}>{formatDue(task.dueDate)}</span>}
+                        {task.dueDate && <span className={`font-tnum ${due === "late" ? "text-rose-700 dark:text-rose-400 font-bold" : due === "today" ? "font-semibold text-zinc-800 dark:text-zinc-100" : ""}`}><span className={due === "late" ? "" : "text-zinc-400 dark:text-zinc-500 font-medium"}>Due </span>{formatDue(task.dueDate)}</span>}
                         {comments > 0 && <span className="inline-flex items-center gap-0.5 font-tnum"><MessageSquare className="w-3 h-3" />{comments}</span>}
                         {files > 0 && <span className="inline-flex items-center gap-0.5 font-tnum"><Paperclip className="w-3 h-3" />{files}</span>}
                         <span className="ml-auto flex items-center gap-1.5">

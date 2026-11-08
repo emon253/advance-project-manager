@@ -345,11 +345,24 @@ export function TaskPanel() {
           </select>
         </div>
         <div>
-          <label htmlFor="tp-due" className="label">Due</label>
+          <label htmlFor="tp-start" className="label">Start date</label>
+          <input
+            id="tp-start"
+            type="date"
+            value={task.startDate ? new Date(task.startDate).toISOString().slice(0, 10) : ""}
+            max={task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : undefined}
+            disabled={!canEdit}
+            onChange={(e) => updateTask(task.id, { startDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+            className="field h-[30px] text-xs font-semibold"
+          />
+        </div>
+        <div>
+          <label htmlFor="tp-due" className="label">Due date</label>
           <input
             id="tp-due"
             type="date"
             value={task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : ""}
+            min={task.startDate ? new Date(task.startDate).toISOString().slice(0, 10) : undefined}
             disabled={!canEdit}
             onChange={(e) => updateTask(task.id, { dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
             className={`field h-[30px] text-xs font-semibold ${due === "late" ? "border-rose-200 bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:border-rose-500/30 dark:text-rose-300" : ""}`}
@@ -361,6 +374,12 @@ export function TaskPanel() {
           <select id="tp-priority" value={task.priority || "Medium"} disabled={!canEdit} onChange={(e) => updateTask(task.id, { priority: e.target.value })} className={`field h-[30px] text-xs font-semibold ${task.priority === "Urgent" ? "text-rose-700 dark:text-rose-300" : task.priority === "High" ? "text-amber-700 dark:text-amber-300" : ""}`}>
             {["Low", "Medium", "High", "Urgent"].map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
+        </div>
+        <div>
+          <span className="label">Created</span>
+          <p className="h-[30px] flex items-center text-xs font-semibold text-zinc-600 dark:text-zinc-300 font-tnum" title={task.createdAt ? new Date(task.createdAt).toLocaleString() : undefined}>
+            {task.createdAt ? new Date(task.createdAt).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
+          </p>
         </div>
       </div>
 
@@ -530,7 +549,7 @@ export function TaskPanel() {
   );
 
   const footer = task && canEdit ? (
-    <div className="shrink-0 px-3 md:px-4 py-2.5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 pb-[max(0.625rem,env(safe-area-inset-bottom))]">
+    <div className="shrink-0 px-2 md:px-4 py-2 md:py-2.5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       <CommentComposer ref={composerRef} members={users} currentUser={currentUser} onSubmit={submitComment} onUpload={uploadToTask} />
     </div>
   ) : null;

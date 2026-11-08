@@ -5,7 +5,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, MoreHorizontal, Archive, RotateCcw, CheckCircle2 } from "lucide-react";
+import { Plus, MoreHorizontal, Archive, RotateCcw, CheckCircle2, FolderOpen, ListTodo, AlertTriangle, CalendarClock, ArrowUpDown } from "lucide-react";
 import { getIconComponent } from "../../../components/common/IconHelper";
 import { useAppState } from "../../../app/providers";
 import { useMockQuery } from "../../../hooks/useMockQuery";
@@ -68,10 +68,10 @@ export function ProjectsPage() {
 
   const activeRows = rows.filter((p) => bucket(p) === "active");
   const kpis = [
-    { label: "Active", value: activeRows.length },
-    { label: "Open tasks", value: activeRows.reduce((n, p) => n + p.open, 0) },
-    { label: "Overdue", value: activeRows.reduce((n, p) => n + p.late, 0), tone: "late" },
-    { label: "Due this week", value: activeRows.filter((p) => p.deadline && startOfDay(p.deadline) >= today && startOfDay(p.deadline) < today + 7 * DAY).length },
+    { label: "Active", value: activeRows.length, Icon: FolderOpen, tint: "bg-primary/10 text-primary" },
+    { label: "Open tasks", value: activeRows.reduce((n, p) => n + p.open, 0), Icon: ListTodo, tint: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
+    { label: "Overdue", value: activeRows.reduce((n, p) => n + p.late, 0), tone: "late", Icon: AlertTriangle, tint: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+    { label: "Due this week", value: activeRows.filter((p) => p.deadline && startOfDay(p.deadline) >= today && startOfDay(p.deadline) < today + 7 * DAY).length, Icon: CalendarClock, tint: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
   ];
 
   const openForm = () => {
@@ -85,7 +85,7 @@ export function ProjectsPage() {
 
   return (
     <div className="text-left" id="projects-page-root">
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center gap-3 mb-4">
         <h1 className="page-title">Projects</h1>
         {can("manageProjects") && (
           <button type="button" onClick={openForm} className="btn btn-primary ml-auto">
@@ -94,17 +94,20 @@ export function ProjectsPage() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 mb-4">
         {kpis.map((k) => (
-          <div key={k.label} className="card px-3.5 py-2.5 min-w-[128px]">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{k.label}</p>
-            <p className={`text-xl font-bold tracking-tight font-tnum ${k.tone === "late" && k.value > 0 ? "text-rose-700 dark:text-rose-400" : "text-zinc-900 dark:text-white"}`}>{k.value}</p>
+          <div key={k.label} className="card flex items-center gap-3 p-2.5 md:p-3">
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${k.tint}`}><k.Icon className="w-5 h-5" /></span>
+            <div className="min-w-0">
+              <p className={`text-xl font-bold leading-tight tracking-tight font-tnum ${k.tone === "late" && k.value > 0 ? "text-rose-700 dark:text-rose-400" : "text-zinc-900 dark:text-white"}`}>{k.value}</p>
+              <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 truncate">{k.label}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 mb-2">
-        <div className="seg" role="group" aria-label="Status">
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <div className="seg w-full sm:w-auto h-8 sm:h-7 [&>button]:flex-1 [&>button]:justify-center sm:[&>button]:flex-none" role="group" aria-label="Status">
           <button type="button" aria-pressed={tab === "active"} onClick={() => setTab("active")}>Active <span className="text-zinc-400 font-tnum">{counts.active}</span></button>
           <button type="button" aria-pressed={tab === "closed"} onClick={() => setTab("closed")}>Closed <span className="text-zinc-400 font-tnum">{counts.closed}</span></button>
           <button type="button" aria-pressed={tab === "archived"} onClick={() => setTab("archived")}>Archived <span className="text-zinc-400 font-tnum">{counts.archived}</span></button>
@@ -113,6 +116,9 @@ export function ProjectsPage() {
         <div className="ml-auto">
           <ChipSelect
             label="Sort"
+            icon={ArrowUpDown}
+            clearable={false}
+            align="right"
             value={sort}
             onChange={(v) => setSort(v || "overdue")}
             options={[{ value: "overdue", label: "Overdue first" }, { value: "due", label: "Due date" }, { value: "progress", label: "Least progress" }, { value: "name", label: "Name" }]}
