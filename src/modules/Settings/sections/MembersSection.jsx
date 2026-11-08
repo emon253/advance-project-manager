@@ -78,7 +78,7 @@ export function MembersSection() {
             const me = m.id === currentUser?.id;
             const isOwnerRow = m.role === "Owner";
             return (
-              <div key={m.id} className="relative flex items-center gap-2.5 h-11 px-3 border-t border-zinc-100 dark:border-zinc-800/80 first:border-t-0">
+              <div key={m.id} className="relative flex items-center gap-3 min-h-[60px] py-2.5 px-3 border-t border-zinc-100 dark:border-zinc-800/80 first:border-t-0">
                 <UserAvatar user={m} size="sm" />
                 <span className="flex-1 min-w-0">
                   <span className="block text-[13px] font-bold truncate">{m.name}{me && <span className="ml-1.5 text-[10px] font-bold text-zinc-500 bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5">You</span>}</span>

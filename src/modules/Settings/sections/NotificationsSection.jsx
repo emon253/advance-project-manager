@@ -39,10 +39,10 @@ export function NotificationsSection() {
         <div key={g.group} className="card p-3">
           <h2 className="text-[15px] font-bold text-zinc-900 dark:text-white mb-1">{g.group}</h2>
           {g.items.map(([key, title, desc]) => (
-            <div key={key} className="flex items-center gap-3 h-12 border-t border-zinc-100 dark:border-zinc-800 first:border-t-0">
+            <div key={key} className="flex items-center gap-4 py-3 min-h-[60px] border-t border-zinc-100 dark:border-zinc-800 first:border-t-0">
               <span className="flex-1 min-w-0">
                 <span className="block text-[13px] font-semibold">{title}</span>
-                <span className="block text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{key === "pushMock" && permission === "denied" ? "Blocked in your browser settings" : desc}</span>
+                <span className="block mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{key === "pushMock" && permission === "denied" ? "Blocked in your browser settings" : desc}</span>
               </span>
               <button type="button" role="switch" aria-checked={!!notificationSettings?.[key]} aria-label={title} onClick={() => toggle(key)} className="switch"><span /></button>
             </div>

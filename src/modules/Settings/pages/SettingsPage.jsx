@@ -45,10 +45,16 @@ export function SettingsPage() {
     security: <SecuritySection />,
   }[section] || <Navigate to="/settings/general" replace />;
 
+  const subtitle = `${activeWorkspace?.name} workspace · ${activePlanId ? activePlanId.charAt(0).toUpperCase() + activePlanId.slice(1) : "Free"} plan`;
+
   return (
     <div className="text-left flex flex-wrap gap-6 items-start" id="settings-root">
+      <div className="lg:hidden w-full -mb-3">
+        <h1 className="page-title">Settings</h1>
+        <p className="page-sub">{subtitle}</p>
+      </div>
       <nav aria-label="Settings sections" className="flex-[0_0_184px] flex flex-col lg:pt-[46px] w-full lg:w-auto">
-        <div className="flex lg:flex-col gap-0.5 overflow-x-auto no-scrollbar -mx-4 px-4 lg:mx-0 lg:px-0">
+        <div className="flex lg:flex-col gap-1 lg:gap-0.5 overflow-x-auto no-scrollbar">
           {sections.map((g) => (
             <React.Fragment key={g.group}>
               <p className="hidden lg:block text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-2.5 pt-3 pb-1 first:pt-0">{g.group}</p>
@@ -76,9 +82,9 @@ export function SettingsPage() {
       </nav>
 
       <section className="flex-[999_1_480px] min-w-0 flex flex-col gap-4">
-        <div>
+        <div className="hidden lg:block">
           <h1 className="page-title">Settings</h1>
-          <p className="page-sub">{activeWorkspace?.name} workspace · {activePlanId ? activePlanId.charAt(0).toUpperCase() + activePlanId.slice(1) : "Free"} plan</p>
+          <p className="page-sub">{subtitle}</p>
         </div>
         {body}
       </section>

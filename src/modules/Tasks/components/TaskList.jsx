@@ -12,7 +12,7 @@ import { statusDot } from "../util/tasksUtils";
 
 /**
  * Grouped task list: every group is an accordion (chevron · dot · name ·
- * count) over a card of 36px rows. Open groups start expanded, done/cancelled
+ * count) over a card of 44px rows. Open groups start expanded, done/cancelled
  * start collapsed; a collapsed header still shows the count. Optional
  * inline "Add a task" row at the top of the first open group (project page).
  */
@@ -59,7 +59,7 @@ export function TaskList({ groups, showProject = true, onAddTask, addPlaceholder
             {isOpen && (
               <div className="card overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
                 {showAdd && (
-                  <form onSubmit={submitAdd} className="flex items-center gap-2.5 h-[34px] px-2.5 bg-zinc-50/80 dark:bg-zinc-800/40 border-b border-zinc-100 dark:border-zinc-800/80">
+                  <form onSubmit={submitAdd} className="flex items-center gap-2.5 h-11 px-2.5 md:px-3 bg-zinc-50/80 dark:bg-zinc-800/40 border-b border-zinc-100 dark:border-zinc-800/80">
                     <Plus className="w-4 h-4 text-primary shrink-0" />
                     <label className="sr-only" htmlFor={`add-task-${group.key}`}>Add a task</label>
                     <input

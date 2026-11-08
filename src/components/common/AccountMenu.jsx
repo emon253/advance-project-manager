@@ -5,7 +5,7 @@
 
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Plus, Sun, Moon, LogOut } from "lucide-react";
+import { Check, Plus, LogOut } from "lucide-react";
 import { useAppState } from "../../app/providers";
 import { UserAvatar } from "./UserAvatar";
 import { getIconComponent, ICON_OPTIONS } from "./IconHelper";
@@ -16,12 +16,12 @@ const itemClass =
 /**
  * Account + workspace dropdown under the top-bar avatar. Owns workspace
  * switching and inline creation (moved out of the sidebar), plus Settings,
- * Team (phone only — the sidebar carries it on desktop), theme and sign-out.
+ * Team (phone only — the sidebar carries it on desktop) and sign-out. Theme lives in the top bar.
  */
 export function AccountMenu({ onClose }) {
   const {
     currentUser, workspaces, activeWorkspaceId, setActiveWorkspaceId, addWorkspace,
-    theme, setTheme, logout, isSystemOwner,
+    logout, isSystemOwner,
   } = useAppState();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
@@ -126,15 +126,6 @@ export function AccountMenu({ onClose }) {
         {isSystemOwner && (
           <Link to="/owner" role="menuitem" onClick={onClose} className={itemClass}>Owner console</Link>
         )}
-        <button
-          type="button"
-          role="menuitem"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className={itemClass}
-        >
-          {theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-zinc-400" />}
-          {theme === "dark" ? "Light mode" : "Dark mode"}
-        </button>
         <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
         <button type="button" role="menuitem" onClick={() => { onClose(); logout(); }} className={`${itemClass} text-rose-600 dark:text-rose-400`}>
           <LogOut className="w-4 h-4" />

@@ -102,9 +102,9 @@ export function WorkspaceGeneralSection() {
             {others.map((w) => {
               const wsProjects = projects.filter((p) => p.workspaceId === w.id).length;
               return (
-                <div key={w.id} className="flex items-center gap-2.5 h-10 border-t border-zinc-100 dark:border-zinc-800 first:border-t-0">
+                <div key={w.id} className="flex items-center gap-3 h-[52px] border-t border-zinc-100 dark:border-zinc-800 first:border-t-0">
                   <span className="h-7 w-7 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center shrink-0">{getIconComponent(w.logo, "w-3.5 h-3.5")}</span>
-                  <span className="flex-1 min-w-0 text-[13px] font-semibold truncate">{w.name}<span className="ml-2 text-xs font-medium text-zinc-400">{w.memberCount || 0} members{wsProjects ? ` · ${wsProjects} projects` : ""}{w.isArchived ? " · archived" : ""}</span></span>
+                  <span className="flex-1 min-w-0 text-[13px] font-semibold truncate">{w.name}<span className="ml-2 text-xs font-medium text-zinc-400">{w.memberCount || 0} {(w.memberCount || 0) === 1 ? "member" : "members"}{wsProjects ? ` · ${wsProjects} projects` : ""}{w.isArchived ? " · archived" : ""}</span></span>
                   {w.isArchived ? (
                     <button type="button" onClick={() => updateWorkspace(w.id, { isArchived: false })} className="btn btn-sm btn-secondary"><RotateCcw className="w-3.5 h-3.5" /> Restore</button>
                   ) : (

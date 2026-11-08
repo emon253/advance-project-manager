@@ -22,7 +22,7 @@ const ICONS = {
   milestone_rescheduled: [Calendar, "text-fuchsia-600 bg-fuchsia-50 dark:bg-fuchsia-500/10"],
 };
 
-/** One inbox row (44px): icon · title + message · project · time · hover actions. The row opens the task. */
+/** One inbox row (~60px): icon · message over type · project · time; unread dot; hover actions. The row opens the task. */
 export function NotificationItem({ item, relatedProject, onOpen, onToggleRead, onDelete }) {
   const [Icon, tone] = ICONS[item.type] || [Bell, "text-zinc-500 bg-zinc-100 dark:bg-zinc-800"];
   return (
@@ -31,19 +31,19 @@ export function NotificationItem({ item, relatedProject, onOpen, onToggleRead, o
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }}
-      className={`group/n flex items-center gap-2.5 px-3 h-12 border-t border-zinc-100 dark:border-zinc-800/80 first:border-t-0 cursor-pointer transition-colors ${
+      className={`group/n flex items-center gap-3 px-4 py-3 min-h-[60px] border-t border-zinc-100 dark:border-zinc-800/80 first:border-t-0 cursor-pointer transition-colors ${
         item.read ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/40" : "bg-primary/[0.04] dark:bg-primary/10 hover:bg-primary/[0.07]"
       }`}
     >
-      <span className={`flex h-7 w-7 items-center justify-center rounded-md shrink-0 ${tone}`}><Icon className="w-3.5 h-3.5" /></span>
+      <span className={`flex h-8 w-8 items-center justify-center rounded-lg shrink-0 ${tone}`}><Icon className="w-4 h-4" /></span>
       <span className="flex-1 min-w-0">
-        <span className={`block text-[13px] truncate ${item.read ? "font-medium text-zinc-700 dark:text-zinc-300" : "font-bold text-zinc-900 dark:text-white"}`}>{item.message}</span>
-        <span className="block text-[11px] text-zinc-400 truncate">
+        <span className={`block text-[13px] leading-snug line-clamp-2 md:line-clamp-1 break-words ${item.read ? "font-medium text-zinc-700 dark:text-zinc-300" : "font-bold text-zinc-900 dark:text-white"}`}>{item.message}</span>
+        <span className="block mt-0.5 text-xs text-zinc-500 dark:text-zinc-400 truncate">
           {item.title}{relatedProject && <> · <span className="inline-block w-1.5 h-1.5 rounded-full align-middle mr-1" style={{ backgroundColor: relatedProject.color }} />{relatedProject.name}</>}
         </span>
       </span>
-      <span className="text-[11px] text-zinc-400 font-tnum shrink-0 group-hover/n:hidden">{formatRelative(item.timestamp)}</span>
-      <span className="hidden group-hover/n:flex items-center shrink-0" onClick={(e) => e.stopPropagation()}>
+      <span className="flex items-center gap-2 text-xs text-zinc-400 font-tnum shrink-0 group-hover/n:hidden">{formatRelative(item.timestamp)}{!item.read && <span className="w-2 h-2 rounded-full bg-primary" aria-label="Unread" />}</span>
+      <span className="hidden group-hover/n:flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
         <button type="button" onClick={onToggleRead} className="btn-icon h-7 w-7" aria-label={item.read ? "Mark unread" : "Mark read"} title={item.read ? "Mark unread" : "Mark read"}>
           {item.read ? <CircleDot className="w-3.5 h-3.5" /> : <Circle className="w-3.5 h-3.5" />}
         </button>

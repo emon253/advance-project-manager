@@ -79,8 +79,8 @@ export function ProjectsPage() {
     setShowForm(true);
   };
 
-  const th = "text-left text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 px-2.5 py-[7px] bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800 whitespace-nowrap";
-  const td = "px-2.5 h-10 border-t border-zinc-100 dark:border-zinc-800/80 align-middle whitespace-nowrap text-[13px]";
+  const th = "text-left text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 px-3 py-2.5 bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800 whitespace-nowrap";
+  const td = "px-3 py-2.5 h-[60px] border-t border-zinc-100 dark:border-zinc-800/80 align-middle whitespace-nowrap text-[13px]";
   const wide = "hidden md:table-cell";
 
   return (
@@ -142,12 +142,12 @@ export function ProjectsPage() {
                 <tr key={p.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                   <td className={`${td} !whitespace-normal md:min-w-[240px]`}>
                     <Link to={`/projects/${p.id}`} className="flex items-center gap-2.5 text-zinc-900 dark:text-white font-bold hover:text-primary">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-md shrink-0" style={{ backgroundColor: `${p.color}1f`, color: p.color }}>
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0" style={{ backgroundColor: `${p.color}1f`, color: p.color }}>
                         {getIconComponent(p.icon, "w-3.5 h-3.5")}
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate max-w-[calc(100vw-13.5rem)] md:max-w-[320px]">{p.name}</span>
-                        {richTextToPlain(p.description) && <span className="block text-[11.5px] font-medium text-zinc-500 dark:text-zinc-400 truncate max-w-[calc(100vw-13.5rem)] md:max-w-[320px] leading-tight">{richTextToPlain(p.description)}</span>}
+                        <span className="block truncate max-w-[calc(100vw-13.5rem)] md:max-w-[360px]">{p.name}</span>
+                        {richTextToPlain(p.description) && <span className="block mt-0.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 truncate max-w-[calc(100vw-13.5rem)] md:max-w-[360px] leading-tight">{richTextToPlain(p.description)}</span>}
                       </span>
                     </Link>
                   </td>
@@ -155,7 +155,7 @@ export function ProjectsPage() {
                     {p.total === 0 ? <span className="text-xs text-zinc-400">No tasks yet</span> : (
                       <span className="inline-flex items-center gap-2">
                         <span className="w-[100px] h-[5px] rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden"><span className={`block h-full rounded-full ${p.pct === 100 ? "bg-emerald-500" : "bg-primary"}`} style={{ width: `${p.pct}%` }} /></span>
-                        <span className="text-xs font-semibold text-zinc-500 font-tnum">{p.total - p.open}/{p.total}</span>
+                        <span className="text-xs leading-none font-semibold text-zinc-500 font-tnum">{p.total - p.open}/{p.total}</span>
                       </span>
                     )}
                   </td>

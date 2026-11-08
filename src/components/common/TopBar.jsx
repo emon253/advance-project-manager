@@ -3,45 +3,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAppState } from "../../app/providers";
 import { Wordmark } from "./Logo";
-import { Search, Bell, Plus, ChevronDown } from "lucide-react";
+import { Search, Bell, Plus, ChevronDown, Sun, Moon } from "lucide-react";
 import { UserAvatar } from "./UserAvatar";
 import { AccountMenu } from "./AccountMenu";
+import { GlobalSearch } from "./GlobalSearch";
 
 /**
- * 48px top bar: brand · global search · New task · inbox · account menu.
+ * 48px top bar: brand · global search (with suggestions) · New task · theme · inbox · account menu.
  * Workspace switching, settings, profile, theme and sign-out all live in the
  * account menu so the sidebar starts at Today.
  */
 export function TopBar({ onOpenQuickAdd }) {
-  const { currentUser, notifications, can } = useAppState();
-  const navigate = useNavigate();
-  const [searchValue, setSearchValue] = useState("");
+  const { currentUser, notifications, can, theme, setTheme } = useAppState();
   const [menuOpen, setMenuOpen] = useState(false);
-  const searchRef = useRef(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
-
-  // "/" focuses the global search from anywhere
-  useEffect(() => {
-    const onKeyDown = (e) => {
-      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
-      const tag = document.activeElement?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
-      e.preventDefault();
-      searchRef.current?.focus();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchValue.trim()) navigate(`/search?q=${encodeURIComponent(searchValue.trim())}`);
-  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-30 pt-[env(safe-area-inset-top)] border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
@@ -51,21 +31,7 @@ export function TopBar({ onOpenQuickAdd }) {
           <Wordmark className="text-base" />
         </Link>
 
-        {/* Global search (desktop) */}
-        <form onSubmit={handleSearchSubmit} className="hidden md:flex flex-1 max-w-[480px] relative" role="search">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 pointer-events-none" />
-          <input
-            ref={searchRef}
-            type="search"
-            placeholder="Search tasks, projects, people"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            className="w-full h-8 text-[13px] bg-zinc-100 dark:bg-zinc-900 border border-transparent focus:bg-white dark:focus:bg-zinc-950 focus:border-primary text-zinc-800 dark:text-zinc-100 rounded-md pl-8 pr-8 outline-none transition-colors placeholder:text-zinc-400 font-medium"
-          />
-          <kbd className="absolute right-2 top-1/2 -translate-y-1/2 hidden lg:inline-flex items-center h-[18px] px-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[10px] font-bold text-zinc-400 pointer-events-none">
-            /
-          </kbd>
-        </form>
+        <GlobalSearch />
 
         {/* Right cluster */}
         <div className="ml-auto flex items-center gap-1 relative">
@@ -80,9 +46,19 @@ export function TopBar({ onOpenQuickAdd }) {
             </button>
           )}
 
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="btn-icon ml-1"
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
+          >
+            {theme === "dark" ? <Sun className="w-[18px] h-[18px] text-amber-400" /> : <Moon className="w-[18px] h-[18px]" />}
+          </button>
+
           <Link
             to="/inbox"
-            className="btn-icon relative ml-1 hidden lg:inline-flex"
+            className="btn-icon relative hidden lg:inline-flex"
             aria-label={unreadCount > 0 ? `Inbox, ${unreadCount} unread` : "Inbox"}
             title="Inbox"
           >

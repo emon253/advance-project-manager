@@ -13,7 +13,7 @@ import { completedStatusName, defaultStatusName, dueState, formatDue, isDoneTask
  * The one task row used everywhere (Today, My Tasks, project, search):
  * checkbox · title · priority flag (only High/Urgent) · counts · checklist
  * progress (only when there is one) · project · due · assignee.
- * 36px single line on desktop; two lines (title + meta) at phone width.
+ * 44px single line on desktop; two lines (title + meta) at phone width.
  */
 /**
  * Small pop-confirm under the checkbox so a stray tap doesn't complete a task.
@@ -133,7 +133,7 @@ export function TaskRow({ task, project, assignee, showProject = true, selected 
       tabIndex={0}
       onClick={() => setActiveTaskId(task.id)}
       onKeyDown={(e) => { if (e.key === "Enter") setActiveTaskId(task.id); }}
-      className={`group/row flex items-start md:items-center gap-2.5 px-2.5 py-1.5 md:py-0 md:h-9 border-t border-zinc-100 dark:border-zinc-800/80 first:border-t-0 cursor-pointer select-none transition-colors ${
+      className={`group/row flex items-start md:items-center gap-2.5 px-2.5 md:px-3 py-2.5 md:py-0 md:h-11 border-t border-zinc-100 dark:border-zinc-800/80 first:border-t-0 cursor-pointer select-none transition-colors ${
         selected ? "bg-primary/8 dark:bg-primary/15" : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
       }`}
       id={`task-item-${task.id}`}

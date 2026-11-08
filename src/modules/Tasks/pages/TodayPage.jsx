@@ -165,7 +165,7 @@ export function TodayPage() {
         )}
       </section>
 
-      <aside className="flex-[1_1_280px] max-w-[340px] 2xl:max-w-[380px] flex flex-col gap-3 lg:pt-[52px]">
+      <aside className="flex-[1_1_280px] w-full lg:w-auto lg:max-w-[340px] 2xl:max-w-[380px] flex flex-col gap-3 lg:pt-[52px]">
         <div className="card p-3">
           <div className="flex items-center mb-2.5">
             <h3 className="text-[13px] font-bold text-zinc-900 dark:text-white">Projects</h3>

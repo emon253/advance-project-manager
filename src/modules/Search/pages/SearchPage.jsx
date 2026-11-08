@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useDeferredValue, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, SearchX, ArrowUpDown } from "lucide-react";
 import { useAppState } from "../../../app/providers";
@@ -21,7 +21,8 @@ export function SearchPage() {
   const [sort, setSort] = useState("dueDate");
   useEffect(() => setTerm(q), [q]);
 
-  const results = sortSearchedTasks(filterTasksBySearch(activeWorkspaceTasks, q), sort);
+  const liveTerm = useDeferredValue(term.trim());
+  const results = useMemo(() => sortSearchedTasks(filterTasksBySearch(activeWorkspaceTasks, liveTerm), sort), [activeWorkspaceTasks, liveTerm, sort]);
 
   return (
     <div className="text-left" id="search-root">
