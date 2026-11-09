@@ -6,17 +6,16 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppState } from "../../app/providers";
-import { Sun, CheckSquare, Folder, Inbox, Users, Settings } from "lucide-react";
+import { Sun, CheckSquare, Folder, Settings } from "lucide-react";
 
 /**
  * 220px sidebar: Today · My Tasks · Projects (with up to 3 pinned, most
- * recently created active projects) · Inbox · Team · Settings. No workspace
- * switcher here — that lives in the top-bar account menu.
+ * recently created active projects) · Settings. Inbox is the bell in the top
+ * bar; Team and the workspace switcher live in the account menu.
  */
 export function DesktopSidebar() {
-  const { notifications, activeWorkspaceProjects, tasks, taskStatuses, currentUser } = useAppState();
+  const { activeWorkspaceProjects, tasks, taskStatuses, currentUser } = useAppState();
   const location = useLocation();
-  const unread = notifications.filter((n) => !n.read).length;
 
   const openStatuses = new Set(
     taskStatuses.filter((s) => !s.isCompleted && !s.isCancelled).map((s) => s.name)
@@ -37,8 +36,6 @@ export function DesktopSidebar() {
     { label: "Today", icon: Sun, path: "/today", badge: todayCount },
     { label: "My Tasks", icon: CheckSquare, path: "/my-tasks", match: ["/my-tasks", "/t/"] },
     { label: "Projects", icon: Folder, path: "/projects", match: ["/projects"] },
-    { label: "Inbox", icon: Inbox, path: "/inbox", badge: unread },
-    { label: "Team", icon: Users, path: "/team" },
   ];
 
   const isActive = (item) =>

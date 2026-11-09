@@ -16,7 +16,7 @@ const itemClass =
 /**
  * Account + workspace dropdown under the top-bar avatar. Owns workspace
  * switching and inline creation (moved out of the sidebar), plus Settings,
- * Team (phone only — the sidebar carries it on desktop) and sign-out. Theme lives in the top bar.
+ * Team and sign-out. Theme lives in the top bar.
  */
 export function AccountMenu({ onClose }) {
   const {
@@ -120,9 +120,9 @@ export function AccountMenu({ onClose }) {
         )}
 
         <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
+        <Link to="/team" role="menuitem" onClick={onClose} className={itemClass}>Team</Link>
         <Link to="/settings" role="menuitem" onClick={onClose} className={itemClass}>Settings</Link>
         <Link to="/settings/profile" role="menuitem" onClick={onClose} className={itemClass}>Profile</Link>
-        <Link to="/team" role="menuitem" onClick={onClose} className={`${itemClass} lg:hidden`}>Team</Link>
         {isSystemOwner && (
           <Link to="/owner" role="menuitem" onClick={onClose} className={itemClass}>Owner console</Link>
         )}

@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAppState } from "../../app/providers";
 import { Wordmark } from "./Logo";
 import { Search, Bell, Plus, ChevronDown, Sun, Moon } from "lucide-react";
@@ -22,6 +22,7 @@ export function TopBar({ onOpenQuickAdd }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const onInbox = useLocation().pathname.startsWith("/inbox");
 
   return (
     <header className="fixed top-0 left-0 right-0 z-30 pt-[env(safe-area-inset-top)] border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
@@ -58,13 +59,16 @@ export function TopBar({ onOpenQuickAdd }) {
 
           <Link
             to="/inbox"
-            className="btn-icon relative hidden lg:inline-flex"
+            aria-current={onInbox ? "page" : undefined}
+            className={`btn-icon relative hidden lg:inline-flex ${onInbox ? "bg-primary/10 text-primary" : ""}`}
             aria-label={unreadCount > 0 ? `Inbox, ${unreadCount} unread` : "Inbox"}
             title="Inbox"
           >
             <Bell className="w-[18px] h-[18px]" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-zinc-950" />
+              <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold leading-4 text-center font-tnum ring-2 ring-white dark:ring-zinc-950">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
             )}
           </Link>
 
