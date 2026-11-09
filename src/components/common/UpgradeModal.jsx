@@ -5,6 +5,7 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useAppState } from "../../app/providers";
 import { X, Zap } from "lucide-react";
 
 /**
@@ -13,6 +14,8 @@ import { X, Zap } from "lucide-react";
  */
 export function UpgradeModal({ isOpen, onClose, title = "Upgrade to keep going", limitText }) {
   const navigate = useNavigate();
+  const { can } = useAppState();
+  const isOwner = can("manageBilling");
 
   if (!isOpen) return null;
 
@@ -35,21 +38,24 @@ export function UpgradeModal({ isOpen, onClose, title = "Upgrade to keep going",
         <div className="px-5 pb-4">
           <h2 className="font-display font-semibold text-base text-zinc-900 dark:text-white">{title}</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-1 leading-relaxed">
-            {limitText || "You've reached a limit of the Free plan."} Upgrade to Pro for unlimited projects, more members, and AI features.
+            {limitText || "You've reached a limit of the Free plan."}{" "}
+            {isOwner ? "Upgrade to Pro for unlimited projects, more members, and AI features." : "Ask the workspace owner to upgrade the plan."}
           </p>
         </div>
 
         <div className="flex gap-2.5 px-5 py-3.5 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
           <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
-            Not now
+            {isOwner ? "Not now" : "OK"}
           </button>
-          <button
-            type="button"
-            onClick={() => { onClose(); navigate("/settings/billing"); }}
-            className="btn btn-primary flex-1"
-          >
-            See plans
-          </button>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => { onClose(); navigate("/settings/billing"); }}
+              className="btn btn-primary flex-1"
+            >
+              See plans
+            </button>
+          )}
         </div>
       </div>
     </div>

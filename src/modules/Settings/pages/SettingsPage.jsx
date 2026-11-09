@@ -39,7 +39,7 @@ export function SettingsPage() {
     members: <MembersSection />,
     statuses: <StatusSettingsPanel />,
     automation: <AutomationSection />,
-    billing: <BillingPage embedded />,
+    billing: can("manageBilling") ? <BillingPage embedded /> : <Navigate to="/settings/general" replace />,
     profile: <ProfileSection />,
     notifications: <NotificationsSection />,
     security: <SecuritySection />,

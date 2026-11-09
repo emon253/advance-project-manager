@@ -13,7 +13,7 @@ export const ROLES = ["Owner", "Admin", "Manager", "Member", "Viewer"];
 
 export const PERMISSIONS = {
   // Billing
-  manageBilling: ["Owner", "Admin"],
+  manageBilling: ["Owner"],                  // only the owner sees plans & billing
   // Workspace administration
   manageWorkspace: ["Owner", "Admin"],       // edit name/logo/description
   archiveWorkspace: ["Owner", "Admin"],

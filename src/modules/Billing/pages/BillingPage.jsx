@@ -61,9 +61,9 @@ export function BillingPage() {
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500">
             <Lock className="w-5 h-5" />
           </span>
-          <h2 className="font-semibold text-sm sm:text-base text-zinc-900 dark:text-white">Admin access required</h2>
+          <h2 className="font-semibold text-sm sm:text-base text-zinc-900 dark:text-white">Owner access required</h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium max-w-sm">
-            Ask a workspace Owner or Admin to manage the subscription.
+            Only the workspace owner can manage the plan and billing.
           </p>
           <span className="badge bg-primary/8 text-primary border-primary/20 dark:bg-primary/15 mt-1">
             {currentPlan.name}{trialing ? " trial" : ""}
