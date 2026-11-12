@@ -5,11 +5,11 @@
 
 import React from "react";
 import { useAppState } from "../../../app/providers";
+import { PushToggle } from "../../Notifications/components/PushToggle";
 
 const ROWS = [
   { group: "Delivery", items: [
-    ["inApp", "In-app inbox", "Keep alerts in the inbox"],
-    ["pushMock", "Browser push", "Desktop alerts when Carbarn Hub is in the background"],
+    ["inApp", "In-app notifications", "Keep alerts in your notifications list"],
     ["emailMock", "Email copies", "Send a digest to your email"],
   ] },
   { group: "What to send", items: [
@@ -24,25 +24,19 @@ const ROWS = [
 /** Notification preferences, one toggle per row. */
 export function NotificationsSection() {
   const { notificationSettings, setNotificationSettings } = useAppState();
-  const [permission, setPermission] = React.useState(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
-
-  const toggle = async (key) => {
-    if (key === "pushMock" && !notificationSettings.pushMock && typeof Notification !== "undefined" && Notification.permission === "default") {
-      setPermission(await Notification.requestPermission());
-    }
-    setNotificationSettings((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  const toggle = (key) => setNotificationSettings((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
     <>
       {ROWS.map((g) => (
         <div key={g.group} className="card p-3">
           <h2 className="text-[15px] font-bold text-zinc-900 dark:text-white mb-1">{g.group}</h2>
+          {g.group === "Delivery" && <PushToggle />}
           {g.items.map(([key, title, desc]) => (
-            <div key={key} className="flex items-center gap-4 py-3 min-h-[60px] border-t border-zinc-100 dark:border-zinc-800 first:border-t-0">
+            <div key={key} className="flex items-center gap-4 py-3 min-h-[60px] border-t border-zinc-100 dark:border-zinc-800">
               <span className="flex-1 min-w-0">
                 <span className="block text-[13px] font-semibold">{title}</span>
-                <span className="block mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{key === "pushMock" && permission === "denied" ? "Blocked in your browser settings" : desc}</span>
+                <span className="block mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{desc}</span>
               </span>
               <button type="button" role="switch" aria-checked={!!notificationSettings?.[key]} aria-label={title} onClick={() => toggle(key)} className="switch"><span /></button>
             </div>

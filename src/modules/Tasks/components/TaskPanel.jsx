@@ -395,7 +395,7 @@ export function TaskPanel() {
 
     body = (
       <div
-        className="flex-1 overflow-y-auto px-2 md:px-5 pt-4 md:pt-5 flex flex-col gap-4 md:gap-[18px]"
+        className="flex-1 overflow-y-auto [scrollbar-gutter:stable] px-2 md:px-5 pt-4 md:pt-5 flex flex-col gap-4 md:gap-[18px]"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); Array.from(e.dataTransfer.files || []).forEach(uploadToTask); }}
       >

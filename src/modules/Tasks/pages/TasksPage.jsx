@@ -11,8 +11,7 @@ import { ListSkeleton } from "../../../components/common/Skeleton";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { TaskToolbar, applyTaskFilters } from "../components/TaskToolbar";
 import { TaskTable } from "../components/TaskTable";
-import { TaskBoard } from "../components/TaskBoard";
-import { dueState, groupByStatus, isOpenTask, sortTasks } from "../util/tasksUtils";
+import { dueState, isOpenTask, sortTasks } from "../util/tasksUtils";
 
 const SCOPES = [
   { value: "mine", label: "Assigned to me" },
@@ -22,13 +21,12 @@ const SCOPES = [
 
 /**
  * My Tasks: one flat table (open tasks first, then by due date), filters as
- * dropdowns (URL-backed so a filtered view can be shared), list/board toggle.
+ * dropdowns (URL-backed so a filtered view can be shared), table.
  */
 export function TasksPage() {
   const { activeWorkspaceTasks, activeWorkspaceProjects, users, currentUser, taskStatuses } = useAppState();
   const { isLoading, isError, retry } = useMockQuery();
   const [params, setParams] = useSearchParams();
-  const [view, setView] = useState(() => localStorage.getItem("apm_tasks_view") || "list");
 
   const scope = params.get("scope") || "mine";
   const filters = {
@@ -55,13 +53,11 @@ export function TasksPage() {
 
   const filtered = useMemo(() => applyTaskFilters(scoped, filters, taskStatuses), [scoped, filters.status, filters.projectId, filters.assigneeId, filters.priority, filters.due, taskStatuses]); // eslint-disable-line react-hooks/exhaustive-deps
   const rows = useMemo(() => sortTasks(filtered, taskStatuses), [filtered, taskStatuses]);
-  const groups = useMemo(() => (view === "board" ? groupByStatus(filtered, taskStatuses) : []), [view, filtered, taskStatuses]);
 
   const openTasks = scoped.filter((t) => isOpenTask(t, taskStatuses));
   const lateCount = openTasks.filter((t) => dueState(t, taskStatuses) === "late").length;
   const todayCount = openTasks.filter((t) => dueState(t, taskStatuses) === "today").length;
 
-  const changeView = (v) => { setView(v); localStorage.setItem("apm_tasks_view", v); };
 
   return (
     <div className="text-left flex flex-col gap-4" id="tasks-page-root">
@@ -88,13 +84,9 @@ export function TasksPage() {
         projects={activeWorkspaceProjects}
         users={users}
         showAssigneeFilter={scope !== "mine"}
-        view={view}
-        onView={changeView}
       />
 
-      {isLoading ? <ListSkeleton rows={6} /> : isError ? <ErrorState onRetry={retry} title="Couldn't load tasks" /> : view === "board" ? (
-        <TaskBoard groups={groups} />
-      ) : (
+      {isLoading ? <ListSkeleton rows={6} /> : isError ? <ErrorState onRetry={retry} title="Couldn't load tasks" /> : (
         <TaskTable tasks={rows} variant="my" emptyDescription={scope === "mine" ? "Nothing assigned to you matches these filters." : "No tasks match these filters."} />
       )}
     </div>

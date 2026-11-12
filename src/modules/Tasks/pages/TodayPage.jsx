@@ -210,7 +210,7 @@ export function TodayPage() {
         <div className="card p-3">
           <div className="flex items-center mb-2">
             <h3 className="text-[13px] font-bold text-zinc-900 dark:text-white">Needs your reply</h3>
-            <Link to="/inbox" className="ml-auto text-xs font-semibold text-primary hover:underline">Inbox</Link>
+            <Link to="/inbox" className="ml-auto text-xs font-semibold text-primary hover:underline">Notifications</Link>
           </div>
           {needsReply.length === 0 ? <p className="text-xs text-zinc-400">No unread mentions.</p> : (
             <div className="flex flex-col gap-2">

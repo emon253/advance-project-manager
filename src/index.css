@@ -21,7 +21,7 @@
      1px border and NO shadow, so `soft` is none. `elevated` is the one soft,
      low-opacity shadow for floating layers only: menus, popovers, modals, the
      drawer edge, toasts. Dark mode deepens it below (.dark). */
-  --shadow-elevated: 0px 8px 24px -8px rgba(16, 24, 40, 0.12);
+  --shadow-elevated: 0px 2px 10px -2px rgba(16, 24, 40, 0.06);
   --shadow-soft: 0 0 #0000;
 
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -118,7 +118,7 @@
   }
   /* On dark surfaces the border does the separating; the shadow only grounds the layer. */
   .dark {
-    --shadow-elevated: 0px 8px 24px -8px rgba(0, 0, 0, 0.5);
+    --shadow-elevated: 0px 2px 10px -2px rgba(0, 0, 0, 0.35);
   }
 
   html {
@@ -229,10 +229,10 @@
 
   /* Surfaces */
   .card {
-    @apply bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-lg;
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-800 rounded-lg;
   }
   .menu-panel {
-    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-elevated;
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-800 rounded-lg shadow-elevated;
   }
 
   /* Badges / chips */

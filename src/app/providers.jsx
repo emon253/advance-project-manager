@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { disablePush } from "../modules/Notifications/util/push";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { matchPath, useLocation, useNavigate } from "react-router-dom";
 import { ApiError, goToLogin, setSessionExpiredHandler, tokenStore } from "../api/client";
@@ -636,6 +637,8 @@ export function AppStateProvider({ children }) {
 
   const logout = async () => {
     setActiveTimerTaskId(null);
+    // This device stops getting the signed-out person's notifications.
+    try { await disablePush(); } catch { /* best effort */ }
     try { await authApi.logout(); } catch { /* clearing locally regardless */ }
     setIsAuthenticated(false);
     setCurrentUser(null);

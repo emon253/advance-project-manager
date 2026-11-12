@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import { Inbox, SearchX, CheckCheck } from "lucide-react";
+import { Bell, SearchX, CheckCheck } from "lucide-react";
 import { EmptyState } from "../../../components/common/EmptyState";
 
 export function NotificationEmptyState({ searchQuery, setSearchQuery, setSelectedType, activeTab }) {
@@ -40,9 +40,9 @@ export function NotificationEmptyState({ searchQuery, setSearchQuery, setSelecte
   return (
     <div id="notification-empty-state">
       <EmptyState
-        title="Inbox is empty"
+        title="No notifications"
         description="Task assignments, project updates, file drops, and reminders will appear here."
-        icon={<Inbox className="w-7 h-7" />}
+        icon={<Bell className="w-7 h-7" />}
       />
     </div>
   );

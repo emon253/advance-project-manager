@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from "react";
-import { ChevronDown, Check, List, LayoutGrid, X } from "lucide-react";
+import { ChevronDown, Check, X } from "lucide-react";
 
 /**
  * Filter dropdown. `options`: [{ value, label }]. `clearable` (filters) shows
@@ -81,11 +81,11 @@ export const PRIORITY_OPTIONS = ["Urgent", "High", "Medium", "Low"].map((p) => (
 
 /**
  * One-line toolbar: `lead` (a scope segment or the page tabs) · Status (All by
- * default) · Project · Assignee · Priority · Due · (right) list/board toggle.
+ * default) · Project · Assignee · Priority · Due.
  * Wraps at phone width. `filtersHidden` leaves only the lead.
  */
 export function TaskToolbar({
-  lead, filters, onFilter, statuses = [], projects = [], users = [], showProjectFilter = true, showAssigneeFilter = true, filtersHidden = false, view, onView,
+  lead, filters, onFilter, statuses = [], projects = [], users = [], showProjectFilter = true, showAssigneeFilter = true, filtersHidden = false,
 }) {
   if (filtersHidden) return <div className="flex flex-wrap items-center gap-2">{lead}</div>;
   return (
@@ -115,16 +115,6 @@ export function TaskToolbar({
       <ChipSelect label="Priority" value={filters.priority} onChange={(v) => onFilter({ priority: v })} options={PRIORITY_OPTIONS} allLabel="Any" />
       <ChipSelect label="Due" value={filters.due} onChange={(v) => onFilter({ due: v })} options={DUE_OPTIONS} allLabel="Any time" />
 
-      {onView && (
-        <div className="seg ml-auto" role="group" aria-label="View">
-          <button type="button" aria-pressed={view === "list"} onClick={() => onView("list")} aria-label="List view" title="List">
-            <List className="w-4 h-4" />
-          </button>
-          <button type="button" aria-pressed={view === "board"} onClick={() => onView("board")} aria-label="Board view" title="Board">
-            <LayoutGrid className="w-4 h-4" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

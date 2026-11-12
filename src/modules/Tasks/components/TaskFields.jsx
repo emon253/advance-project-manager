@@ -19,6 +19,9 @@ const PLAIN = "bg-white dark:bg-zinc-900 font-semibold text-zinc-900 dark:text-z
 const edge = (open) => (open ? "border-primary ring-[3px] ring-primary/15" : "border-zinc-200 dark:border-zinc-700 enabled:hover:border-zinc-300 dark:enabled:hover:border-zinc-600");
 const OPTION = "w-full flex items-center gap-2.5 min-h-11 md:min-h-9 px-2 rounded-md text-left text-[13.5px] font-semibold text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer";
 
+/** Focus without scrolling the drawer: autoFocus scrolled it while the popover was still sliding in. */
+const focusQuietly = (el) => el?.focus({ preventScroll: true });
+
 /** Label + trigger + popover. Escape closes the popover (and not the drawer). */
 function Field({ label, open, setOpen, align = "left", width = "w-56", trigger, children }) {
   const id = useId();
@@ -115,8 +118,7 @@ export function DatesField({ task, taskStatuses, disabled, onChange }) {
       <div className="p-3 flex flex-col gap-3" role="dialog" aria-label="Dates">
         <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
           Start
-          {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
-          <input type="date" autoFocus value={day(task.startDate)} max={day(task.dueDate) || undefined}
+          <input type="date" ref={focusQuietly} value={day(task.startDate)} max={day(task.dueDate) || undefined}
             onChange={(e) => onChange({ startDate: e.target.value ? new Date(e.target.value).toISOString() : null })} className={dateInput} />
         </label>
         <label className="flex flex-col gap-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
@@ -164,8 +166,7 @@ export function AssigneeField({ task, members, users, disabled, onChange }) {
       <div role="dialog" aria-label="Assign people">
         <div className="flex items-center gap-2 h-10 px-3 border-b border-zinc-100 dark:border-zinc-800">
           <Search className="w-[15px] h-[15px] text-zinc-500 shrink-0" />
-          {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
-          <input type="text" autoFocus value={query} maxLength={60} onChange={(e) => setQuery(e.target.value)}
+          <input type="text" ref={focusQuietly} value={query} maxLength={60} onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (exactMember) toggleMember(exactMember); else addName(); } }}
             aria-label="Search people or type a name" placeholder="Search people or type a name"
             className="flex-1 min-w-0 h-9 bg-transparent outline-none text-base md:text-sm font-semibold text-zinc-900 dark:text-white placeholder:font-medium placeholder:text-zinc-400" />

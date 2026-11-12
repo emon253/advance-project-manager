@@ -15,8 +15,7 @@ import { ProjectMembersList } from "../components/ProjectMembersList";
 import { ProjectDiscussionPanel } from "../components/ProjectDiscussionPanel";
 import { TaskToolbar, applyTaskFilters } from "../../Tasks/components/TaskToolbar";
 import { TaskTable } from "../../Tasks/components/TaskTable";
-import { TaskBoard } from "../../Tasks/components/TaskBoard";
-import { defaultStatusName, formatRelative, groupByStatus, isOpenTask, shortDate, sortTasks } from "../../Tasks/util/tasksUtils";
+import { defaultStatusName, formatRelative, isOpenTask, shortDate, sortTasks } from "../../Tasks/util/tasksUtils";
 
 const STATUS_STYLES = {
   Planning: "bg-primary/10 text-[#0467d1] dark:bg-primary/15 dark:text-sky-300",
@@ -49,7 +48,6 @@ export function ProjectDetailsPage() {
   const [membersOpen, setMembersOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [filters, setFilters] = useState({ status: "", projectId: "", assigneeId: "", priority: "", due: "" });
-  const [view, setView] = useState(() => localStorage.getItem("apm_tasks_view") || "list");
   const [previewFile, setPreviewFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
@@ -61,7 +59,6 @@ export function ProjectDetailsPage() {
   const projectTasks = useMemo(() => tasks.filter((t) => t.projectId === project?.id), [tasks, project]);
   const filtered = useMemo(() => applyTaskFilters(projectTasks, filters, taskStatuses), [projectTasks, filters, taskStatuses]);
   const rows = useMemo(() => sortTasks(filtered, taskStatuses), [filtered, taskStatuses]);
-  const groups = useMemo(() => (view === "board" ? groupByStatus(filtered, taskStatuses) : []), [view, filtered, taskStatuses]);
 
   if (!project) {
     return (
@@ -89,11 +86,9 @@ export function ProjectDetailsPage() {
   const canAddTask = can("editTasks") && isOpenProject;
 
   const addTaskHere = (title) => addTask({ title, projectId: project.id, status: defaultStatusName(taskStatuses), priority: "Medium" });
-  const changeView = (v) => { setView(v); localStorage.setItem("apm_tasks_view", v); };
   // "Add task" puts the cursor in the quick-add row at the bottom of the table.
   const focusAdd = () => {
     if (tab !== "tasks") navigate(`/projects/${project.id}`);
-    if (view !== "list") changeView("list");
     setTimeout(() => document.getElementById("task-table-add")?.focus(), 50);
   };
   const stat = (label, value, tone = "") => (
@@ -240,16 +235,12 @@ export function ProjectDetailsPage() {
           statuses={taskStatuses}
           users={members.length ? members : users}
           showProjectFilter={false}
-          view={view}
-          onView={changeView}
         />
       </div>
 
-      {tab === "tasks" && (view === "board" ? (
-        <TaskBoard groups={groups} showProject={false} onAddTask={canAddTask ? (title, status) => addTask({ title, projectId: project.id, status, priority: "Medium" }) : undefined} />
-      ) : (
+      {tab === "tasks" && (
         <TaskTable tasks={rows} variant="project" onAddTask={canAddTask ? addTaskHere : undefined} addLabel={`Add a task to ${project.name}`} emptyDescription={projectTasks.length ? "No tasks match these filters." : "No tasks in this project yet."} />
-      ))}
+      )}
 
       {tab === "files" && (
         <div className="card">

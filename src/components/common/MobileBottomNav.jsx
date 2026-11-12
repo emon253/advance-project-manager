@@ -6,17 +6,17 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppState } from "../../app/providers";
-import { Sun, CheckSquare, Folder, Inbox, Plus } from "lucide-react";
+import { Sun, CheckSquare, Folder, Bell, Plus } from "lucide-react";
 
 const TABS = [
   { label: "Today", icon: Sun, path: "/today" },
   { label: "Tasks", icon: CheckSquare, path: "/my-tasks", match: ["/my-tasks", "/t/"] },
   { label: "Projects", icon: Folder, path: "/projects", match: ["/projects"] },
-  { label: "Inbox", icon: Inbox, path: "/inbox", badgeKey: "unread" },
+  { label: "Notifications", icon: Bell, path: "/inbox", badgeKey: "unread" },
 ];
 
 /**
- * Phone nav: Today · Tasks · [New task] · Projects · Inbox. Frosted bar; the
+ * Phone nav: Today · Tasks · [New task] · Projects · Notifications. Frosted bar; the
  * centre action is raised and opens quick add (pre-filled with the current
  * project when on a project page). Active tab gets a tinted pill behind its icon.
  */

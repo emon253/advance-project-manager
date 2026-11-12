@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppState } from "../../app/providers";
 import { Wordmark } from "./Logo";
@@ -12,6 +12,7 @@ import { ASSISTANT_TOGGLE_ID, useAssistant } from "../../modules/Assistant/Assis
 import { UserAvatar } from "./UserAvatar";
 import { AccountMenu } from "./AccountMenu";
 import { GlobalSearch } from "./GlobalSearch";
+import { syncPush } from "../../modules/Notifications/util/push";
 
 /**
  * 48px top bar: brand · global search (with suggestions) · New task · assistant · theme · inbox · account menu.
@@ -22,6 +23,8 @@ export function TopBar({ onOpenQuickAdd }) {
   const { currentUser, notifications, can, theme, setTheme } = useAppState();
   const assistant = useAssistant();
   const [menuOpen, setMenuOpen] = useState(false);
+  // A device with push already on re-registers, so it follows whoever is signed in.
+  useEffect(() => { syncPush(); }, [currentUser?.id]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const onInbox = useLocation().pathname.startsWith("/inbox");
@@ -78,8 +81,8 @@ export function TopBar({ onOpenQuickAdd }) {
             to="/inbox"
             aria-current={onInbox ? "page" : undefined}
             className={`btn-icon relative hidden lg:inline-flex ${onInbox ? "bg-primary/10 text-primary" : ""}`}
-            aria-label={unreadCount > 0 ? `Inbox, ${unreadCount} unread` : "Inbox"}
-            title="Inbox"
+            aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+            title="Notifications"
           >
             <Bell className="w-[18px] h-[18px]" />
             {unreadCount > 0 && (

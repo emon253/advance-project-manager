@@ -37,7 +37,7 @@ export default defineConfig(() => {
           shortcuts: [
             {name: 'Dashboard', url: '/dashboard', icons: [{src: '/shortcut-96.png', sizes: '96x96'}]},
             {name: 'My Tasks', url: '/my-tasks', icons: [{src: '/shortcut-96.png', sizes: '96x96'}]},
-            {name: 'Inbox', url: '/inbox', icons: [{src: '/shortcut-96.png', sizes: '96x96'}]},
+            {name: 'Notifications', url: '/inbox', icons: [{src: '/shortcut-96.png', sizes: '96x96'}]},
           ],
         },
         workbox: {
@@ -50,6 +50,8 @@ export default defineConfig(() => {
           navigateFallback: '/index.html',
           navigateFallbackDenylist: [/^\/api\//],
           cleanupOutdatedCaches: true,
+          // Push and notification-click handlers (public/push-sw.js).
+          importScripts: ['/push-sw.js'],
         },
       }),
     ],

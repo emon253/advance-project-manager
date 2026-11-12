@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { PushToggle } from "../components/PushToggle";
 import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CheckCheck, Trash2, Search, X, Settings } from "lucide-react";
@@ -55,7 +56,7 @@ export function InboxPage() {
     <div className="text-left" id="inbox-root">
       <div className="flex items-center gap-3 mb-3">
         <div>
-          <h1 className="page-title">Inbox</h1>
+          <h1 className="page-title">Notifications</h1>
           <p className="page-sub font-tnum">{unread > 0 ? `${unread} unread` : "All caught up"}</p>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
@@ -64,6 +65,8 @@ export function InboxPage() {
           <Link to="/settings/notifications" className="btn-icon" aria-label="Notification settings" title="Notification settings"><Settings className="w-4 h-4" /></Link>
         </div>
       </div>
+
+      <PushToggle promptOnly />
 
       <div className="flex flex-wrap items-center gap-1.5 mb-2">
         <div className="seg" role="group" aria-label="Filter">

@@ -481,6 +481,13 @@ export const pagesApi = {
 // --- assistant: the caller's private conversation in one workspace ------------
 // Wire shape is used as-is: { busy, messages: [{ id, role, body, state, actions, createdAt }] }.
 // A reply is written in the background, so the Assistant module polls `conversation` while `busy`.
+/** Device push notifications (Web Push). `publicKey` is null when the server has push switched off. */
+export const pushApi = {
+  config: () => http.get("/push/public-key"),
+  subscribe: (subscription) => http.post("/push/subscriptions", subscription),
+  unsubscribe: (endpoint) => http.delete(`/push/subscriptions?endpoint=${encodeURIComponent(endpoint)}`),
+};
+
 export const assistantApi = {
   conversation: (workspaceId) => http.get(`/workspaces/${workspaceId}/assistant/messages`),
   /** 202 with the conversation (new USER message + a PENDING reply); 409 ASSISTANT_BUSY while one is pending. */
