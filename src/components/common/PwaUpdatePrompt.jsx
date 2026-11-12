@@ -30,6 +30,8 @@ export function PwaUpdatePrompt() {
   };
 
   if (!needRefresh && !offlineReady) return null;
+  // A shared page (/p/…) is for outside readers: no app notices on top of it.
+  if (window.location.pathname.startsWith("/p/")) return null;
 
   return (
     <div
