@@ -587,6 +587,7 @@ export function AppStateProvider({ children }) {
       const target = list.find((w) => w.id === workspaceId) || list[0];
       if (target) setActiveWorkspaceId(target.id);
       refreshNotifications();
+      return { success: true };
     } catch (err) {
       const code = err instanceof ApiError ? err.code : "invalid";
       if (code === "INVITE_ACCEPTED") return { error: "accepted" };

@@ -10,6 +10,7 @@ import { inviteApi } from "../../../api/endpoints";
 import { tokenStore } from "../../../api/client";
 import { getIconComponent } from "../../../components/common/IconHelper";
 import { Wordmark } from "../../../components/common/Logo";
+import { GoogleSignInButton, googleSignInAvailable } from "../components/GoogleSignInButton";
 import { MailX, CheckCircle2, Users, Loader2 } from "lucide-react";
 
 /**
@@ -20,7 +21,7 @@ import { MailX, CheckCircle2, Users, Loader2 } from "lucide-react";
 export function InvitePage() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const { acceptInvite, isAuthenticated } = useAppState();
+  const { acceptInvite, isAuthenticated, loginWithGoogle } = useAppState();
 
   const [lookup, setLookup] = useState(null);      // PublicInviteResponse
   const [lookupError, setLookupError] = useState(null); // invalid | accepted | revoked | expired
@@ -61,6 +62,27 @@ export function InvitePage() {
       setFormError(res.message || "Enter your account password to join.");
     } else {
       setLookupError(res.error);
+    }
+  };
+
+  // Google: sign in (or create the account) with Google, then join one-click as that account.
+  const handleGoogleCredential = async (credential) => {
+    setAccepting(true);
+    setFormError("");
+    const signedIn = await loginWithGoogle(credential);
+    if (!signedIn.success) {
+      setAccepting(false);
+      setFormError(signedIn.error || "Google sign-in failed. Please try again.");
+      return;
+    }
+    const res = await acceptInvite(token, undefined);
+    setAccepting(false);
+    if (res.success) {
+      navigate("/today");
+    } else if (res.error === "accepted" || res.error === "revoked" || res.error === "expired") {
+      setLookupError(res.error);
+    } else {
+      setFormError(`This invitation is for ${lookup?.email}. Sign in with that Google account, or set a password below.`);
     }
   };
 
@@ -185,6 +207,17 @@ export function InvitePage() {
           >
             {accepting ? "Joining workspace…" : "Accept invitation"}
           </button>
+          {!isAuthenticated && googleSignInAvailable && (
+            <>
+              <div className="flex items-center gap-3 my-4" aria-hidden="true">
+                <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">or</span>
+                <span className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+              </div>
+              <GoogleSignInButton onCredential={handleGoogleCredential} onError={setFormError} />
+              {!needsCredentials && formError && <p className="mt-2 text-xs text-rose-600 dark:text-rose-400 font-medium">{formError}</p>}
+            </>
+          )}
           <Link to="/login" className="block mt-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200">
             Decline
           </Link>
