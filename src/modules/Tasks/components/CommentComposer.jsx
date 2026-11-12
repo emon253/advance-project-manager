@@ -8,17 +8,21 @@ import { Paperclip, X, Loader2, ArrowUp, AtSign } from "lucide-react";
 import { UserAvatar } from "../../../components/common/UserAvatar";
 
 /**
- * Comment composer: one rounded box with the text area on top and a slim
- * action row underneath (attach · mention · hint · send). @mention
+ * Comment composer, chat style: a rounded input with mention and attach
+ * inside and a round send button beside it. The inline edit box (`compact`)
+ * is a plain box with Save / Cancel underneath. @mention
  * autocomplete, paste/drop files. Mentions are tracked as "@Full Name" tokens
  * → user id; on submit only tokens still present in the text are sent.
  *
- * Props: members, currentUser, onSubmit({ text, mentionUserIds, attachmentIds })
+ * Props: members, onSubmit({ text, mentionUserIds, attachmentIds })
  * → Promise<bool>, onUpload(file) → Promise<attachment|null>, initial for edit
- * mode, compact (edit mode: Save/Cancel), onCancel.
+ * mode, compact (edit mode: Save/Cancel), onCancel, maxLength. With no
+ * `members` there is no mention button; with no `onUpload`, no attach button.
+ * `disabled` holds sending (the text stays typed); `label` names the input
+ * and the send button when this is not a comment box (the assistant chat).
  */
 export const CommentComposer = forwardRef(function CommentComposer(
-  { members = [], currentUser, onSubmit, onUpload, initial, compact = false, onCancel, placeholder = "Write a comment…" },
+  { members = [], onSubmit, onUpload, initial, compact = false, onCancel, placeholder = "Write a comment…", maxLength, disabled = false, label },
   ref
 ) {
   const [text, setText] = useState(initial?.text || "");
@@ -115,7 +119,7 @@ export const CommentComposer = forwardRef(function CommentComposer(
   };
 
   const submit = async () => {
-    if (!text.trim() || sending || uploading > 0) return;
+    if (!text.trim() || sending || disabled || uploading > 0) return;
     setSending(true);
     const mentionUserIds = mentions.filter((m) => text.includes(`@${m.name}`)).map((m) => m.id);
     const ok = await onSubmit({ text: text.trim(), mentionUserIds, attachmentIds: attachments.map((a) => a.id) });
@@ -134,35 +138,30 @@ export const CommentComposer = forwardRef(function CommentComposer(
     if (e.key === "Escape" && compact) onCancel?.();
   };
 
-  const canSend = text.trim().length > 0 && !sending && uploading === 0;
+  const canSend = text.trim().length > 0 && !sending && !disabled && uploading === 0;
 
-  // Phone (non-compact): chat-style row — rounded input with attach/@ inside,
-  // round send button outside. Desktop and the inline edit box keep the boxed
-  // composer with its toolbar.
-  const iconBtn = "btn-icon h-8 w-8 md:h-7 md:w-7 rounded-full md:rounded-md";
-  const attachButton = (
+  const iconBtn = compact ? "btn-icon h-7 w-7" : "btn-icon h-8 w-8 rounded-full";
+  const attachButton = onUpload && (
     <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => fileRef.current?.click()} className={iconBtn} aria-label="Attach a file" title="Attach a file (or paste an image)">
       <Paperclip className="w-4 h-4" />
     </button>
   );
-  const mentionButton = (
+  const mentionButton = members.length > 0 && (
     <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={startMention} className={iconBtn} aria-label="Mention someone" title="Mention someone">
       <AtSign className="w-4 h-4" />
     </button>
   );
   const boxTone = focused || compact
     ? "border-primary ring-2 ring-primary/15 bg-white dark:bg-zinc-900"
-    : "border-transparent bg-zinc-100 dark:bg-zinc-900 md:bg-white md:border-zinc-200 md:dark:border-zinc-700 md:hover:border-zinc-300 md:dark:hover:border-zinc-600";
+    : "border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 dark:hover:border-zinc-600";
 
   return (
     <div
-      className={`relative ${compact ? "" : "flex items-end md:items-start gap-2 md:gap-2.5"}`}
+      className={`relative ${compact ? "" : "flex items-end gap-2 md:gap-2.5"}`}
       onDrop={(e) => { e.preventDefault(); addFiles(e.dataTransfer.files); }}
       onDragOver={(e) => e.preventDefault()}
     >
       <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
-      {!compact && <span className="hidden md:block mt-1.5"><UserAvatar user={currentUser} size="xs" /></span>}
-
       <div className="flex-1 min-w-0 relative">
         {mentionQuery && suggestions.length > 0 && (
           <ul role="listbox" aria-label="Mention a member" className="menu-panel absolute left-0 bottom-full mb-1.5 z-40 w-64 max-w-full p-1">
@@ -184,8 +183,8 @@ export const CommentComposer = forwardRef(function CommentComposer(
           </ul>
         )}
 
-        <div className={`border transition-[border-color,box-shadow,background-color] ${compact ? "rounded-lg" : "rounded-[22px] md:rounded-lg"} ${boxTone}`}>
-          <div className={compact ? "" : "flex items-end md:block"}>
+        <div className={`border transition-[border-color,box-shadow,background-color] ${compact ? "rounded-lg" : "rounded-[22px]"} ${boxTone}`}>
+          <div className={compact ? "" : "flex items-end"}>
             <textarea
               ref={textareaRef}
               value={text}
@@ -196,17 +195,18 @@ export const CommentComposer = forwardRef(function CommentComposer(
               onFocus={() => setFocused(true)}
               onBlur={() => { setFocused(false); setTimeout(() => setMentionQuery(null), 150); }}
               placeholder={placeholder}
-              aria-label={compact ? "Edit comment" : "Write a comment"}
-              className={`w-full max-h-40 bg-transparent font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none resize-none leading-relaxed ${
-                compact ? "min-h-[36px] px-3 pt-2 pb-1 text-[13px]" : "flex-1 min-h-[42px] md:min-h-[36px] pl-4 pr-1 md:px-3 py-[9px] md:pt-2 md:pb-1 text-[15px] md:text-[13px]"
+              maxLength={maxLength}
+              aria-label={label || (compact ? "Edit comment" : "Write a comment")}
+              className={`w-full max-h-40 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-400 outline-none resize-none leading-relaxed ${
+                compact ? "min-h-[36px] px-3 pt-2 pb-1 text-base md:text-[13px]" : `flex-1 min-h-[42px] pl-3.5 ${mentionButton || attachButton ? "pr-1" : "pr-3.5"} py-[9px] text-base md:text-sm md:py-[10px]`
               }`}
             />
-            {!compact && <div className="flex md:hidden items-center shrink-0 pr-1 pb-[5px]">{mentionButton}{attachButton}</div>}
+            {!compact && (mentionButton || attachButton) && <div className="flex items-center gap-1 shrink-0 pr-1.5 pb-[5px]">{mentionButton}{attachButton}</div>}
           </div>
           {(attachments.length > 0 || uploading > 0) && (
-            <div className="flex flex-wrap gap-1.5 px-3 pb-2 md:px-2.5 md:pb-1.5">
+            <div className="flex flex-wrap gap-1.5 px-3 pb-2">
               {attachments.map((a) => (
-                <span key={a.id} className="inline-flex items-center gap-1.5 h-6 pl-2 pr-1 rounded-md bg-zinc-200/70 md:bg-zinc-100 dark:bg-zinc-800 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 max-w-[220px]">
+                <span key={a.id} className="inline-flex items-center gap-1.5 h-6 pl-2 pr-1 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 max-w-[220px]">
                   <Paperclip className="w-3 h-3 shrink-0" />
                   <span className="truncate">{a.name}</span>
                   <button type="button" onClick={() => setAttachments((prev) => prev.filter((x) => x.id !== a.id))} className="btn-icon h-4 w-4 rounded" aria-label={`Remove ${a.name}`}><X className="w-3 h-3" /></button>
@@ -219,22 +219,16 @@ export const CommentComposer = forwardRef(function CommentComposer(
               )}
             </div>
           )}
-          <div className={`${compact ? "flex" : "hidden md:flex"} items-center gap-0.5 px-1.5 pb-1.5`}>
-            {attachButton}
-            {mentionButton}
-            <span className="flex-1" />
-            <span className="hidden sm:inline text-[11px] text-zinc-400 mr-1.5">{compact ? "Esc to cancel" : "Enter to send · Shift+Enter for a new line"}</span>
-            {compact ? (
-              <>
-                <button type="button" onClick={onCancel} className="btn btn-sm btn-ghost">Cancel</button>
-                <button type="button" onClick={submit} disabled={!canSend} className="btn btn-sm btn-primary">Save</button>
-              </>
-            ) : (
-              <button type="button" onClick={submit} disabled={!canSend} className="inline-flex items-center justify-center h-7 w-7 rounded-md bg-primary text-white hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer" aria-label="Send comment">
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" strokeWidth={2.5} />}
-              </button>
-            )}
-          </div>
+          {compact && (
+            <div className="flex items-center gap-0.5 px-1.5 pb-1.5">
+              {attachButton}
+              {mentionButton}
+              <span className="flex-1" />
+              <span className="hidden sm:inline text-[11px] text-zinc-400 mr-1.5">Esc to cancel</span>
+              <button type="button" onClick={onCancel} className="btn btn-sm btn-ghost">Cancel</button>
+              <button type="button" onClick={submit} disabled={!canSend} className="btn btn-sm btn-primary">Save</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -243,10 +237,10 @@ export const CommentComposer = forwardRef(function CommentComposer(
           type="button"
           onClick={submit}
           disabled={!canSend}
-          aria-label="Send comment"
-          className="md:hidden shrink-0 inline-flex items-center justify-center h-[42px] w-[42px] rounded-full bg-primary text-white shadow-sm shadow-primary/30 active:scale-95 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500 transition-all cursor-pointer"
+          aria-label={label ? "Send message" : "Send comment"}
+          className="shrink-0 inline-flex items-center justify-center h-11 w-11 rounded-full bg-primary text-white hover:bg-primary-hover active:scale-95 disabled:bg-zinc-200 disabled:text-zinc-400 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500 transition-all cursor-pointer disabled:cursor-not-allowed"
         >
-          {sending ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <ArrowUp className="w-5 h-5" strokeWidth={2.5} />}
+          {sending ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <ArrowUp className="w-[18px] h-[18px]" strokeWidth={2.4} />}
         </button>
       )}
     </div>

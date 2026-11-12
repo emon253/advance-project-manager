@@ -17,12 +17,12 @@
   --color-primary-active: #0052a8;
   --color-accent: #ea2261;
 
-  /* Elevation — kept deliberately restrained for a flat, premium feel.
-     `soft` is a near-flat hairline for resting surfaces (cards); real
-     elevation (`elevated`) is reserved for floating overlays: modals,
-     drawers, menus, toasts. */
-  --shadow-elevated: 0px 12px 28px -12px rgba(16, 24, 40, 0.16), 0px 4px 10px -6px rgba(16, 24, 40, 0.08);
-  --shadow-soft: 0px 1px 2px rgba(16, 24, 40, 0.04);
+  /* Elevation — calm and flat. Resting surfaces (cards, bars, buttons) carry a
+     1px border and NO shadow, so `soft` is none. `elevated` is the one soft,
+     low-opacity shadow for floating layers only: menus, popovers, modals, the
+     drawer edge, toasts. Dark mode deepens it below (.dark). */
+  --shadow-elevated: 0px 8px 24px -8px rgba(16, 24, 40, 0.12);
+  --shadow-soft: 0 0 #0000;
 
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -42,6 +42,12 @@
 @keyframes splash {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(300%); }
+}
+
+/* Assistant "Thinking…" dots (stilled by the reduced-motion rule below) */
+@keyframes thinking {
+  0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
 }
 
 @utility pb-nav {
@@ -109,6 +115,10 @@
   }
   html.dark {
     color-scheme: dark;
+  }
+  /* On dark surfaces the border does the separating; the shadow only grounds the layer. */
+  .dark {
+    --shadow-elevated: 0px 8px 24px -8px rgba(0, 0, 0, 0.5);
   }
 
   html {
@@ -182,7 +192,7 @@
     @apply h-7 px-2.5 text-xs;
   }
   .btn-primary {
-    @apply bg-primary text-white hover:bg-primary-hover active:bg-primary-active shadow-soft;
+    @apply bg-primary text-white hover:bg-primary-hover active:bg-primary-active;
   }
   .btn-secondary {
     @apply bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300 dark:bg-zinc-900 dark:text-zinc-200 dark:border-zinc-700 dark:hover:bg-zinc-800;
@@ -219,7 +229,7 @@
 
   /* Surfaces */
   .card {
-    @apply bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-lg shadow-soft;
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-lg;
   }
   .menu-panel {
     @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-elevated;
@@ -229,22 +239,22 @@
   .badge {
     @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-semibold whitespace-nowrap;
   }
-  /* Filter chip (toolbar): 28px, toggles to solid when active */
+  /* Filter dropdown (toolbar): 34px, tints to the brand when a value is set */
   .chip {
-    @apply inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-semibold text-zinc-600 dark:text-zinc-300 whitespace-nowrap cursor-pointer transition-colors hover:border-zinc-300 dark:hover:border-zinc-600 select-none;
+    @apply inline-flex items-center gap-1.5 h-[34px] px-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[13px] font-semibold text-zinc-700 dark:text-zinc-300 whitespace-nowrap cursor-pointer transition-colors hover:border-zinc-300 dark:hover:border-zinc-600 select-none;
   }
   .chip-on {
     @apply bg-primary/8 text-primary border-primary/30 dark:bg-primary/15 dark:text-sky-300 dark:border-primary/40 hover:border-primary/50;
   }
-  /* Segmented control: 28px */
+  /* Segmented control: grey track, 28px segments, the selected one is a white tile */
   .seg {
-    @apply inline-flex h-7 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden;
+    @apply inline-flex p-[3px] rounded-[9px] bg-[#ececee] dark:bg-zinc-800;
   }
-  .seg > button {
-    @apply inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400 cursor-pointer transition-colors hover:text-zinc-800 dark:hover:text-zinc-100;
+  .seg > button, .seg > a {
+    @apply inline-flex items-center justify-center gap-1.5 h-7 px-3 rounded-[7px] text-[13px] font-medium text-zinc-600 dark:text-zinc-400 whitespace-nowrap cursor-pointer transition-colors hover:text-zinc-900 dark:hover:text-zinc-100;
   }
-  .seg > button[aria-pressed="true"], .seg > button[aria-checked="true"] {
-    @apply bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white;
+  .seg > [aria-pressed="true"], .seg > [aria-checked="true"], .seg > [aria-selected="true"] {
+    @apply bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white font-bold;
   }
   /* Section label above a group of rows */
   .section-label {
@@ -256,7 +266,7 @@
   }
   /* Page title block */
   .page-title {
-    @apply text-[22px] font-bold tracking-tight text-zinc-900 dark:text-white leading-tight;
+    @apply text-[22px] font-extrabold tracking-[-0.01em] text-zinc-900 dark:text-white leading-tight;
   }
   .page-sub {
     @apply text-[13px] text-zinc-500 dark:text-zinc-400 font-medium mt-0.5;
@@ -273,7 +283,7 @@
     @apply bg-primary;
   }
   .switch > span {
-    @apply absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-soft transition-transform;
+    @apply absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white transition-transform;
   }
   .switch[aria-checked="true"] > span {
     transform: translateX(14px);

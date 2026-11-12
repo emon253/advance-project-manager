@@ -21,7 +21,11 @@ import { TeamPage } from "../modules/Team/pages/TeamPage";
 import { SettingsPage } from "../modules/Settings/pages/SettingsPage";
 import { OwnerConsolePage } from "../modules/Owner/pages/OwnerConsolePage";
 import { useAppState } from "./providers";
-import { Bell, X } from "lucide-react";
+import { hasFeature } from "./permissions";
+import { Bell, FileText, X } from "lucide-react";
+import { EmptyState } from "../components/common/EmptyState";
+import { useAssistant } from "../modules/Assistant/AssistantContext";
+import { AssistantPanel } from "../modules/Assistant/AssistantPanel";
 
 import { DesktopSidebar } from "../components/common/DesktopSidebar";
 import { MobileBottomNav } from "../components/common/MobileBottomNav";
@@ -60,14 +64,25 @@ function FullScreen({ children }) {
   );
 }
 
-/** App shell: 48px top bar, 220px sidebar (desktop), bottom nav + FAB (phone). */
+/**
+ * App shell: 48px top bar, 200px sidebar (desktop), bottom nav + FAB (phone).
+ * Desktop side panels shrink the page instead of covering it: the assistant
+ * (420px) sits at the far right and the task drawer (600px) beside it. With
+ * both open the page shrinks for both only on very wide windows; below that
+ * the task drawer floats over the page and the assistant stays docked.
+ */
 function AppLayout({ children }) {
   const {
     isAuthenticated, bootLoading, theme, quickAddTaskOpen, setQuickAddTaskOpen, activeToast, setActiveToast, activeTaskId,
   } = useAppState();
+  const assistant = useAssistant();
   const isMobile = useIsMobile();
   const location = useLocation();
   const projectMatch = location.pathname.match(/^\/projects\/(\d+)/);
+  const assistantOpen = assistant.available && assistant.open;
+  const sidePadding = assistantOpen && activeTaskId ? "lg:pr-[420px] min-[102.5rem]:pr-[1020px]"
+    : assistantOpen ? "lg:pr-[420px]"
+    : activeTaskId ? "lg:pr-[600px]" : "";
 
   if (bootLoading) return <BootSplash />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -78,24 +93,26 @@ function AppLayout({ children }) {
 
       <div className="flex pt-[calc(3rem+env(safe-area-inset-top))] min-h-screen">
         {!isMobile && <DesktopSidebar />}
-        <main className={`flex-1 min-w-0 flex flex-col ${isMobile ? "pb-nav" : ""} ${!isMobile && activeTaskId ? "lg:pr-[520px]" : ""} transition-[padding] duration-200`}>
+        <main className={`flex-1 min-w-0 flex flex-col ${isMobile ? "pb-nav" : ""} ${isMobile ? "" : sidePadding} transition-[padding] duration-200`}>
           <VerifyEmailBanner />
-          <div className={`flex-1 min-w-0 w-full ${isMobile ? "px-1 pt-3" : "px-7 py-5 2xl:px-10 2xl:py-6"}`}>
+          <div className={`flex-1 min-w-0 w-full ${isMobile ? "px-1 pt-3" : "px-7 py-6 2xl:px-10"}`}>
             <div className="w-full h-full">{children}</div>
           </div>
         </main>
       </div>
 
+      {/* Before the task drawer: on a phone a task opened from the chat lies on top of it. */}
+      {assistantOpen && <AssistantPanel />}
       <TaskPanel />
       <QuickAddTask isOpen={quickAddTaskOpen} onClose={() => setQuickAddTaskOpen(false)} defaultProjectId={projectMatch ? Number(projectMatch[1]) : undefined} />
-      {isMobile && !activeTaskId && <MobileBottomNav onOpenQuickAdd={() => setQuickAddTaskOpen(true)} />}
+      {isMobile && !activeTaskId && !assistantOpen && <MobileBottomNav onOpenQuickAdd={() => setQuickAddTaskOpen(true)} />}
 
       {activeToast && (
         <div
           onClick={() => setActiveToast(null)}
           role="status"
           aria-live="polite"
-          className={`fixed z-50 p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-elevated flex gap-2.5 cursor-pointer animate-in slide-in-from-bottom-4 fade-in duration-250 text-left left-4 right-4 sm:left-auto sm:right-5 sm:w-[340px] ${
+          className={`fixed z-50 p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-elevated flex gap-2.5 cursor-pointer animate-in slide-in-from-bottom-4 fade-in duration-250 text-left left-4 right-4 sm:left-auto sm:right-5 sm:w-[340px] ${assistantOpen ? "lg:right-[440px]" : ""} ${
             isMobile ? "bottom-[calc(5rem+env(safe-area-inset-bottom))]" : "bottom-5"
           }`}
         >
@@ -116,6 +133,26 @@ function AppLayout({ children }) {
 }
 
 const page = (el) => <AppLayout>{el}</AppLayout>;
+
+/** Pages can be switched off per account (Owner Console). Share links (/p/:token) are not behind this. */
+function PagesGate({ children }) {
+  const { currentUser } = useAppState();
+  if (!currentUser || hasFeature(currentUser, "PAGES")) return children;
+  return (
+    <EmptyState
+      icon={<FileText className="w-7 h-7" />}
+      title="Pages are not available on your account"
+      description="Your administrator has switched this feature off for you. Pages shared with you by link still open."
+    />
+  );
+}
+
+/** The full-window Pages screens; with Pages switched off they fall back to the normal shell. */
+function PagesFullScreen({ children }) {
+  const { currentUser } = useAppState();
+  if (currentUser && !hasFeature(currentUser, "PAGES")) return page(<PagesGate />);
+  return <FullScreen>{children}</FullScreen>;
+}
 
 export function AppRoutes() {
   const { isAuthenticated } = useAppState();
@@ -147,10 +184,10 @@ export function AppRoutes() {
       <Route path="/projects/:projectId" element={page(<ProjectDetailsPage />)} />
       <Route path="/projects/:projectId/:tab" element={page(<ProjectDetailsPage />)} />
 
-      <Route path="/pages" element={page(<PagesListPage />)} />
-      <Route path="/pages/new" element={<FullScreen><NewPagePage /></FullScreen>} />
-      <Route path="/pages/:pageId" element={<FullScreen><PageEditorPage /></FullScreen>} />
-      <Route path="/pages/:pageId/data" element={<FullScreen><NewPagePage /></FullScreen>} />
+      <Route path="/pages" element={page(<PagesGate><PagesListPage /></PagesGate>)} />
+      <Route path="/pages/new" element={<PagesFullScreen><NewPagePage /></PagesFullScreen>} />
+      <Route path="/pages/:pageId" element={<PagesFullScreen><PageEditorPage /></PagesFullScreen>} />
+      <Route path="/pages/:pageId/data" element={<PagesFullScreen><NewPagePage /></PagesFullScreen>} />
       {/* The share link: opens signed out for "anyone with the link" pages */}
       <Route path="/p/:token" element={<PublicPageView />} />
 

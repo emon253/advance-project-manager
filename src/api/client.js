@@ -50,10 +50,17 @@ export const tokenStore = {
   },
 };
 
+/**
+ * Sends a dead session to the login screen — except on a share link
+ * (/p/:token), which is open to visitors: there the page just carries on
+ * signed out.
+ */
+export function goToLogin() {
+  if (!window.location.pathname.startsWith("/p/")) window.location.assign("/login?expired=1");
+}
+
 /** Called by the client when the session is irrecoverably gone (refresh failed). */
-let onSessionExpired = () => {
-  window.location.assign("/login?expired=1");
-};
+let onSessionExpired = goToLogin;
 export function setSessionExpiredHandler(handler) {
   onSessionExpired = handler;
 }
@@ -133,10 +140,13 @@ export async function request(path, { method = "GET", body, auth = true, blob = 
   const response = await fetch(`${BASE_URL}${path}`, { method, headers, body: payload });
 
   if (response.status === 401 && auth && !_retried) {
-    // One refresh + one retry; anything beyond that is a dead session.
+    // One refresh + one retry. The session is dead only when the refresh
+    // endpoint itself says so (401/403); a network error or a 5xx there
+    // leaves the tokens alone and just fails this request.
     try {
       await refreshTokens();
-    } catch {
+    } catch (err) {
+      if (!(err instanceof ApiError) || (err.status !== 401 && err.status !== 403)) throw err;
       tokenStore.clear();
       onSessionExpired();
       throw new ApiError(401, "TOKEN_EXPIRED", "Session expired");
@@ -151,6 +161,23 @@ export async function request(path, { method = "GET", body, auth = true, blob = 
   // /auth/verify-email) — an empty body is success, not a parse failure.
   const text = await response.text();
   return text ? JSON.parse(text) : null;
+}
+
+/**
+ * For endpoints a visitor with no account may call (shared pages). The
+ * session is sent when there is one, so a member is recognised; if that
+ * session turns out to be dead or not allowed (401 even after the refresh
+ * attempt), the request is made once more as a visitor before giving up.
+ * A 401 from here therefore always means "this needs signing in".
+ */
+export async function publicRequest(path, options = {}) {
+  if (!tokenStore.access && !tokenStore.refresh) return request(path, { ...options, auth: false });
+  try {
+    return await request(path, options);
+  } catch (err) {
+    if (err.status !== 401) throw err;
+    return request(path, { ...options, auth: false });
+  }
 }
 
 export const http = {

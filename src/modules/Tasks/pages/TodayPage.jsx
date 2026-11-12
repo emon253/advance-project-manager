@@ -36,7 +36,7 @@ function Group({ title, tone, count, action, children }) {
  */
 export function TodayPage() {
   const {
-    activeWorkspaceTasks, activeWorkspaceProjects, users, currentUser, taskStatuses, addTask, updateTask, can, notifications, setActiveTaskId,
+    activeWorkspaceTasks, activeWorkspaceProjects, currentUser, taskStatuses, addTask, updateTask, can, notifications, setActiveTaskId,
   } = useAppState();
   const { isLoading, isError, retry } = useMockQuery();
   const [draft, setDraft] = useState("");
@@ -102,7 +102,7 @@ export function TodayPage() {
 
   const dateLabel = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
   const row = (t) => (
-    <TaskRow key={t.id} task={t} project={activeWorkspaceProjects.find((p) => p.id === t.projectId)} assignee={users.find((u) => u.id === t.assigneeId)} />
+    <TaskRow key={t.id} task={t} project={activeWorkspaceProjects.find((p) => p.id === t.projectId)} />
   );
 
   return (

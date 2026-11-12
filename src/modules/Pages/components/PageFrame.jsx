@@ -16,8 +16,11 @@ const POLICY = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-s
 
 /**
  * Hub's own few lines inside the frame: say when the design is ready for
- * data, print on request, and (in the editor) let a click on a part of the
- * page point Cortex at it. Parts are elements carrying `data-hub-part`.
+ * data, print on request, (in the editor) let a click on a part of the
+ * page point Cortex at it, and (outside the editor) tell Hub when a task's
+ * comments button is pressed. Parts are elements carrying `data-hub-part`;
+ * comment buttons carry `data-hub-comments="{taskId}"` and `data-hub-title`.
+ * The thread itself opens in Hub, outside the frame.
  */
 const BOOT = `<script>(function(){
 var part=null,edit=false;
@@ -40,6 +43,13 @@ document.addEventListener('click',function(e){
   var name=el.getAttribute('data-hub-part');
   part=part===name?null:name;mark();post({type:'hub-select',part:part});
 },true);
+document.addEventListener('click',function(e){
+  if(edit)return;
+  var el=e.target.closest&&e.target.closest('[data-hub-comments]');
+  if(!el)return;
+  e.preventDefault();
+  post({type:'hub-comments',taskId:Number(el.getAttribute('data-hub-comments')),title:String(el.getAttribute('data-hub-title')||'')});
+});
 document.addEventListener('DOMContentLoaded',function(){
   new MutationObserver(mark).observe(document.body,{childList:true,subtree:true});
   post({type:'hub-ready'});
@@ -59,9 +69,11 @@ function withHubHead(html) {
 /**
  * Shows a page design with its data. Data is handed in by message (the
  * design cannot fetch), again each time `data` changes, which is how a live
- * page updates in place. Ref: `print()` and `clearSelection()`.
+ * page updates in place. `onOpenComments({ taskId, title })` fires when a
+ * task's comments button is pressed in the design; leave it out and those
+ * buttons do nothing. Ref: `print()` and `clearSelection()`.
  */
-export const PageFrame = forwardRef(function PageFrame({ html, data, editable = false, onSelectPart, title, className = "" }, ref) {
+export const PageFrame = forwardRef(function PageFrame({ html, data, editable = false, onSelectPart, onOpenComments, title, className = "" }, ref) {
   const frame = useRef(null);
   const ready = useRef(false);
   const loads = useRef(0);
@@ -90,10 +102,17 @@ export const PageFrame = forwardRef(function PageFrame({ html, data, editable = 
         const part = e.data.part;
         onSelectPart?.(typeof part === "string" && part ? part.slice(0, 120) : null);
       }
+      if (e.data?.type === "hub-comments") {
+        // Both values come from the design: a real task id and a short plain title, or nothing.
+        const { taskId, title: taskTitle } = e.data;
+        if (Number.isSafeInteger(taskId) && taskId > 0) {
+          onOpenComments?.({ taskId, title: typeof taskTitle === "string" ? taskTitle.slice(0, 300) : "" });
+        }
+      }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [send, onSelectPart]);
+  }, [send, onSelectPart, onOpenComments]);
 
   useEffect(() => { if (ready.current) send(); }, [send]);
 

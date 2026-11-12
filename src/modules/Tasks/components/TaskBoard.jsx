@@ -7,8 +7,8 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Flag, MessageSquare, Paperclip, Plus, ChevronRight, GripVertical } from "lucide-react";
 import { useAppState } from "../../../app/providers";
-import { UserAvatar } from "../../../components/common/UserAvatar";
-import { dueState, formatDue, statusDot } from "../util/tasksUtils";
+import { Assignees } from "./Assignees";
+import { dueState, formatDue, statusDot, taskAssignees } from "../util/tasksUtils";
 
 /**
  * Kanban: one column per status group. Cards animate between columns (motion
@@ -94,7 +94,7 @@ export function TaskBoard({ groups, showProject = true, onAddTask }) {
               <AnimatePresence initial={false}>
                 {group.tasks.map((task) => {
                   const project = activeWorkspaceProjects.find((p) => p.id === task.projectId);
-                  const assignee = users.find((u) => u.id === task.assigneeId);
+                  const people = taskAssignees(task, users);
                   const due = dueState(task, taskStatuses);
                   const hot = task.priority === "Urgent" || task.priority === "High";
                   const comments = task.comments?.length || task.commentCount || 0;
@@ -115,7 +115,7 @@ export function TaskBoard({ groups, showProject = true, onAddTask }) {
                       onDragEnd={() => { setDragging(null); setOver(null); }}
                       onClick={() => setActiveTaskId(task.id)}
                       onKeyDown={(e) => { if (e.key === "Enter") setActiveTaskId(task.id); }}
-                      className={`group/card relative bg-white dark:bg-zinc-800 rounded-md border border-zinc-200/80 dark:border-zinc-700 shadow-soft p-2.5 pl-3 cursor-grab active:cursor-grabbing hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-elevated transition-[box-shadow,border-color] ${group.kind === "done" ? "opacity-75" : ""}`}
+                      className={`group/card relative bg-white dark:bg-zinc-800 rounded-md border border-zinc-200 dark:border-zinc-700 p-2.5 pl-3 cursor-grab active:cursor-grabbing hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors ${group.kind === "done" ? "opacity-75" : ""}`}
                     >
                       {editable && <GripVertical className="absolute left-0.5 top-2.5 w-3.5 h-3.5 text-zinc-300 opacity-0 group-hover/card:opacity-100 transition-opacity" />}
                       <p className={`text-[13px] font-medium leading-snug line-clamp-3 ${group.kind === "done" ? "line-through text-zinc-500" : "text-zinc-900 dark:text-white"}`}>{task.title}</p>
@@ -130,7 +130,7 @@ export function TaskBoard({ groups, showProject = true, onAddTask }) {
                         {files > 0 && <span className="inline-flex items-center gap-0.5 font-tnum"><Paperclip className="w-3 h-3" />{files}</span>}
                         <span className="ml-auto flex items-center gap-1.5">
                           {showProject && project && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: project.color }} title={project.name} />}
-                          {assignee ? <span className="inline-flex items-center gap-1.5" title={assignee.name}><span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 truncate max-w-[64px]">{assignee.name.split(" ")[0]}</span><UserAvatar user={assignee} size="xs" /></span> : <span className="h-6 w-6 rounded-full border border-dashed border-zinc-300 dark:border-zinc-600" />}
+                          <span className="inline-flex max-w-[120px] text-[11px] font-semibold text-zinc-500 dark:text-zinc-400"><Assignees people={people} showLabel={people.length === 1} ring="ring-white dark:ring-zinc-800" empty={<span className="h-6 w-6 rounded-full border border-dashed border-zinc-300 dark:border-zinc-600" />} /></span>
                         </span>
                       </div>
                     </motion.div>
@@ -139,7 +139,7 @@ export function TaskBoard({ groups, showProject = true, onAddTask }) {
               </AnimatePresence>
 
               {adding === group.key ? (
-                <form onSubmit={(e) => submitAdd(e, group.key)} className="bg-white dark:bg-zinc-800 rounded-md border border-primary p-2 shadow-soft">
+                <form onSubmit={(e) => submitAdd(e, group.key)} className="bg-white dark:bg-zinc-800 rounded-md border border-primary p-2">
                   <textarea
                     autoFocus
                     rows={2}

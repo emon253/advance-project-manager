@@ -7,13 +7,32 @@ import React from "react";
 import { CheckCircle2, Clock, Play, AlertOctagon, XCircle, FileEdit, Tag } from "lucide-react";
 import { useAppState } from "../../app/providers";
 
-export function StatusBadge({ status, size = "md" }) {
+const TAG = "inline-flex items-center gap-1.5 h-6 px-[9px] rounded-full text-xs font-bold whitespace-nowrap max-w-full";
+
+/** Tint classes (background + text, light and dark) for a workspace status. */
+export function statusTint(status, taskStatuses = []) {
+  const s = taskStatuses.find((x) => x.name === status);
+  if (s) return [s.bg || "bg-zinc-100", s.text || "text-zinc-700", s.darkBg || "dark:bg-zinc-800", s.darkText || "dark:text-zinc-300"].join(" ");
+  return "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300";
+}
+
+/** `variant="tag"`: borderless pill tinted with the status colour, with a dot (tables, drawer). */
+export function StatusBadge({ status, size = "md", variant }) {
   let taskStatuses = [];
   try {
     const state = useAppState();
     taskStatuses = state.taskStatuses;
   } catch (e) {
     // safe fallback outside provider
+  }
+
+  if (variant === "tag") {
+    return (
+      <span className={`${TAG} ${statusTint(status, taskStatuses)}`}>
+        <span className="w-2 h-2 rounded-full bg-current shrink-0" />
+        <span className="truncate">{status}</span>
+      </span>
+    );
   }
 
   const iconClass = "w-3 h-3 shrink-0";

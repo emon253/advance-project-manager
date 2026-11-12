@@ -37,7 +37,7 @@ export function RulesEngine({ automationRules, handleToggleRule }) {
                 className="flex items-center justify-center h-10 w-12 -my-2 -mx-1.5 cursor-pointer shrink-0"
               >
                 <span className={`relative w-9 h-5 rounded-full transition-colors ${rule.active ? "bg-primary" : "bg-zinc-300 dark:bg-zinc-600"}`}>
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-soft transition-transform ${rule.active ? "translate-x-4" : ""}`} />
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${rule.active ? "translate-x-4" : ""}`} />
                 </span>
               </button>
             </div>

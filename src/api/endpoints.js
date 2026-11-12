@@ -9,7 +9,7 @@
  * the provider (and pages) never see backend casing or envelopes.
  */
 
-import { http, tokenStore } from "./client";
+import { http, publicRequest, tokenStore } from "./client";
 import {
   activityToUi,
   attachmentToUi,
@@ -284,7 +284,6 @@ export const taskApi = {
       // Page fields: an empty string clears the value.
       evidence: fields.evidence,
       ownerNote: fields.ownerNote,
-      finishNote: fields.finishNote,
       startDate: fields.startDate ? String(fields.startDate).slice(0, 10) : undefined,
       estimatedHours: fields.estimatedTime,
       tagIds: fields.tags,
@@ -411,6 +410,9 @@ export const ownerApi = {
     get: async (id) => adminUserDetailToUi(await http.get(`/admin/users/${id}`)),
     setStatus: async (id, enabled, reason) =>
       adminUserRowToUi(await http.patch(`/admin/users/${id}/status`, { enabled, reason: reason || null })),
+    /** `disabledFeatures`: the features switched OFF for the user, e.g. ["PAGES"]. Resolves to the user detail. */
+    setFeatures: async (id, disabledFeatures) =>
+      adminUserDetailToUi(await http.put(`/admin/users/${id}/features`, { disabledFeatures })),
   },
 
   subscriptions: {
@@ -458,12 +460,31 @@ export const pagesApi = {
   refreshSnapshot: (pageId) => http.post(`/pages/${pageId}/snapshot`),
   /** Editor preview: the design plus live data. */
   view: (pageId) => http.get(`/pages/${pageId}/view`),
-  /** The share link (works signed out for "anyone with the link" pages). */
-  // Signed out, a 401 means "team only" (show a sign-in prompt), not an expired session.
-  viewByToken: (token) => http.get(`/public/pages/${encodeURIComponent(token)}`, { auth: tokenStore.hasSession }),
+  /**
+   * The share link. "Anyone with the link" pages open with no session, and
+   * with a stale one too (publicRequest retries as a visitor), so a 401 here
+   * only ever means "team only": show the sign-in prompt.
+   */
+  viewByToken: (token) => publicRequest(`/public/pages/${encodeURIComponent(token)}`),
+  /** A task's comment thread on a shared page: [{ id, authorName, authorAvatarUrl, guest, body, createdAt }]. */
+  taskComments: (token, taskId) => publicRequest(`/public/pages/${encodeURIComponent(token)}/tasks/${taskId}/comments`),
+  /** Members post as themselves (session sent); visitors pass the name they gave. */
+  addTaskComment: (token, taskId, body, guestName) =>
+    publicRequest(`/public/pages/${encodeURIComponent(token)}/tasks/${taskId}/comments`, { method: "POST", body: { body, guestName } }),
   versions: (pageId) => http.get(`/pages/${pageId}/versions`),
   restoreVersion: (pageId, versionNo) => http.post(`/pages/${pageId}/versions/${versionNo}/restore`),
   messages: (pageId) => http.get(`/pages/${pageId}/messages`),
   sendMessage: (pageId, text, part) => http.post(`/pages/${pageId}/messages`, { text, part: part || null }),
   stopMessage: (pageId) => http.post(`/pages/${pageId}/messages/stop`),
+};
+
+// --- assistant: the caller's private conversation in one workspace ------------
+// Wire shape is used as-is: { busy, messages: [{ id, role, body, state, actions, createdAt }] }.
+// A reply is written in the background, so the Assistant module polls `conversation` while `busy`.
+export const assistantApi = {
+  conversation: (workspaceId) => http.get(`/workspaces/${workspaceId}/assistant/messages`),
+  /** 202 with the conversation (new USER message + a PENDING reply); 409 ASSISTANT_BUSY while one is pending. */
+  send: (workspaceId, body) => http.post(`/workspaces/${workspaceId}/assistant/messages`, { body }),
+  /** Clears the conversation and stops a running reply. */
+  clear: (workspaceId) => http.delete(`/workspaces/${workspaceId}/assistant/messages`),
 };

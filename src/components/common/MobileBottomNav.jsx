@@ -52,7 +52,7 @@ export function MobileBottomNav({ onOpenQuickAdd }) {
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 pb-safe bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl backdrop-saturate-150 border-t border-zinc-200/70 dark:border-zinc-800/80 shadow-[0_-6px_20px_-12px_rgba(0,0,0,0.12)]"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 pb-safe bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl backdrop-saturate-150 border-t border-zinc-200 dark:border-zinc-800"
       aria-label="Primary"
     >
       <div className="grid grid-cols-5 items-center h-16 px-1">
@@ -63,7 +63,7 @@ export function MobileBottomNav({ onOpenQuickAdd }) {
               type="button"
               onClick={onOpenQuickAdd}
               aria-label="New task"
-              className="-mt-8 flex h-14 w-14 items-center justify-center rounded-full text-white bg-[linear-gradient(180deg,#2a8cf2_0%,var(--color-primary)_100%)] shadow-[0_8px_20px_-6px_rgba(0,115,234,0.55)] ring-[5px] ring-zinc-50 dark:ring-zinc-950 active:scale-95 transition-transform cursor-pointer"
+              className="-mt-8 flex h-14 w-14 items-center justify-center rounded-full text-white bg-primary shadow-elevated ring-[5px] ring-zinc-50 dark:ring-zinc-950 active:scale-95 transition-transform cursor-pointer"
             >
               <Plus className="w-6 h-6" strokeWidth={2.6} />
             </button>

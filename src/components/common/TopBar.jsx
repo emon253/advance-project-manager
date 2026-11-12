@@ -7,18 +7,20 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppState } from "../../app/providers";
 import { Wordmark } from "./Logo";
-import { Search, Bell, Plus, ChevronDown, Sun, Moon } from "lucide-react";
+import { Search, Bell, Plus, ChevronDown, Sun, Moon, Sparkles } from "lucide-react";
+import { ASSISTANT_TOGGLE_ID, useAssistant } from "../../modules/Assistant/AssistantContext";
 import { UserAvatar } from "./UserAvatar";
 import { AccountMenu } from "./AccountMenu";
 import { GlobalSearch } from "./GlobalSearch";
 
 /**
- * 48px top bar: brand · global search (with suggestions) · New task · theme · inbox · account menu.
+ * 48px top bar: brand · global search (with suggestions) · New task · assistant · theme · inbox · account menu.
  * Workspace switching, settings, profile, theme and sign-out all live in the
  * account menu so the sidebar starts at Today.
  */
 export function TopBar({ onOpenQuickAdd }) {
   const { currentUser, notifications, can, theme, setTheme } = useAppState();
+  const assistant = useAssistant();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -27,8 +29,8 @@ export function TopBar({ onOpenQuickAdd }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-30 pt-[env(safe-area-inset-top)] border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
       <div className="h-12 flex items-center gap-3 px-3 lg:px-4">
-        {/* Brand — matches the 220px sidebar column on desktop */}
-        <Link to="/today" className="flex items-center min-w-0 rounded-md lg:w-[204px] shrink-0">
+        {/* Brand — matches the 200px sidebar column on desktop */}
+        <Link to="/today" className="flex items-center min-w-0 rounded-md lg:w-[184px] shrink-0">
           <Wordmark className="text-base" />
         </Link>
 
@@ -44,6 +46,21 @@ export function TopBar({ onOpenQuickAdd }) {
             <button type="button" onClick={onOpenQuickAdd} className="btn btn-primary h-[30px] hidden md:inline-flex">
               <Plus className="w-4 h-4" />
               New task
+            </button>
+          )}
+
+          {assistant.available && (
+            <button
+              id={ASSISTANT_TOGGLE_ID}
+              type="button"
+              onClick={() => assistant.setOpen(!assistant.open)}
+              aria-expanded={assistant.open}
+              aria-controls="assistant-panel"
+              aria-label="Assistant"
+              title="Assistant"
+              className={`btn-icon lg:ml-1 max-lg:h-11 max-lg:w-11 max-lg:-mx-1 ${assistant.open ? "bg-primary/10 text-primary dark:text-sky-300" : ""}`}
+            >
+              <Sparkles className="w-[18px] h-[18px]" />
             </button>
           )}
 

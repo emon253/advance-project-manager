@@ -96,3 +96,9 @@ export function plainToRichText(text) {
     .map((block) => `<p>${escape(block.trim()).replace(/\n/g, "<br>")}</p>`)
     .join("");
 }
+
+/** Stored text of either kind as rich-text HTML: markup passes through, plain text is wrapped. */
+export function toRichText(value) {
+  if (!value || typeof value !== "string") return "";
+  return /<\/?[a-z][^>]*>/i.test(value) ? value : plainToRichText(value);
+}

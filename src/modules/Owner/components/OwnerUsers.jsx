@@ -13,6 +13,12 @@ import { Pager, ConfirmDialog, AccountStatusBadge, SubStatusBadge, fmtDate, time
 import { ManageSubscriptionModal } from "./ManageSubscriptionModal";
 import { Search, ArrowUpDown, X, MailCheck, MailWarning, ShieldCheck, SlidersHorizontal } from "lucide-react";
 
+/** Per-user feature switches; the API stores the ones switched OFF. */
+const FEATURES = [
+  { id: "PAGES", label: "Pages", hint: "Create and share live pages" },
+  { id: "ASSISTANT", label: "Assistant", hint: "AI assistant that can read and change tasks" },
+];
+
 const SORTS = [
   { id: "-createdAt", label: "Newest first" },
   { id: "createdAt", label: "Oldest first" },
@@ -37,6 +43,7 @@ export function OwnerUsers() {
   const [actionError, setActionError] = useState("");
   const [catalog, setCatalog] = useState([]);      // owner plan catalog (for the subscription modal)
   const [manageSub, setManageSub] = useState(null); // workspace being assigned a plan
+  const [featureState, setFeatureState] = useState(null); // {saving} | {saved} | {error}
   const debounce = useRef(null);
 
   const load = useCallback(() => {
@@ -58,6 +65,21 @@ export function OwnerUsers() {
 
   const openDetail = async (id) => {
     try { setDetail(await ownerApi.users.get(id)); } catch { /* row remains */ }
+  };
+  const closeDetail = () => { setDetail(null); setFeatureState(null); };
+
+  const setFeature = async (featureId, allowed) => {
+    const current = detail.user.disabledFeatures;
+    const disabledFeatures = allowed ? current.filter((f) => f !== featureId) : [...current, featureId];
+    setFeatureState({ saving: featureId });
+    try {
+      const updated = await ownerApi.users.setFeatures(detail.user.id, disabledFeatures);
+      setDetail(updated);
+      setData((d) => ({ ...d, content: d.content.map((u) => (u.id === updated.user.id ? updated.user : u)) }));
+      setFeatureState({ saved: true });
+    } catch (err) {
+      setFeatureState({ error: err.message || "Could not update feature access." });
+    }
   };
 
   const applyStatus = async () => {
@@ -177,7 +199,7 @@ export function OwnerUsers() {
       {/* -------- user detail sheet -------- */}
       {detail && (
         <div className="modal-overlay">
-          <div className="absolute inset-0" onClick={() => setDetail(null)} aria-hidden="true" />
+          <div className="absolute inset-0" onClick={closeDetail} aria-hidden="true" />
           <div className="modal-panel sm:max-w-xl" role="dialog" aria-modal="true" aria-label={`User ${detail.user.name}`}>
             <div className="sheet-grabber" />
             <div className="flex items-start justify-between gap-3 px-5 pt-4">
@@ -194,7 +216,7 @@ export function OwnerUsers() {
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">{detail.user.email}</p>
                 </div>
               </div>
-              <button type="button" className="btn-icon -mr-1.5" onClick={() => setDetail(null)} aria-label="Close">
+              <button type="button" className="btn-icon -mr-1.5" onClick={closeDetail} aria-label="Close">
                 <X className="w-4.5 h-4.5" />
               </button>
             </div>
@@ -205,6 +227,46 @@ export function OwnerUsers() {
                 {detail.user.systemRole === "SYSTEM_OWNER" && <span className="badge bg-primary/8 text-primary border-primary/20 dark:bg-primary/15">System Owner</span>}
                 <span className="badge">{detail.user.emailVerified ? "Email verified" : "Email unverified"}</span>
                 <span className="text-[11px] text-zinc-400 font-medium">joined {fmtDate(detail.user.createdAt)} · last active {timeAgo(detail.user.lastLoginAt)}</span>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <h3 className="label mb-0">Feature access</h3>
+                  {featureState?.saved && <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400" role="status">Saved</span>}
+                </div>
+                <ul className="rounded-xl border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {FEATURES.map((f) => {
+                    const allowed = !detail.user.disabledFeatures.includes(f.id);
+                    return (
+                      <li key={f.id} className="flex items-center justify-between gap-4 px-3 py-3">
+                        <span id={`feature-${f.id}`} className="min-w-0">
+                          <span className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200">{f.label}</span>
+                          <span className="block text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-0.5">{f.hint}</span>
+                        </span>
+                        <span className="flex items-center gap-2.5 shrink-0">
+                          <span className="w-12 text-right text-xs font-semibold text-zinc-500 dark:text-zinc-400" aria-hidden="true">{allowed ? "Allowed" : "Off"}</span>
+                          {/* the ::after widens the 18px switch to a 44px touch target */}
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={allowed}
+                            aria-labelledby={`feature-${f.id}`}
+                            disabled={!!featureState?.saving}
+                            onClick={() => setFeature(f.id, !allowed)}
+                            className="switch after:absolute after:-inset-x-1.5 after:-inset-y-[13px] disabled:opacity-60 disabled:cursor-wait"
+                          >
+                            <span />
+                          </button>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {featureState?.error && (
+                  <p className="mt-2 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 text-xs font-semibold" role="alert">
+                    {featureState.error}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -261,7 +323,7 @@ export function OwnerUsers() {
             </div>
 
             <div className="flex gap-2.5 px-5 py-3.5 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
-              <button type="button" className="btn btn-secondary flex-1" onClick={() => setDetail(null)}>Close</button>
+              <button type="button" className="btn btn-secondary flex-1" onClick={closeDetail}>Close</button>
               {detail.user.id !== currentUser?.id && detail.user.systemRole !== "SYSTEM_OWNER" && (
                 detail.user.enabled ? (
                   <button type="button" className="btn btn-danger-soft flex-1" onClick={() => setConfirm({ user: detail.user, enable: false })}>

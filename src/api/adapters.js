@@ -74,6 +74,8 @@ export function userToUi(u) {
     emailVerified: u.emailVerified,
     systemRole: u.systemRole || "USER",
     avatarUrl: toAvatarUrl(u.avatarUrl),
+    // Features the system owner switched off for this account ("PAGES", "ASSISTANT").
+    disabledFeatures: u.disabledFeatures || [],
   };
 }
 
@@ -134,6 +136,7 @@ export function commentToUi(c) {
     id: c.id,
     userId: c.author?.id ?? null,
     author: userToUi(c.author),
+    guestName: c.guestName || null,
     text: c.body,
     timestamp: iso(c.createdAt),
     editedAt: iso(c.editedAt),
@@ -175,6 +178,7 @@ export function taskToUi(t) {
     assignee: userToUi(t.assignee),
     startDate: iso(t.startDate),
     createdAt: iso(t.createdAt),
+    updatedAt: iso(t.updatedAt),
     dueDate: iso(t.dueDate),
     evidence: t.evidence || "",
     ownerNote: t.ownerNote || "",
@@ -431,6 +435,7 @@ export function adminUserRowToUi(u) {
     ownedWorkspaces: u.ownedWorkspaces ?? 0,
     memberWorkspaces: u.memberWorkspaces ?? 0,
     ownedPlans: (u.ownedPlans || []).map((c) => c.toLowerCase()),
+    disabledFeatures: u.disabledFeatures || [],
   };
 }
 

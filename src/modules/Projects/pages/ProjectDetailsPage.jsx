@@ -5,26 +5,24 @@
 
 import React, { useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { Plus, MoreHorizontal, Pencil, Users, Archive, RotateCcw, Trash2, FileLock, Paperclip, FileText, Image as ImageIcon, Eye, Download, Loader2, CheckCircle2, Pause, Play } from "lucide-react";
+import { Plus, MoreHorizontal, Pencil, Users, Archive, RotateCcw, Trash2, FileLock, Paperclip, FileText, Image as ImageIcon, Eye, Download, Loader2, CheckCircle2, Pause, Play, ChevronDown } from "lucide-react";
 import { useAppState } from "../../../app/providers";
 import { UserAvatar } from "../../../components/common/UserAvatar";
 import { RichTextView } from "../../../components/common/RichText/RichTextView";
-import { richTextToPlain } from "../../../components/common/RichText/sanitizeHtml";
-import { getIconComponent } from "../../../components/common/IconHelper";
 import { AttachmentPreviewModal } from "../components/AttachmentPreviewModal";
 import { ProjectFormDialog } from "../components/ProjectFormDialog";
 import { ProjectMembersList } from "../components/ProjectMembersList";
 import { ProjectDiscussionPanel } from "../components/ProjectDiscussionPanel";
 import { TaskToolbar, applyTaskFilters } from "../../Tasks/components/TaskToolbar";
-import { TaskList } from "../../Tasks/components/TaskList";
+import { TaskTable } from "../../Tasks/components/TaskTable";
 import { TaskBoard } from "../../Tasks/components/TaskBoard";
-import { defaultStatusName, formatDue, formatRelative, groupByStatus, isOpenTask } from "../../Tasks/util/tasksUtils";
+import { defaultStatusName, formatRelative, groupByStatus, isOpenTask, shortDate, sortTasks } from "../../Tasks/util/tasksUtils";
 
 const STATUS_STYLES = {
-  Planning: "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300",
+  Planning: "bg-primary/10 text-[#0467d1] dark:bg-primary/15 dark:text-sky-300",
   Active: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
-  "On Hold": "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
-  Completed: "bg-primary/8 text-primary dark:bg-primary/15",
+  "On Hold": "bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300",
+  Completed: "bg-primary/10 text-[#0467d1] dark:bg-primary/15 dark:text-sky-300",
   Archived: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
 };
 const TABS = [["tasks", "Tasks"], ["files", "Files"], ["activity", "Activity"]];
@@ -32,9 +30,10 @@ const isImageType = (t) => (t || "").toLowerCase().startsWith("image/");
 const isPdfType = (t) => (t || "").toLowerCase().includes("pdf");
 
 /**
- * Project page opens on Tasks. Header: icon · name · status · description ·
- * Invite / Add task / ••• ; stat strip (progress, open, overdue, due, team).
- * Tabs: Tasks · Files · Activity. Settings live under the ••• menu.
+ * Project page opens on Tasks. Slim header: name · status · Members / Add
+ * task / ••• ; a one-line strip (N of M done, progress, in progress, open,
+ * overdue, due, team); then the Tasks · Files · Activity tabs on the same row
+ * as the task filters. The description lives under Activity → Overview.
  */
 export function ProjectDetailsPage() {
   const { projectId, tab = "tasks" } = useParams();
@@ -49,7 +48,7 @@ export function ProjectDetailsPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [filters, setFilters] = useState({ projectId: "", assigneeId: "", priority: "", due: "" });
+  const [filters, setFilters] = useState({ status: "", projectId: "", assigneeId: "", priority: "", due: "" });
   const [view, setView] = useState(() => localStorage.getItem("apm_tasks_view") || "list");
   const [previewFile, setPreviewFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -60,7 +59,9 @@ export function ProjectDetailsPage() {
 
   const project = projects.find((p) => String(p.id) === String(projectId));
   const projectTasks = useMemo(() => tasks.filter((t) => t.projectId === project?.id), [tasks, project]);
-  const groups = useMemo(() => groupByStatus(applyTaskFilters(projectTasks, filters, taskStatuses), taskStatuses), [projectTasks, filters, taskStatuses]);
+  const filtered = useMemo(() => applyTaskFilters(projectTasks, filters, taskStatuses), [projectTasks, filters, taskStatuses]);
+  const rows = useMemo(() => sortTasks(filtered, taskStatuses), [filtered, taskStatuses]);
+  const groups = useMemo(() => (view === "board" ? groupByStatus(filtered, taskStatuses) : []), [view, filtered, taskStatuses]);
 
   if (!project) {
     return (
@@ -84,8 +85,23 @@ export function ProjectDetailsPage() {
   const projectActivity = activities.filter((a) => (a.text || "").includes(`'${project.name}'`));
   const manage = can("manageProjects");
 
+  const started = open.filter((t) => taskStatuses.find((s) => s.name === t.status)?.isStarted).length;
+  const canAddTask = can("editTasks") && isOpenProject;
+
   const addTaskHere = (title) => addTask({ title, projectId: project.id, status: defaultStatusName(taskStatuses), priority: "Medium" });
   const changeView = (v) => { setView(v); localStorage.setItem("apm_tasks_view", v); };
+  // "Add task" puts the cursor in the quick-add row at the bottom of the table.
+  const focusAdd = () => {
+    if (tab !== "tasks") navigate(`/projects/${project.id}`);
+    if (view !== "list") changeView("list");
+    setTimeout(() => document.getElementById("task-table-add")?.focus(), 50);
+  };
+  const stat = (label, value, tone = "") => (
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+      <span className="text-xs text-zinc-600 dark:text-zinc-400">{label}</span>
+      <span className={`text-sm font-bold font-tnum ${tone || "text-zinc-900 dark:text-white"}`}>{value}</span>
+    </span>
+  );
 
   const handleUpload = async (e) => {
     const list = Array.from(e.target.files || []);
@@ -130,22 +146,16 @@ export function ProjectDetailsPage() {
         </div>
       )}
 
-      <div className="flex items-start gap-3 mb-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl shrink-0" style={{ backgroundColor: `${project.color}1f`, color: project.color }}>{getIconComponent(project.icon, "w-5 h-5")}</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-            <h1 className="text-[19px] md:text-[22px] font-bold tracking-tight leading-tight text-zinc-900 dark:text-white line-clamp-2 md:line-clamp-1 break-words min-w-0">{project.name}</h1>
-            <span className={`inline-flex items-center gap-1.5 h-5 px-2 rounded-full text-[11px] font-bold ${STATUS_STYLES[project.status] || STATUS_STYLES.Planning}`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />{project.status === "Completed" ? "Closed" : project.status}
-            </span>
-          </div>
-          {richTextToPlain(project.description) && (
-            <p className="text-[13px] leading-relaxed text-zinc-500 dark:text-zinc-400 mt-1 max-w-[720px] line-clamp-2">{richTextToPlain(project.description)}</p>
-          )}
+      <div className="flex items-center gap-3 mb-4 px-1 md:px-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 min-w-0 flex-1">
+          <h1 className="page-title line-clamp-2 md:line-clamp-1 break-words min-w-0">{project.name}</h1>
+          <span className={`inline-flex items-center h-6 px-[9px] rounded-full text-xs font-bold ${STATUS_STYLES[project.status] || STATUS_STYLES.Planning}`}>
+            {project.status === "Completed" ? "Closed" : project.status}
+          </span>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 relative">
-          {manage && isOpenProject && <button type="button" onClick={() => setMembersOpen(true)} className="btn btn-secondary hidden lg:inline-flex"><Users className="w-4 h-4" /> Members</button>}
-          {can("editTasks") && isOpenProject && <button type="button" onClick={() => { const el = document.getElementById("add-task-" + (groups.find((g) => g.kind === "open")?.key || "")); if (el) el.focus(); else navigate(`/projects/${project.id}`); }} className="btn btn-primary hidden lg:inline-flex"><Plus className="w-4 h-4" /> Add task</button>}
+        <div className="flex items-center gap-2 shrink-0 relative">
+          {manage && isOpenProject && <button type="button" onClick={() => setMembersOpen(true)} className="chip hidden lg:inline-flex">Members<ChevronDown className="w-3.5 h-3.5 text-zinc-500" /></button>}
+          {canAddTask && <button type="button" onClick={focusAdd} className="btn btn-primary h-[34px] px-3.5 rounded-lg font-bold hidden lg:inline-flex"><Plus className="w-[15px] h-[15px]" strokeWidth={2.4} /> Add task</button>}
           {manage && (
             <button type="button" onClick={() => setMenuOpen((v) => !v)} className="btn-icon" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Project menu: edit, members, archive, delete">
               <MoreHorizontal className="w-4 h-4" />
@@ -193,93 +203,53 @@ export function ProjectDetailsPage() {
         </div>
       </div>
 
-      <div className="card flex flex-col md:flex-row mb-4 overflow-hidden">
-        {/* Progress: ring + status breakdown */}
-        <div className="md:flex-1 flex items-center gap-4 px-4 py-3.5 md:py-3 min-w-0">
-          <svg className="w-12 h-12 shrink-0 -rotate-90" viewBox="0 0 48 48" role="img" aria-label={`${pct}% complete`}>
-            <circle cx="24" cy="24" r="20" fill="none" strokeWidth="5" className="stroke-zinc-200 dark:stroke-zinc-800" />
-            <circle cx="24" cy="24" r="20" fill="none" strokeWidth="5" strokeLinecap="round" className={pct === 100 && projectTasks.length ? "stroke-emerald-500" : "stroke-primary"} strokeDasharray={`${(pct / 100) * 125.66} 125.66`} style={{ transition: "stroke-dasharray .4s ease" }} />
-            <text x="24" y="24" transform="rotate(90 24 24)" textAnchor="middle" dominantBaseline="central" className="fill-zinc-900 dark:fill-white font-bold" fontSize="11">{pct}%</text>
-          </svg>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-bold text-zinc-900 dark:text-white font-tnum">
-              {projectTasks.length === 0 ? "No tasks yet" : `${done} of ${projectTasks.length} done`}
-              {projectTasks.length > 0 && open.length === 0 && <span className="ml-2 text-xs font-bold text-emerald-700 dark:text-emerald-400">All done</span>}
-            </p>
-            {projectTasks.length > 0 && (() => {
-              const started = open.filter((t) => taskStatuses.find((s) => s.name === t.status)?.isStarted).length;
-              const todo = open.length - started;
-              const seg = (n) => `${(n / projectTasks.length) * 100}%`;
-              return (
-                <>
-                  <div className="mt-1.5 h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex">
-                    <span className="h-full bg-emerald-500 transition-[width] duration-300" style={{ width: seg(done) }} />
-                    <span className="h-full bg-primary transition-[width] duration-300" style={{ width: seg(started) }} />
-                    <span className="h-full bg-rose-400 transition-[width] duration-300" style={{ width: seg(late) }} />
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 font-tnum">
-                    <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />{done} done</span>
-                    <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary" />{started} in progress</span>
-                    <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />{todo} to do</span>
-                    {late > 0 && <span className="inline-flex items-center gap-1 text-rose-700 dark:text-rose-400"><span className="w-2 h-2 rounded-full bg-rose-400" />{late} overdue</span>}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-4 md:flex border-t md:border-t-0 md:border-l border-zinc-100 dark:border-zinc-800 divide-x divide-zinc-100 dark:divide-zinc-800">
-        <button type="button" onClick={() => setFilters((f) => ({ ...f, due: "" }))} className="flex flex-col items-center md:items-start justify-center text-center md:text-left px-1 md:px-4 py-2.5 md:py-3 md:min-w-[96px] hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer">
-          <span className="label mb-0.5">Open</span>
-          <span className="text-lg font-bold leading-none font-tnum text-zinc-900 dark:text-white">{open.length}</span>
+      <div className="card rounded-[10px] border-zinc-200 flex flex-wrap items-center gap-x-6 gap-y-2 min-h-12 px-4 py-2.5 md:py-0 mb-4">
+        <span className="text-[13px] font-bold whitespace-nowrap font-tnum text-zinc-900 dark:text-white">
+          {projectTasks.length === 0 ? "No tasks yet" : `${done} of ${projectTasks.length} done`}
+        </span>
+        <span className="flex-1 min-w-[96px] h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex" role="progressbar" aria-label="Tasks done" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+          <span className="bg-primary transition-[width] duration-300" style={{ width: `${pct}%` }} />
+        </span>
+        {stat("In progress", started)}
+        {stat("Open", open.length)}
+        <button type="button" onClick={() => setFilters((f) => ({ ...f, due: f.due === "late" ? "" : "late" }))} aria-pressed={filters.due === "late"} title="Show overdue tasks" className="cursor-pointer rounded-md hover:underline underline-offset-4">
+          {stat("Overdue", late, late ? "text-red-700 dark:text-red-400" : "")}
         </button>
-        <button type="button" onClick={() => setFilters((f) => ({ ...f, due: f.due === "late" ? "" : "late" }))} aria-pressed={filters.due === "late"} className={`flex flex-col items-center md:items-start justify-center text-center md:text-left px-1 md:px-4 py-2.5 md:py-3 md:min-w-[96px] cursor-pointer transition-colors ${filters.due === "late" ? "bg-rose-50 dark:bg-rose-500/10" : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"}`}>
-          <span className="label mb-0.5">Overdue</span>
-          <span className={`text-lg font-bold leading-none font-tnum ${late ? "text-rose-700 dark:text-rose-400" : "text-zinc-400"}`}>{late}</span>
+        {stat("Due", project.deadline ? shortDate(project.deadline) : "Not set", project.deadline && new Date(project.deadline) < today && open.length ? "text-red-700 dark:text-red-400" : "")}
+        <button type="button" onClick={() => manage && setMembersOpen(true)} aria-label={`Team: ${members.length} ${members.length === 1 ? "person" : "people"}`} className={`inline-flex items-center rounded-full ${manage ? "cursor-pointer" : "cursor-default"}`}>
+          {members.slice(0, 4).map((m, i) => <span key={m.id} className={`rounded-full ${members.length > 1 ? "ring-2 ring-white dark:ring-zinc-900" : ""} ${i ? "-ml-2" : ""}`}><UserAvatar user={m} size="xs" /></span>)}
+          {members.length > 4 && <span className="-ml-2 h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 ring-2 ring-white dark:ring-zinc-900 text-[10px] font-bold flex items-center justify-center font-tnum">+{members.length - 4}</span>}
+          {members.length === 0 && <span className="text-xs text-zinc-500 dark:text-zinc-400">{manage ? "Add people" : "No team"}</span>}
         </button>
-        <div className="flex flex-col items-center md:items-start justify-center text-center md:text-left px-1 md:px-4 py-2.5 md:py-3 md:min-w-[110px]">
-          <span className="label mb-0.5">Due</span>
-          {project.deadline ? (
-            <span className={`text-[13px] font-bold leading-tight font-tnum ${new Date(project.deadline) < today && open.length ? "text-rose-700 dark:text-rose-400" : "text-zinc-900 dark:text-white"}`}>
-              {new Date(project.deadline).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
-              <span className="block text-[11px] font-semibold text-zinc-400">{new Date(project.deadline) < today ? (open.length ? "past due" : "met") : formatDue(project.deadline)}</span>
-            </span>
-          ) : <span className="text-[13px] font-semibold text-zinc-400">Not set</span>}
-        </div>
-        <button type="button" onClick={() => manage && setMembersOpen(true)} className={`flex flex-col items-center md:items-start justify-center text-center md:text-left px-1 md:px-4 py-2.5 md:py-3 md:min-w-[120px] ${manage ? "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer" : "cursor-default"}`}>
-          <span className="label mb-1">Team <span className="normal-case tracking-normal text-zinc-400 font-tnum">{members.length}</span></span>
-          <span className="inline-flex -space-x-1.5">
-            {members.slice(0, 3).map((m) => <span key={m.id} className="ring-2 ring-white dark:ring-zinc-900 rounded-full"><UserAvatar user={m} size="xs" /></span>)}
-            {members.length > 3 && <span className="h-6 w-6 rounded-full bg-zinc-100 dark:bg-zinc-800 ring-2 ring-white dark:ring-zinc-900 text-[10px] font-bold flex items-center justify-center font-tnum">+{members.length - 3}</span>}
-            {members.length === 0 && <span className="text-xs text-zinc-400">{manage ? "Add people" : "None"}</span>}
-          </span>
-        </button>
-        </div>
       </div>
 
-      <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800 mb-3" role="tablist">
-        {TABS.map(([id, label]) => (
-          <Link key={id} to={`/projects/${project.id}${id === "tasks" ? "" : `/${id}`}`} role="tab" aria-selected={tab === id}
-            className={`inline-flex items-center gap-1.5 h-9 px-2.5 text-[13px] font-semibold border-b-2 -mb-px ${tab === id ? "border-primary text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"}`}>
-            {label}
-            <span className="text-xs text-zinc-400 font-tnum">{id === "tasks" ? open.length : id === "files" ? files.length : ""}</span>
-          </Link>
-        ))}
+      <div className="mb-4">
+        <TaskToolbar
+          lead={(
+            <div className="seg w-full sm:w-auto [&>a]:flex-1 sm:[&>a]:flex-none" role="tablist" aria-label="Project sections">
+              {TABS.map(([id, label]) => (
+                <Link key={id} to={`/projects/${project.id}${id === "tasks" ? "" : `/${id}`}`} role="tab" aria-selected={tab === id}>
+                  {label}{id !== "activity" && <span className="font-tnum">{id === "tasks" ? projectTasks.length : files.length}</span>}
+                </Link>
+              ))}
+            </div>
+          )}
+          filtersHidden={tab !== "tasks"}
+          filters={filters}
+          onFilter={(p) => setFilters((f) => ({ ...f, ...p }))}
+          statuses={taskStatuses}
+          users={members.length ? members : users}
+          showProjectFilter={false}
+          view={view}
+          onView={changeView}
+        />
       </div>
 
-      {tab === "tasks" && (
-        <>
-          <TaskToolbar filters={filters} onFilter={(p) => setFilters((f) => ({ ...f, ...p }))} users={members.length ? members : users} showProjectFilter={false} view={view} onView={changeView} />
-          <div className="mt-1">
-            {view === "board" ? (
-              <div className="mt-3"><TaskBoard groups={groups} showProject={false} onAddTask={can("editTasks") && isOpenProject ? (title, status) => addTask({ title, projectId: project.id, status, priority: "Medium" }) : undefined} /></div>
-            ) : (
-              <TaskList groups={groups} showProject={false} onAddTask={can("editTasks") && isOpenProject ? addTaskHere : undefined} addPlaceholder={`Add a task to ${project.name}… press Enter`} />
-            )}
-          </div>
-        </>
-      )}
+      {tab === "tasks" && (view === "board" ? (
+        <TaskBoard groups={groups} showProject={false} onAddTask={canAddTask ? (title, status) => addTask({ title, projectId: project.id, status, priority: "Medium" }) : undefined} />
+      ) : (
+        <TaskTable tasks={rows} variant="project" onAddTask={canAddTask ? addTaskHere : undefined} addLabel={`Add a task to ${project.name}`} emptyDescription={projectTasks.length ? "No tasks match these filters." : "No tasks in this project yet."} />
+      ))}
 
       {tab === "files" && (
         <div className="card">

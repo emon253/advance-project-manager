@@ -4,16 +4,16 @@
  */
 
 import React, { useState } from "react";
-import { ChevronDown, Check, List, LayoutGrid, X, Layers, CircleDot, Folder } from "lucide-react";
+import { ChevronDown, Check, List, LayoutGrid, X } from "lucide-react";
 
-/** Chip that opens a small single-select menu. `options`: [{ value, label }]. */
 /**
- * Filter chip with a dropdown. `clearable` (filters) shows "Label: value ×"
- * in the brand tint once set. Settings that always have a value (group by,
- * sort) pass `clearable={false}` and an `icon`: they render as a plain
- * dropdown "icon Label value ˅" with no clear button and no "any" row.
+ * Filter dropdown. `options`: [{ value, label }]. `clearable` (filters) shows
+ * "Label: value ×" in the brand tint once set; with `showAll` an unset filter
+ * reads "Label All" so the default is said out loud. Settings that always
+ * have a value (sort) pass `clearable={false}` and an `icon`: they render as
+ * "icon Label value ˅" with no clear button and no "any" row.
  */
-export function ChipSelect({ label, value, options, onChange, allLabel = "Any", clearable = true, icon: Icon, align = "left" }) {
+export function ChipSelect({ label, value, options, onChange, allLabel = "Any", clearable = true, showAll = false, icon: Icon, align = "left" }) {
   const [open, setOpen] = useState(false);
   const current = options.find((o) => String(o.value) === String(value));
   const active = clearable && value !== "" && value != null;
@@ -28,7 +28,7 @@ export function ChipSelect({ label, value, options, onChange, allLabel = "Any", 
         className={`chip ${active ? "chip-on" : ""} ${open ? "border-primary/50" : ""}`}
       >
         {Icon && <Icon className="w-3.5 h-3.5 text-zinc-400" />}
-        {clearable ? (active ? `${label}: ${current?.label ?? value}` : label) : (
+        {clearable ? (active ? `${label}: ${current?.label ?? value}` : showAll ? <>{label} <span className="text-primary dark:text-sky-300">All</span></> : label) : (
           <>
             <span className="text-zinc-500 dark:text-zinc-400 font-medium">{label}</span>
             <span className="text-primary dark:text-sky-300">{current?.label ?? allLabel}</span>
@@ -37,13 +37,13 @@ export function ChipSelect({ label, value, options, onChange, allLabel = "Any", 
         {active ? (
           <X className="w-3.5 h-3.5" onClick={(e) => { e.stopPropagation(); onChange(""); setOpen(false); }} />
         ) : (
-          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+          <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform ${open ? "rotate-180" : ""}`} />
         )}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} aria-hidden="true" />
-          <ul role="listbox" className={`menu-panel absolute ${align === "right" ? "right-0" : "left-0"} top-8 z-40 min-w-[180px] max-h-64 overflow-y-auto p-1 animate-in fade-in slide-in-from-top-1 duration-150`}>
+          <ul role="listbox" className={`menu-panel absolute ${align === "right" ? "right-0" : "left-0"} top-full mt-1 z-40 min-w-[180px] max-h-64 overflow-y-auto p-1 animate-in fade-in slide-in-from-top-1 duration-150`}>
             {items.map((o) => {
               const sel = String(o.value) === String(value ?? "");
               return (
@@ -80,29 +80,20 @@ export const DUE_OPTIONS = [
 export const PRIORITY_OPTIONS = ["Urgent", "High", "Medium", "Low"].map((p) => ({ value: p, label: p }));
 
 /**
- * One-line toolbar: optional scope segment · filter chips · (right) group-by
- * and list/board toggle. Wraps at phone width.
+ * One-line toolbar: `lead` (a scope segment or the page tabs) · Status (All by
+ * default) · Project · Assignee · Priority · Due · (right) list/board toggle.
+ * Wraps at phone width. `filtersHidden` leaves only the lead.
  */
 export function TaskToolbar({
-  scope, scopeOptions, onScope,
-  filters, onFilter, projects = [], users = [], showProjectFilter = true, showAssigneeFilter = true,
-  groupBy, onGroupBy, view, onView,
+  lead, filters, onFilter, statuses = [], projects = [], users = [], showProjectFilter = true, showAssigneeFilter = true, filtersHidden = false, view, onView,
 }) {
+  if (filtersHidden) return <div className="flex flex-wrap items-center gap-2">{lead}</div>;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {scopeOptions && (
-        <>
-          <div className="seg w-full sm:w-auto h-8 sm:h-7 [&>button]:flex-1 [&>button]:justify-center sm:[&>button]:flex-none" role="group" aria-label="Scope">
-            {scopeOptions.map((o) => (
-              <button key={o.value} type="button" aria-pressed={scope === o.value} onClick={() => onScope(o.value)}>
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <span className="w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-0.5 hidden sm:block" />
-        </>
-      )}
+      {lead}
+      {lead && <span className="w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-1 hidden sm:block" />}
 
+      <ChipSelect label="Status" showAll value={filters.status} onChange={(v) => onFilter({ status: v })} options={statuses.map((s) => ({ value: s.name, label: s.name }))} allLabel="All" />
       {showProjectFilter && (
         <ChipSelect
           label="Project"
@@ -124,30 +115,16 @@ export function TaskToolbar({
       <ChipSelect label="Priority" value={filters.priority} onChange={(v) => onFilter({ priority: v })} options={PRIORITY_OPTIONS} allLabel="Any" />
       <ChipSelect label="Due" value={filters.due} onChange={(v) => onFilter({ due: v })} options={DUE_OPTIONS} allLabel="Any time" />
 
-      <div className="ml-auto flex items-center gap-2">
-        {onGroupBy && (
-          <ChipSelect
-            label="Group by"
-            icon={Layers}
-            clearable={false}
-            align="right"
-            value={groupBy}
-            onChange={(v) => onGroupBy(v || "status")}
-            options={[{ value: "status", label: "Status", icon: CircleDot }, { value: "project", label: "Project", icon: Folder }]}
-            allLabel="Status"
-          />
-        )}
-        {onView && (
-          <div className="seg" role="group" aria-label="View">
-            <button type="button" aria-pressed={view === "list"} onClick={() => onView("list")} aria-label="List view" title="List">
-              <List className="w-4 h-4" />
-            </button>
-            <button type="button" aria-pressed={view === "board"} onClick={() => onView("board")} aria-label="Board view" title="Board">
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-      </div>
+      {onView && (
+        <div className="seg ml-auto" role="group" aria-label="View">
+          <button type="button" aria-pressed={view === "list"} onClick={() => onView("list")} aria-label="List view" title="List">
+            <List className="w-4 h-4" />
+          </button>
+          <button type="button" aria-pressed={view === "board"} onClick={() => onView("board")} aria-label="Board view" title="Board">
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -159,6 +136,7 @@ export function applyTaskFilters(tasks, filters, taskStatuses) {
   const DAY = 86400000;
   const doneNames = new Set(taskStatuses.filter((s) => s.isCompleted || s.isCancelled).map((s) => s.name));
   return tasks.filter((t) => {
+    if (filters.status && t.status !== filters.status) return false;
     if (filters.projectId && String(t.projectId) !== String(filters.projectId)) return false;
     if (filters.assigneeId && String(t.assigneeId) !== String(filters.assigneeId)) return false;
     if (filters.priority && t.priority !== filters.priority) return false;

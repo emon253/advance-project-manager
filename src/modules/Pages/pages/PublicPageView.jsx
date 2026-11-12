@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { pagesApi } from "../../../api/endpoints";
 import { PageFrame } from "../components/PageFrame";
+import { PageComments } from "../components/PageComments";
 import { Wordmark } from "../../../components/common/Logo";
 
 const LIVE_MS = 60000;
@@ -17,6 +18,9 @@ const LIVE_MS = 60000;
  * and when the tab comes back, so task changes show up without a republish.
  * The server answers 304 when nothing changed, and the frame is only
  * repainted when the answer differs. `?print=1` opens the print dialog (PDF).
+ * It never needs an account: a visitor (or a member whose session has
+ * expired) sees an "anyone with the link" page; only a team-only page asks
+ * for sign-in. A task's comments button opens the thread beside the page.
  */
 export function PublicPageView() {
   const { token } = useParams();
@@ -24,6 +28,7 @@ export function PublicPageView() {
   const location = useLocation();
   const [view, setView] = useState(null);
   const [problem, setProblem] = useState(null); // "signin" | "missing"
+  const [thread, setThread] = useState(null); // { taskId, title } of the open comments panel
   const seen = useRef("");
   const frame = useRef(null);
   const printed = useRef(false);
@@ -78,8 +83,11 @@ export function PublicPageView() {
   if (!view) return <div className="min-h-dvh bg-[#0f141c]" aria-busy="true" />;
 
   return (
-    <div className="h-dvh w-full bg-[#0f141c]">
-      <PageFrame ref={frame} html={view.html} data={view.data} title={view.title} />
+    <div className="h-dvh w-full flex bg-[#0f141c]">
+      <div className="flex-1 min-w-0 h-full">
+        <PageFrame ref={frame} html={view.html} data={view.data} title={view.title} onOpenComments={setThread} />
+      </div>
+      {thread && <PageComments key={thread.taskId} token={token} taskId={thread.taskId} title={thread.title} onClose={() => setThread(null)} onPosted={load} />}
     </div>
   );
 }

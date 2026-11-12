@@ -211,7 +211,7 @@ export function BillingPage() {
               onClick={() => setInterval(iv)}
               className={`h-8 px-3 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
                 interval === iv
-                  ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-soft"
+                  ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
                   : "text-zinc-500 dark:text-zinc-400"
               }`}
             >

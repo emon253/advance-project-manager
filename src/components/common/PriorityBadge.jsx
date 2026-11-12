@@ -4,9 +4,27 @@
  */
 
 import React from "react";
-import { AlertCircle, ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Flag, Minus } from "lucide-react";
 
-export function PriorityBadge({ priority, size = "md" }) {
+/** Tint per priority: `tag` for the pill, `text` for a bare flag + name. */
+export const PRIORITY_TONE = {
+  Urgent: { tag: "bg-[#fde8e8] text-red-700 dark:bg-red-500/10 dark:text-red-400", text: "text-red-700 dark:text-red-400" },
+  High: { tag: "bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-400", text: "text-amber-700 dark:text-amber-400" },
+  Medium: { tag: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300", text: "text-zinc-700 dark:text-zinc-300" },
+  Low: { tag: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400", text: "text-zinc-500 dark:text-zinc-400" },
+};
+
+/** `variant="tag"`: borderless tinted pill with a flag (tables). */
+export function PriorityBadge({ priority, size = "md", variant }) {
+  if (variant === "tag") {
+    return (
+      <span className={`inline-flex items-center gap-[5px] h-6 pl-[7px] pr-[9px] rounded-full text-xs font-bold whitespace-nowrap ${(PRIORITY_TONE[priority] || PRIORITY_TONE.Medium).tag}`}>
+        <Flag className="w-3 h-3 shrink-0" />
+        {priority || "Medium"}
+      </span>
+    );
+  }
+
   const iconClass = "w-3 h-3 shrink-0";
   const styles = {
     Urgent: {

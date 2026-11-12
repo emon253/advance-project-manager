@@ -107,7 +107,7 @@ export function ProjectsPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        <div className="seg w-full sm:w-auto h-8 sm:h-7 [&>button]:flex-1 [&>button]:justify-center sm:[&>button]:flex-none" role="group" aria-label="Status">
+        <div className="seg w-full sm:w-auto [&>button]:flex-1 [&>button]:justify-center sm:[&>button]:flex-none" role="group" aria-label="Status">
           <button type="button" aria-pressed={tab === "active"} onClick={() => setTab("active")}>Active <span className="text-zinc-400 font-tnum">{counts.active}</span></button>
           <button type="button" aria-pressed={tab === "closed"} onClick={() => setTab("closed")}>Closed <span className="text-zinc-400 font-tnum">{counts.closed}</span></button>
           <button type="button" aria-pressed={tab === "archived"} onClick={() => setTab("archived")}>Archived <span className="text-zinc-400 font-tnum">{counts.archived}</span></button>

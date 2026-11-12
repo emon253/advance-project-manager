@@ -143,7 +143,7 @@ export function InvitePage() {
           <div className="mb-4"><Wordmark className="text-2xl" /></div>
         </div>
 
-        <div className="w-full sm:bg-white sm:dark:bg-zinc-900 sm:border sm:border-zinc-200/80 sm:dark:border-zinc-800 sm:rounded-xl sm:shadow-soft sm:p-6 text-center">
+        <div className="w-full sm:bg-white sm:dark:bg-zinc-900 sm:border sm:border-zinc-200/80 sm:dark:border-zinc-800 sm:rounded-xl sm:p-6 text-center">
           <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary/8 dark:bg-primary/15 text-primary mb-3">
             {getIconComponent(lookup.logoKey, "w-5 h-5")}
           </span>

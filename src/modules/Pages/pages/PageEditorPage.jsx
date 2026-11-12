@@ -57,7 +57,7 @@ function PublishDialog({ page, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 z-50 p-4 sm:p-6 bg-zinc-900/45 flex items-center justify-center text-[13px] text-left" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div role="dialog" aria-modal="true" aria-labelledby="pub-title" className="w-full max-w-[512px] max-h-full overflow-y-auto bg-white dark:bg-zinc-900 rounded-xl shadow-[0_24px_60px_-20px_rgba(0,0,0,0.45)] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+      <div role="dialog" aria-modal="true" aria-labelledby="pub-title" className="w-full max-w-[512px] max-h-full overflow-y-auto bg-white dark:bg-zinc-900 rounded-xl shadow-elevated flex flex-col animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center gap-2.5 px-5 pt-[18px] pb-1.5">
           <h2 id="pub-title" className="text-[17px] font-bold text-zinc-900 dark:text-white truncate">{page.published ? "Share" : "Publish"} “{page.title}”</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="ml-auto w-8 h-8 shrink-0 inline-flex items-center justify-center rounded-md text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"><X className="w-4 h-4" strokeWidth={2.2} /></button>
@@ -298,7 +298,7 @@ export function PageEditorPage() {
 
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
         <section aria-label="Page preview" className="lg:flex-[999_1_0] min-w-0 h-[68dvh] lg:h-auto lg:min-h-0 p-2 sm:p-6 flex flex-col gap-2.5">
-          <div className={`flex-1 min-h-0 mx-auto w-full rounded-[10px] border border-zinc-300 dark:border-zinc-700 bg-[#0f141c] overflow-hidden flex flex-col shadow-[0_8px_28px_-12px_rgba(0,0,0,0.25)] transition-[max-width] duration-200 ${device === "phone" ? "max-w-[390px]" : "max-w-none"}`}>
+          <div className={`flex-1 min-h-0 mx-auto w-full rounded-[10px] border border-zinc-300 dark:border-zinc-700 bg-[#0f141c] overflow-hidden flex flex-col transition-[max-width] duration-200 ${device === "phone" ? "max-w-[390px]" : "max-w-none"}`}>
             <div className="h-[30px] shrink-0 flex items-center gap-1.5 px-3 bg-[#1b2230] border-b border-[#263041]" aria-hidden="true">
               <span className="w-[9px] h-[9px] rounded-full bg-[#3a4456]" /><span className="w-[9px] h-[9px] rounded-full bg-[#3a4456]" /><span className="w-[9px] h-[9px] rounded-full bg-[#3a4456]" />
               <span className="ml-3 h-[18px] inline-flex items-center px-2.5 rounded bg-[#0f141c] text-[#9aa5b4] text-[11px] truncate">{shareUrl(page.token).replace(/^https?:\/\//, "")}</span>

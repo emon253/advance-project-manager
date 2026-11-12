@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, Plus, LogOut } from "lucide-react";
 import { useAppState } from "../../app/providers";
+import { hasFeature } from "../../app/permissions";
 import { UserAvatar } from "./UserAvatar";
 import { getIconComponent, ICON_OPTIONS } from "./IconHelper";
 
@@ -120,7 +121,7 @@ export function AccountMenu({ onClose }) {
         )}
 
         <div className="h-px bg-zinc-100 dark:bg-zinc-800 my-1" />
-        <Link to="/pages" role="menuitem" onClick={onClose} className={`${itemClass} lg:hidden`}>Pages</Link>
+        {hasFeature(currentUser, "PAGES") && <Link to="/pages" role="menuitem" onClick={onClose} className={`${itemClass} lg:hidden`}>Pages</Link>}
         <Link to="/team" role="menuitem" onClick={onClose} className={itemClass}>Team</Link>
         <Link to="/settings" role="menuitem" onClick={onClose} className={itemClass}>Settings</Link>
         <Link to="/settings/profile" role="menuitem" onClick={onClose} className={itemClass}>Profile</Link>

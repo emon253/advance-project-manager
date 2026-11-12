@@ -41,3 +41,11 @@ export function resolveRole(workspace, userId) {
   const member = workspace.members?.find((m) => m.id === userId);
   return member?.role || "Viewer";
 }
+
+/**
+ * Per-user feature switches ("PAGES", "ASSISTANT"), set by the system owner in
+ * the Owner Console. A feature is on unless it is listed in `disabledFeatures`.
+ */
+export function hasFeature(user, feature) {
+  return !user?.disabledFeatures?.includes(feature);
+}

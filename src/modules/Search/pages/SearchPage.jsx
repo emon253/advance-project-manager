@@ -14,7 +14,7 @@ import { filterTasksBySearch, sortSearchedTasks } from "../util/searchUtils";
 
 /** Workspace search: the same task rows as everywhere else. */
 export function SearchPage() {
-  const { activeWorkspaceTasks, activeWorkspaceProjects, users } = useAppState();
+  const { activeWorkspaceTasks, activeWorkspaceProjects } = useAppState();
   const [params, setParams] = useSearchParams();
   const q = params.get("q") || "";
   const [term, setTerm] = useState(q);
@@ -47,7 +47,7 @@ export function SearchPage() {
       ) : (
         <div className="card overflow-hidden">
           {results.map((t) => (
-            <TaskRow key={t.id} task={t} project={activeWorkspaceProjects.find((p) => p.id === t.projectId)} assignee={users.find((u) => u.id === t.assigneeId)} />
+            <TaskRow key={t.id} task={t} project={activeWorkspaceProjects.find((p) => p.id === t.projectId)} />
           ))}
         </div>
       )}

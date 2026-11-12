@@ -92,6 +92,57 @@ export function formatDateTime(dateString) {
   });
 }
 
+/** Plain short date for fields and tables: Nov 12 · Nov 12, 2027. */
+export function shortDate(dateStr) {
+  const d = new Date(dateStr);
+  if (!dateStr || isNaN(d)) return "";
+  const opts = { month: "short", day: "numeric" };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+  return d.toLocaleDateString(undefined, opts);
+}
+
+/* ---------- assignees ----------
+   A task has one workspace member (assigneeId) plus any number of typed names
+   for people without a Hub account, kept in `ownerNote` as "Jim, Ollie". */
+
+export const OWNER_NOTE_MAX = 160;
+
+export function typedNames(ownerNote) {
+  return (ownerNote || "").split(",").map((n) => n.trim()).filter(Boolean);
+}
+
+/** Everyone on a task, A→Z: [{ key, name, user }] — `user` is null for a typed name. */
+export function taskAssignees(task, users = []) {
+  const member = task.assigneeId != null ? (users.find((u) => u.id === task.assigneeId) || task.assignee) : null;
+  const people = typedNames(task.ownerNote).map((name) => ({ key: `n:${name}`, name, user: null }));
+  if (member) people.push({ key: `u:${member.id}`, name: member.name || "", user: member });
+  return people.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** "Jim" · "Jim & Yasin" · "Jim, Ollie & Yasin" (first names). */
+export function assigneeLabel(people) {
+  const first = people.map((p) => p.name.split(" ")[0]);
+  if (first.length <= 1) return first[0] || "";
+  return `${first.slice(0, -1).join(", ")} & ${first[first.length - 1]}`;
+}
+
+/* ---------- evidence ----------
+   The `evidence` text field is one item per line: a URL, a [Label](url) link, or a note. */
+
+export const EVIDENCE_MAX = 8000;
+
+export const evidenceLines = (evidence) => (evidence || "").split("\n").map((l) => l.trim()).filter(Boolean);
+
+/** One line → { label, url, host } for a link, { note } otherwise. Only http(s) becomes a link. */
+export function parseEvidence(line) {
+  const labelled = line.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/i);
+  const url = labelled ? labelled[2] : (/^https?:\/\/\S+$/i.test(line) ? line : null);
+  if (!url) return { note: line };
+  let host = "";
+  try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { return { note: line }; }
+  return labelled ? { label: labelled[1], url, host } : { label: url.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, ""), url, host: "" };
+}
+
 /* ---------- grouping / sorting ---------- */
 
 /** Open first, then by due date (undated last), then newest id. */
@@ -127,19 +178,6 @@ export function groupByStatus(tasks, taskStatuses) {
     kind: statusKind(name, taskStatuses),
     tasks: sortTasks(list, taskStatuses),
   }));
-}
-
-export function groupByProject(tasks, projects, taskStatuses) {
-  const map = new Map();
-  for (const t of tasks) {
-    const key = t.projectId ?? "none";
-    if (!map.has(key)) map.set(key, []);
-    map.get(key).push(t);
-  }
-  return [...map.entries()].map(([key, list]) => {
-    const p = projects.find((x) => x.id === key);
-    return { key: String(key), label: p?.name || "No project", color: p?.color, kind: "open", tasks: sortTasks(list, taskStatuses) };
-  });
 }
 
 /* ---------- status dot colours ---------- */

@@ -51,7 +51,7 @@ export function AttachmentPreviewModal({ previewFile, setPreviewFile, handleDown
               <img
                 src={previewFile.base64}
                 alt=""
-                className="max-h-[60vh] max-w-full object-contain rounded-lg shadow-soft"
+                className="max-h-[60vh] max-w-full object-contain rounded-lg"
                 referrerPolicy="no-referrer"
               />
             ) : isPdfType(previewFile.type) ? (

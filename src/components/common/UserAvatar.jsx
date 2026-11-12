@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from "react";
 
 const SIZES = {
+  "2xs": "h-[18px] w-[18px] text-[8px]",
   xs: "h-6 w-6 text-[9px]",
   sm: "h-8 w-8 text-xs",
   md: "h-10 w-10 text-sm",

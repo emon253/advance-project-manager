@@ -5,7 +5,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { matchPath, useLocation, useNavigate } from "react-router-dom";
-import { ApiError, setSessionExpiredHandler, tokenStore } from "../api/client";
+import { ApiError, goToLogin, setSessionExpiredHandler, tokenStore } from "../api/client";
 import {
   authApi,
   billingApi,
@@ -306,8 +306,9 @@ export function AppStateProvider({ children }) {
         await loadWorkspaceData(target.id);
       }
       refreshNotifications();
-    } catch {
-      tokenStore.clear();
+    } catch (err) {
+      // Only a refused session is thrown away; the API being unreachable is not a sign-out.
+      if (err?.status === 401 || err?.status === 403) tokenStore.clear();
       setIsAuthenticated(false);
       setCurrentUser(null);
       return { success: false };
@@ -321,7 +322,7 @@ export function AppStateProvider({ children }) {
     setSessionExpiredHandler(() => {
       setIsAuthenticated(false);
       setCurrentUser(null);
-      window.location.assign("/login?expired=1");
+      goToLogin();
     });
     if (tokenStore.hasSession) {
       bootSession();
@@ -886,9 +887,12 @@ export function AppStateProvider({ children }) {
     }
   }, []);
 
+  // Also re-run once the workspace list has landed: on a direct link (/t/:id)
+  // the detail can arrive first, and the list load would replace it with a
+  // bare row (no comments, files or activity).
   useEffect(() => {
-    if (activeTaskId && activeTaskId !== "NEW_TEMP") loadTaskDetail(activeTaskId);
-  }, [activeTaskId, loadTaskDetail]);
+    if (activeTaskId && activeTaskId !== "NEW_TEMP" && !dataLoading) loadTaskDetail(activeTaskId);
+  }, [activeTaskId, loadTaskDetail, dataLoading]);
 
   // Lazy checklist hydration for inline expansion in the Tasks Lineup: the
   // bulk task list carries only counts (checklist: []), so pull the full items
@@ -1294,7 +1298,7 @@ export function AppStateProvider({ children }) {
     projectFiles,
     projectComments,
     // async lifecycle
-    bootLoading, dataLoading, dataError, refreshWorkspaceData, refreshNotifications,
+    bootLoading, dataLoading, dataError, refreshWorkspaceData, refreshNotifications, refreshTasks, refreshProjects,
     ensureActivities, ensureInvites, ensureAutomationRules, loadInvoices, refreshSubscription,
     simulateErrors, setSimulateErrors,
     // session
