@@ -401,6 +401,39 @@ export function TaskPanel() {
         />
       </div>
 
+      {/* Shown on status pages (Pages): proof of progress, and wording for owner and finish when the basics don't fit */}
+      {(canEdit || task.evidence || task.ownerNote || task.finishNote) && (
+        <div key={`page-${task.id}`}>
+          <h3 className="text-[13px] font-bold text-zinc-900 dark:text-white">Evidence</h3>
+          <p className="mt-0.5 mb-2 text-xs text-zinc-500 dark:text-zinc-400">Shown on status pages. One per line: a note, a link, or [Label](link).</p>
+          <label htmlFor="tp-evidence" className="sr-only">Evidence</label>
+          <textarea
+            id="tp-evidence"
+            rows={Math.min(6, Math.max(2, (task.evidence || "").split("\n").length))}
+            defaultValue={task.evidence || ""}
+            disabled={!canEdit}
+            maxLength={8000}
+            placeholder={"Homepage updated on stock 1179\nhttps://…\n[Review flow](https://…)"}
+            onBlur={(e) => { if (e.target.value !== (task.evidence || "")) updateTask(task.id, { evidence: e.target.value }); }}
+            className="field h-auto py-2 text-xs leading-relaxed resize-y"
+          />
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div>
+              <label htmlFor="tp-owner-note" className="label">Owner on pages</label>
+              <input id="tp-owner-note" type="text" defaultValue={task.ownerNote || ""} disabled={!canEdit} maxLength={160} placeholder="e.g. Rony & Jim"
+                onBlur={(e) => { if (e.target.value !== (task.ownerNote || "")) updateTask(task.id, { ownerNote: e.target.value }); }}
+                className="field h-[30px] text-xs font-semibold" />
+            </div>
+            <div>
+              <label htmlFor="tp-finish-note" className="label">Finish in words</label>
+              <input id="tp-finish-note" type="text" defaultValue={task.finishNote || ""} disabled={!canEdit} maxLength={160} placeholder="e.g. Ongoing process"
+                onBlur={(e) => { if (e.target.value !== (task.finishNote || "")) updateTask(task.id, { finishNote: e.target.value }); }}
+                className="field h-[30px] text-xs font-semibold" />
+            </div>
+          </div>
+        </div>
+      )}
+
       <TaskChecklist key={task.id} task={task} />
 
       {/* Files */}

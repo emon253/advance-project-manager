@@ -262,6 +262,10 @@ export const taskApi = {
       priority: t.priority ? priorityToApi(t.priority) : null,
       assigneeId: t.assigneeId ?? null,
       dueDate: t.dueDate ? String(t.dueDate).slice(0, 10) : null,
+      noDueDate: t.noDueDate || undefined,
+      evidence: t.evidence || undefined,
+      ownerNote: t.ownerNote || undefined,
+      finishNote: t.finishNote || undefined,
       startDate: t.startDate ? String(t.startDate).slice(0, 10) : null,
       estimatedHours: t.estimatedTime ?? null,
       tagIds: t.tags || [],
@@ -275,6 +279,12 @@ export const taskApi = {
       priority: fields.priority ? priorityToApi(fields.priority) : undefined,
       assigneeId: fields.assigneeId,
       dueDate: fields.dueDate ? String(fields.dueDate).slice(0, 10) : undefined,
+      // A cleared date must be said out loud: null alone means "leave it" in a patch.
+      noDueDate: fields.dueDate === null ? true : undefined,
+      // Page fields: an empty string clears the value.
+      evidence: fields.evidence,
+      ownerNote: fields.ownerNote,
+      finishNote: fields.finishNote,
       startDate: fields.startDate ? String(fields.startDate).slice(0, 10) : undefined,
       estimatedHours: fields.estimatedTime,
       tagIds: fields.tags,

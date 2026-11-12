@@ -20,10 +20,10 @@ export const templateOf = (key) => TEMPLATES.find((t) => t.key === key) || TEMPL
 export const COLUMNS = [
   ["task", "Task", "Title and description"],
   ["area", "Area", "From the task's project"],
-  ["owner", "Owner", "Assignee"],
+  ["owner", "Owner", "Assignee, or the task's owner label"],
   ["status", "Status", "Coloured pill per status"],
-  ["finish", "Expected finish", "Due date"],
-  ["evidence", "Evidence", "Links in the task's description, or “Pending”"],
+  ["finish", "Expected finish", "Due date, or the finish in words"],
+  ["evidence", "Evidence", "The task's evidence notes and links, or “Pending”"],
 ];
 
 const bar = (w, color, h = 5) => <span style={{ width: w, height: h, borderRadius: 3, background: color }} />;

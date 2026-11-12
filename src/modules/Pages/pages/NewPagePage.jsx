@@ -69,7 +69,7 @@ export function NewPagePage() {
   const editing = !!pageId;
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { activeWorkspaceId, activeWorkspaceProjects, users, taskStatuses } = useAppState();
+  const { activeWorkspaceId, activeWorkspaceProjects, users, taskStatuses, tags } = useAppState();
 
   const projects = useMemo(() => activeWorkspaceProjects.filter((p) => p.status !== "Archived"), [activeWorkspaceProjects]);
   const [template, setTemplate] = useState(() => templateOf(params.get("template")).key);
@@ -79,8 +79,10 @@ export function NewPagePage() {
   const [assigneeIds, setAssigneeIds] = useState([]);
   const [statusIds, setStatusIds] = useState(null); // null = not chosen yet (defaults to every status but cancelled)
   const [tabs, setTabs] = useState([]);
+  const [allTab, setAllTab] = useState(true); // the tab that lists every task; can be dropped once other tabs exist
   const [columns, setColumns] = useState(COLUMNS.map(([key]) => key));
   const [theme, setTheme] = useState("dark");
+  const [sort, setSort] = useState("due");
   const [brief, setBrief] = useState("");
   const [summary, setSummary] = useState(null);
   const [tabMenu, setTabMenu] = useState(false);
@@ -99,8 +101,10 @@ export function NewPagePage() {
       setAssigneeIds(page.config.assigneeIds || []);
       setStatusIds(page.config.statusIds?.length ? page.config.statusIds : null);
       setTabs((page.config.tabs || []).filter((t) => t.type !== "all"));
+      setAllTab(!(page.config.tabs || []).length || page.config.tabs.some((t) => t.type === "all"));
       setColumns(page.config.columns || COLUMNS.map(([key]) => key));
       setTheme(page.config.theme || "dark");
+      setSort(page.config.sort || "due");
       setLoaded(true);
     }).catch(() => navigate("/pages", { replace: true }));
   }, [editing, pageId, navigate]);
@@ -112,10 +116,11 @@ export function NewPagePage() {
     projectIds,
     assigneeIds,
     statusIds: statusIds ?? [],
-    tabs: [{ type: "all", refId: null, label: title.trim() || "All tasks" }, ...tabs],
+    tabs: [...(allTab || tabs.length === 0 ? [{ type: "all", refId: null, label: title.trim() || "All tasks" }] : []), ...tabs],
     columns: COLUMNS.map(([key]) => key).filter((key) => columns.includes(key)),
     theme,
-  }), [projectIds, assigneeIds, statusIds, tabs, columns, theme, title]);
+    sort,
+  }), [projectIds, assigneeIds, statusIds, tabs, allTab, columns, theme, sort, title]);
 
   // "17 tasks from 7 projects and 6 people": asked from the server so it matches the page exactly.
   const filterKey = JSON.stringify([projectIds, assigneeIds, statusIds]);
@@ -146,6 +151,11 @@ export function NewPagePage() {
     if (tabs.some((t) => t.type === type && t.refId === item.id)) return;
     setTabs((t) => [...t, { type, refId: item.id, label: type === "person" ? `${item.name.split(" ")[0]} work` : item.name }]);
   };
+  const removeTab = (index) => {
+    const next = tabs.filter((_, j) => j !== index);
+    setTabs(next);
+    if (next.length === 0) setAllTab(true);
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -166,7 +176,7 @@ export function NewPagePage() {
     }
   };
 
-  const tabCount = tabs.length + 1;
+  const tabCount = tabs.length + (allTab || tabs.length === 0 ? 1 : 0);
   const s = summary;
 
   return (
@@ -245,20 +255,26 @@ export function NewPagePage() {
             <fieldset className="flex flex-col">
               <legend className={`${label} mb-2`}>Tabs</legend>
               <div className="flex flex-wrap items-center gap-2 relative">
-                <span className="h-[30px] inline-flex items-center gap-2 px-2.5 rounded-md bg-zinc-100 dark:bg-zinc-800 font-semibold text-zinc-900 dark:text-white max-w-full">
-                  <span className="truncate">{title.trim() || "All tasks"}</span>
-                  <span className="text-zinc-500 dark:text-zinc-400 font-tnum">all{s ? ` ${s.tasks}` : ""}</span>
-                </span>
+                {(allTab || tabs.length === 0) && (
+                  <span className={`h-[30px] inline-flex items-center gap-2 rounded-md bg-zinc-100 dark:bg-zinc-800 font-semibold text-zinc-900 dark:text-white max-w-full ${tabs.length ? "pl-2.5 pr-1.5" : "px-2.5"}`}>
+                    <span className="truncate">{title.trim() || "All tasks"}</span>
+                    <span className="text-zinc-500 dark:text-zinc-400 font-tnum">all{s ? ` ${s.tasks}` : ""}</span>
+                    {tabs.length > 0 && (
+                      <button type="button" aria-label="Remove the tab that lists every task" onClick={() => setAllTab(false)}
+                        className="w-[22px] h-[22px] inline-flex items-center justify-center rounded text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"><X className="w-3 h-3" strokeWidth={2.4} /></button>
+                    )}
+                  </span>
+                )}
                 {tabs.map((tab, i) => (
                   <span key={`${tab.type}-${tab.refId}`} className="h-[30px] inline-flex items-center gap-1 pl-2.5 pr-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800 font-semibold text-zinc-900 dark:text-white">
                     <span className="truncate max-w-[180px]">{tab.label}</span>
-                    <button type="button" aria-label={`Remove the ${tab.label} tab`} onClick={() => setTabs((t) => t.filter((_, j) => j !== i))}
+                    <button type="button" aria-label={`Remove the ${tab.label} tab`} onClick={() => removeTab(i)}
                       className="w-[22px] h-[22px] inline-flex items-center justify-center rounded text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"><X className="w-3 h-3" strokeWidth={2.4} /></button>
                   </span>
                 ))}
                 <button type="button" aria-haspopup="menu" aria-expanded={tabMenu} onClick={() => setTabMenu((v) => !v)}
                   className="h-[30px] inline-flex items-center gap-1.5 px-2.5 border border-dashed border-zinc-400 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-[13px] font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                  <Plus className="w-[13px] h-[13px]" strokeWidth={2.2} />Tab per person or project
+                  <Plus className="w-[13px] h-[13px]" strokeWidth={2.2} />Tab per person, project or label
                 </button>
                 {tabMenu && (
                   <>
@@ -267,6 +283,10 @@ export function NewPagePage() {
                       <p className="px-2 pt-1 pb-1 text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">People</p>
                       {users.map((u) => (
                         <button key={`u${u.id}`} type="button" role="menuitem" onClick={() => addTab("person", u)} className="w-full flex items-center h-8 px-2 rounded-md text-left text-[13px] font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"><span className="truncate">{u.name}</span></button>
+                      ))}
+                      {(tags || []).length > 0 && <p className="px-2 pt-2.5 pb-1 text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">Labels</p>}
+                      {(tags || []).map((t) => (
+                        <button key={`t${t.id}`} type="button" role="menuitem" onClick={() => addTab("tag", t)} className="w-full flex items-center h-8 px-2 rounded-md text-left text-[13px] font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"><span className="truncate">{t.name}</span></button>
                       ))}
                       <p className="px-2 pt-2.5 pb-1 text-[10.5px] font-bold uppercase tracking-wider text-zinc-400">Projects</p>
                       {projects.map((p) => (
@@ -293,13 +313,22 @@ export function NewPagePage() {
               </div>
             </fieldset>
 
-            <fieldset className="flex flex-col">
-              <legend className={`${label} mb-2`}>Theme</legend>
-              <div className="seg self-start" role="group" aria-label="Theme">
-                <button type="button" aria-pressed={theme === "dark"} onClick={() => setTheme("dark")}>Dark</button>
-                <button type="button" aria-pressed={theme === "light"} onClick={() => setTheme("light")}>Light</button>
-              </div>
-            </fieldset>
+            <div className="flex flex-wrap gap-x-8 gap-y-4">
+              <fieldset className="flex flex-col">
+                <legend className={`${label} mb-2`}>Theme</legend>
+                <div className="seg self-start" role="group" aria-label="Theme">
+                  <button type="button" aria-pressed={theme === "dark"} onClick={() => setTheme("dark")}>Dark</button>
+                  <button type="button" aria-pressed={theme === "light"} onClick={() => setTheme("light")}>Light</button>
+                </div>
+              </fieldset>
+              <fieldset className="flex flex-col">
+                <legend className={`${label} mb-2`}>Row order</legend>
+                <div className="seg self-start" role="group" aria-label="Row order">
+                  <button type="button" aria-pressed={sort === "due"} onClick={() => setSort("due")}>Earliest finish first</button>
+                  <button type="button" aria-pressed={sort === "created"} onClick={() => setSort("created")}>Order added</button>
+                </div>
+              </fieldset>
+            </div>
           </section>
         </div>
 
