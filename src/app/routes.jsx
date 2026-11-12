@@ -5,7 +5,7 @@
 
 import React from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthPages } from "../modules/Auth/pages/AuthPages";
+import { AuthPages, afterLogin } from "../modules/Auth/pages/AuthPages";
 import { InvitePage } from "../modules/Auth/pages/InvitePage";
 import { VerifyEmailPage } from "../modules/Auth/pages/VerifyEmailPage";
 import { OnboardingPage } from "../modules/Auth/pages/OnboardingPage";
@@ -28,7 +28,37 @@ import { MobileBottomNav } from "../components/common/MobileBottomNav";
 import { TopBar } from "../components/common/TopBar";
 import { TaskPanel } from "../modules/Tasks/components/TaskPanel";
 import { QuickAddTask } from "../components/common/QuickAddTask";
+import { PagesListPage } from "../modules/Pages/pages/PagesListPage";
+import { NewPagePage } from "../modules/Pages/pages/NewPagePage";
+import { PageEditorPage } from "../modules/Pages/pages/PageEditorPage";
+import { PublicPageView } from "../modules/Pages/pages/PublicPageView";
 import { useIsMobile } from "../hooks/useIsMobile";
+
+/** Opening screen while the workspace loads. */
+function BootSplash() {
+  return (
+      <div className="min-h-dvh flex flex-col items-center justify-center px-8 text-center bg-zinc-50 dark:bg-zinc-950">
+        <Wordmark className="text-3xl" />
+        <p className="mt-2 text-[13px] font-bold uppercase tracking-[0.3em] text-zinc-400">Hub</p>
+        <p className="mt-6 max-w-[280px] text-[15px] leading-relaxed font-medium text-zinc-600 dark:text-zinc-300">Plan, track and deliver every Carbarn project together.</p>
+        <span className="mt-8 h-1 w-24 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden" role="progressbar" aria-label="Loading">
+          <span className="block h-full w-1/3 rounded-full bg-primary animate-[splash_1.1s_ease-in-out_infinite]" />
+        </span>
+      </div>
+  );
+}
+
+/** Signed-in screens that take the whole window (page editor, new page): no sidebar or top bar. */
+function FullScreen({ children }) {
+  const { isAuthenticated, bootLoading, theme } = useAppState();
+  if (bootLoading) return <BootSplash />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return (
+    <div className={`min-h-dvh font-sans antialiased text-zinc-900 bg-zinc-50 dark:bg-zinc-950 dark:text-zinc-100 ${theme === "dark" ? "dark" : ""}`}>
+      {children}
+    </div>
+  );
+}
 
 /** App shell: 48px top bar, 220px sidebar (desktop), bottom nav + FAB (phone). */
 function AppLayout({ children }) {
@@ -39,18 +69,7 @@ function AppLayout({ children }) {
   const location = useLocation();
   const projectMatch = location.pathname.match(/^\/projects\/(\d+)/);
 
-  if (bootLoading) {
-    return (
-      <div className="min-h-dvh flex flex-col items-center justify-center px-8 text-center bg-zinc-50 dark:bg-zinc-950">
-        <Wordmark className="text-3xl" />
-        <p className="mt-2 text-[13px] font-bold uppercase tracking-[0.3em] text-zinc-400">Hub</p>
-        <p className="mt-6 max-w-[280px] text-[15px] leading-relaxed font-medium text-zinc-600 dark:text-zinc-300">Plan, track and deliver every Carbarn project together.</p>
-        <span className="mt-8 h-1 w-24 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden" role="progressbar" aria-label="Loading">
-          <span className="block h-full w-1/3 rounded-full bg-primary animate-[splash_1.1s_ease-in-out_infinite]" />
-        </span>
-      </div>
-    );
-  }
+  if (bootLoading) return <BootSplash />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
@@ -106,7 +125,7 @@ export function AppRoutes() {
 
   return (
     <Routes location={background ? { ...location, pathname: background.pathname, search: background.search || "", state: null } : location}>
-      <Route path="/login" element={!isAuthenticated ? <AuthPages mode="login" /> : <Navigate to="/today" replace />} />
+      <Route path="/login" element={!isAuthenticated ? <AuthPages mode="login" /> : <Navigate to={afterLogin(location.search)} replace />} />
       <Route path="/register" element={!isAuthenticated ? <AuthPages mode="register" /> : <Navigate to="/today" replace />} />
       <Route path="/forgot-password" element={<AuthPages mode="forgot" />} />
       <Route path="/reset-password" element={<AuthPages mode="reset" />} />
@@ -127,6 +146,13 @@ export function AppRoutes() {
       <Route path="/projects" element={page(<ProjectsPage />)} />
       <Route path="/projects/:projectId" element={page(<ProjectDetailsPage />)} />
       <Route path="/projects/:projectId/:tab" element={page(<ProjectDetailsPage />)} />
+
+      <Route path="/pages" element={page(<PagesListPage />)} />
+      <Route path="/pages/new" element={<FullScreen><NewPagePage /></FullScreen>} />
+      <Route path="/pages/:pageId" element={<FullScreen><PageEditorPage /></FullScreen>} />
+      <Route path="/pages/:pageId/data" element={<FullScreen><NewPagePage /></FullScreen>} />
+      {/* The share link: opens signed out for "anyone with the link" pages */}
+      <Route path="/p/:token" element={<PublicPageView />} />
 
       <Route path="/inbox" element={page(<InboxPage />)} />
       <Route path="/notifications" element={<Navigate to="/inbox" replace />} />

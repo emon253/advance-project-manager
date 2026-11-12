@@ -6,11 +6,11 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppState } from "../../app/providers";
-import { Sun, CheckSquare, Folder, Settings } from "lucide-react";
+import { Sun, CheckSquare, Folder, FileText, Settings } from "lucide-react";
 
 /**
  * 220px sidebar: Today · My Tasks · Projects (with up to 3 pinned, most
- * recently created active projects) · Settings. Inbox is the bell in the top
+ * recently created active projects) · Pages · Settings. Inbox is the bell in the top
  * bar; Team and the workspace switcher live in the account menu.
  */
 export function DesktopSidebar() {
@@ -57,6 +57,9 @@ export function DesktopSidebar() {
       >
         <Icon className={`w-4 h-4 shrink-0 ${active ? "text-primary" : "text-zinc-400"}`} />
         <span className="truncate">{item.label}</span>
+        {item.tag && (
+          <span className="ml-auto inline-flex h-[18px] px-1.5 items-center rounded-full bg-primary text-[10px] font-bold text-white">{item.tag}</span>
+        )}
         {item.badge > 0 && (
           <span className="ml-auto inline-flex h-[18px] min-w-[18px] px-1.5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white font-tnum">
             {item.badge > 99 ? "99+" : item.badge}
@@ -90,6 +93,7 @@ export function DesktopSidebar() {
           </div>
         )}
         {items.slice(3).map(navLink)}
+        {navLink({ label: "Pages", icon: FileText, path: "/pages", match: ["/pages"], tag: "New" })}
 
         <div className="h-px bg-zinc-200 dark:bg-zinc-800 my-2 mx-1.5" />
         {navLink({ label: "Settings", icon: Settings, path: "/settings", match: ["/settings"] })}

@@ -71,6 +71,12 @@ function BrandPanel() {
 }
 
 
+/** After signing in from a team-only page's prompt, go back to that page; otherwise Today. Only /p/ paths are honoured. */
+export const afterLogin = (search) => {
+  const next = new URLSearchParams(search).get("next") || "";
+  return /^\/p\/[\w-]+$/.test(next) ? next : "/today";
+};
+
 export function AuthPages() {
   const { login, loginWithGoogle, register, forgotPassword, resetPassword } = useAppState();
   const navigate = useNavigate();
@@ -107,10 +113,11 @@ export function AuthPages() {
 
     if (isLogin) {
       setSubmitting(true);
+      const target = afterLogin(window.location.search); // read now: the route may move on as soon as the session exists
       const res = await login(email, password);
       setSubmitting(false);
       if (res.success) {
-        navigate("/today");
+        navigate(target);
       } else {
         setError(res.error || "Invalid email or password.");
       }
@@ -178,10 +185,11 @@ export function AuthPages() {
     setError("");
     setSuccess("");
     setSubmitting(true);
+    const target = afterLogin(window.location.search);
     const res = await loginWithGoogle(credential);
     setSubmitting(false);
     if (res.success) {
-      navigate("/today");
+      navigate(target);
     } else {
       setError(res.error || "Google sign-in failed — please try again.");
     }

@@ -433,3 +433,27 @@ export const aiApi = {
   enhance: async (text, type, action) =>
     (await http.post("/ai/enhance", { text, type, action })).enhancedText,
 };
+
+// --- pages: shareable pages built from live task data -------------------------
+// Wire shape is used as-is (enums in CAPS): the Pages module is the only reader.
+export const pagesApi = {
+  list: (workspaceId) => http.get(`/workspaces/${workspaceId}/pages`),
+  summary: (workspaceId, config) => http.post(`/workspaces/${workspaceId}/pages/summary`, config),
+  create: (workspaceId, body) => http.post(`/workspaces/${workspaceId}/pages`, body),
+  get: (pageId) => http.get(`/pages/${pageId}`),
+  update: (pageId, body) => http.patch(`/pages/${pageId}`, body),
+  remove: (pageId) => http.delete(`/pages/${pageId}`),
+  publish: (pageId, body) => http.post(`/pages/${pageId}/publish`, body),
+  unpublish: (pageId) => http.post(`/pages/${pageId}/unpublish`),
+  refreshSnapshot: (pageId) => http.post(`/pages/${pageId}/snapshot`),
+  /** Editor preview: the design plus live data. */
+  view: (pageId) => http.get(`/pages/${pageId}/view`),
+  /** The share link (works signed out for "anyone with the link" pages). */
+  // Signed out, a 401 means "team only" (show a sign-in prompt), not an expired session.
+  viewByToken: (token) => http.get(`/public/pages/${encodeURIComponent(token)}`, { auth: tokenStore.hasSession }),
+  versions: (pageId) => http.get(`/pages/${pageId}/versions`),
+  restoreVersion: (pageId, versionNo) => http.post(`/pages/${pageId}/versions/${versionNo}/restore`),
+  messages: (pageId) => http.get(`/pages/${pageId}/messages`),
+  sendMessage: (pageId, text, part) => http.post(`/pages/${pageId}/messages`, { text, part: part || null }),
+  stopMessage: (pageId) => http.post(`/pages/${pageId}/messages/stop`),
+};
