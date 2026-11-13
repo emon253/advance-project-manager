@@ -158,26 +158,26 @@ export function AssigneeField({ task, members, users, disabled, onChange }) {
   const close = (v) => { setOpen(v); setQuery(""); };
 
   return (
-    <Field label="Assignee" open={open} setOpen={close} align="right" width="w-[340px]" trigger={(id) => (
+    <Field label="Assignee" open={open} setOpen={close} align="right" width="w-[280px]" trigger={(id) => (
       <button type="button" aria-labelledby={id} aria-haspopup="dialog" aria-expanded={open} disabled={disabled} onClick={() => close(!open)} className={`${BOX} ${PLAIN} pl-[7px] ${edge(open)}`}>
         <Assignees people={people} empty={<span className="pl-[3px] font-medium text-zinc-500 dark:text-zinc-400">{disabled ? "Unassigned" : "Assign"}</span>} />
       </button>
     )}>
       <div role="dialog" aria-label="Assign people">
-        <div className="flex items-center gap-2 h-10 px-3 border-b border-zinc-100 dark:border-zinc-800">
+        <div className="flex items-center gap-2 h-10 md:h-9 px-3 border-b border-zinc-100 dark:border-zinc-800">
           <Search className="w-[15px] h-[15px] text-zinc-500 shrink-0" />
           <input type="text" ref={focusQuietly} value={query} maxLength={60} onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (exactMember) toggleMember(exactMember); else addName(); } }}
             aria-label="Search people or type a name" placeholder="Search people or type a name"
-            className="flex-1 min-w-0 h-9 bg-transparent outline-none text-base md:text-sm font-semibold text-zinc-900 dark:text-white placeholder:font-medium placeholder:text-zinc-400" />
+            className="flex-1 min-w-0 h-9 md:h-8 bg-transparent outline-none text-base md:text-[13px] font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400" />
         </div>
-        <div className="p-1.5 flex flex-col gap-px max-h-[320px] overflow-y-auto">
-          <span className="px-2 pt-1.5 pb-1 text-[11px] font-bold tracking-[0.06em] uppercase text-zinc-500 dark:text-zinc-400">People in this workspace</span>
+        <div className="p-1 flex flex-col gap-px max-h-[232px] overflow-y-auto">
+          <span className="px-2 pt-1 pb-0.5 text-[10.5px] font-semibold tracking-[0.06em] uppercase text-zinc-500 dark:text-zinc-400">People in this workspace</span>
           {matches.map((u) => (
-            <button key={u.id} type="button" aria-pressed={task.assigneeId === u.id} onClick={() => toggleMember(u)} className={`${OPTION} min-h-11 md:min-h-11`}>
-              <UserAvatar user={u} size="xs" />
+            <button key={u.id} type="button" aria-pressed={task.assigneeId === u.id} onClick={() => toggleMember(u)} className={`${OPTION} md:min-h-8 md:gap-2 md:text-[13px] md:font-medium`}>
+              <UserAvatar user={u} size="2xs" />
               <span className="flex-1 truncate">{u.name}</span>
-              {task.assigneeId === u.id && <Check className="w-4 h-4 text-primary shrink-0" strokeWidth={2.4} aria-label="Selected" />}
+              {task.assigneeId === u.id && <Check className="w-3.5 h-3.5 text-primary shrink-0" strokeWidth={2.4} aria-label="Selected" />}
             </button>
           ))}
           {matches.length === 0 && <span className="px-2 py-2 text-[13px] text-zinc-500 dark:text-zinc-400">Nobody here matches “{text}”.</span>}
@@ -196,10 +196,10 @@ export function AssigneeField({ task, members, users, disabled, onChange }) {
           )}
         </div>
         {people.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 px-3 py-2.5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40">
+          <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40">
             <span className="text-xs text-zinc-600 dark:text-zinc-400 mr-0.5">Assigned</span>
             {people.map((p) => (
-              <span key={p.key} className="inline-flex items-center gap-1.5 h-6 pl-[3px] pr-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-zinc-100 max-w-full">
+              <span key={p.key} className="inline-flex items-center gap-1.5 h-6 pl-[3px] pr-1 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-900 dark:text-zinc-100 max-w-full">
                 <UserAvatar user={personAvatar(p)} size="2xs" />
                 <span className="truncate">{p.name.split(" ")[0]}</span>
                 <button type="button" onClick={() => remove(p)} aria-label={`Remove ${p.name}`} className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white cursor-pointer"><X className="w-[11px] h-[11px]" strokeWidth={2.6} /></button>
