@@ -5,6 +5,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { UserCheck, Eye, Users } from "lucide-react";
 import { useAppState } from "../../../app/providers";
 import { useMockQuery } from "../../../hooks/useMockQuery";
 import { ListSkeleton } from "../../../components/common/Skeleton";
@@ -14,9 +15,9 @@ import { TaskTable } from "../components/TaskTable";
 import { dueState, isOpenTask, sortTasks } from "../util/tasksUtils";
 
 const SCOPES = [
-  { value: "mine", label: "Assigned to me" },
-  { value: "watching", label: "Watching" },
-  { value: "all", label: "Everyone" },
+  { value: "mine", label: "Assigned to me", icon: UserCheck },
+  { value: "watching", label: "Watching", icon: Eye },
+  { value: "all", label: "Everyone", icon: Users },
 ];
 
 /**
@@ -73,7 +74,7 @@ export function TasksPage() {
           <div className="seg w-full sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-none" role="tablist" aria-label="Whose tasks">
             {SCOPES.map((o) => (
               <button key={o.value} type="button" role="tab" aria-selected={scope === o.value} onClick={() => setParam({ scope: o.value === "mine" ? "" : o.value })}>
-                {o.label}
+                <o.icon className="w-3.5 h-3.5" aria-hidden="true" />{o.label}
               </button>
             ))}
           </div>

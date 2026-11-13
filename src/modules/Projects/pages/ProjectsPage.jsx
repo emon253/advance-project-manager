@@ -5,7 +5,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, MoreHorizontal, Archive, RotateCcw, CheckCircle2, FolderOpen, ListTodo, AlertTriangle, CalendarClock, ArrowUpDown } from "lucide-react";
+import { Plus, MoreHorizontal, Archive, RotateCcw, CheckCircle2, FolderOpen, ListTodo, AlertTriangle, CalendarClock, ArrowUpDown, Users, Zap } from "lucide-react";
 import { getIconComponent } from "../../../components/common/IconHelper";
 import { useAppState } from "../../../app/providers";
 import { useMockQuery } from "../../../hooks/useMockQuery";
@@ -108,11 +108,11 @@ export function ProjectsPage() {
 
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <div className="seg w-full sm:w-auto [&>button]:flex-1 [&>button]:justify-center sm:[&>button]:flex-none" role="group" aria-label="Status">
-          <button type="button" aria-pressed={tab === "active"} onClick={() => setTab("active")}>Active <span className="text-zinc-400 font-tnum">{counts.active}</span></button>
-          <button type="button" aria-pressed={tab === "closed"} onClick={() => setTab("closed")}>Closed <span className="text-zinc-400 font-tnum">{counts.closed}</span></button>
-          <button type="button" aria-pressed={tab === "archived"} onClick={() => setTab("archived")}>Archived <span className="text-zinc-400 font-tnum">{counts.archived}</span></button>
+          <button type="button" aria-pressed={tab === "active"} onClick={() => setTab("active")}><Zap className="w-3.5 h-3.5" aria-hidden="true" />Active <span className="text-zinc-400 font-tnum">{counts.active}</span></button>
+          <button type="button" aria-pressed={tab === "closed"} onClick={() => setTab("closed")}><CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />Closed <span className="text-zinc-400 font-tnum">{counts.closed}</span></button>
+          <button type="button" aria-pressed={tab === "archived"} onClick={() => setTab("archived")}><Archive className="w-3.5 h-3.5" aria-hidden="true" />Archived <span className="text-zinc-400 font-tnum">{counts.archived}</span></button>
         </div>
-        <ChipSelect label="Member" value={owner} onChange={setOwner} options={users.map((u) => ({ value: u.id, label: u.name }))} allLabel="Anyone" />
+        <ChipSelect icon={Users} label="Member" value={owner} onChange={setOwner} options={users.map((u) => ({ value: u.id, label: u.name }))} allLabel="Anyone" />
         <div className="ml-auto">
           <ChipSelect
             label="Sort"

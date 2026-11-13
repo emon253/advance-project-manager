@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from "react";
-import { ChevronDown, Check, X } from "lucide-react";
+import { ChevronDown, Check, X, CircleDot, Folder, User, Flag, Calendar } from "lucide-react";
 
 /**
  * Filter dropdown. `options`: [{ value, label }]. `clearable` (filters) shows
@@ -27,7 +27,7 @@ export function ChipSelect({ label, value, options, onChange, allLabel = "Any", 
         aria-expanded={open}
         className={`chip ${active ? "chip-on" : ""} ${open ? "border-primary/50" : ""}`}
       >
-        {Icon && <Icon className="w-3.5 h-3.5 text-zinc-400" />}
+        {Icon && <Icon className={`w-3.5 h-3.5 ${active ? "" : "text-zinc-400"}`} />}
         {clearable ? (active ? `${label}: ${current?.label ?? value}` : showAll ? <>{label} <span className="text-primary dark:text-sky-300">All</span></> : label) : (
           <>
             <span className="text-zinc-500 dark:text-zinc-400 font-medium">{label}</span>
@@ -93,9 +93,10 @@ export function TaskToolbar({
       {lead}
       {lead && <span className="w-px h-5 bg-zinc-200 dark:bg-zinc-700 mx-1 hidden sm:block" />}
 
-      <ChipSelect label="Status" showAll value={filters.status} onChange={(v) => onFilter({ status: v })} options={statuses.map((s) => ({ value: s.name, label: s.name }))} allLabel="All" />
+      <ChipSelect icon={CircleDot} label="Status" showAll value={filters.status} onChange={(v) => onFilter({ status: v })} options={statuses.map((s) => ({ value: s.name, label: s.name }))} allLabel="All" />
       {showProjectFilter && (
         <ChipSelect
+          icon={Folder}
           label="Project"
           value={filters.projectId}
           onChange={(v) => onFilter({ projectId: v })}
@@ -105,6 +106,7 @@ export function TaskToolbar({
       )}
       {showAssigneeFilter && (
         <ChipSelect
+          icon={User}
           label="Assignee"
           value={filters.assigneeId}
           onChange={(v) => onFilter({ assigneeId: v })}
@@ -112,8 +114,8 @@ export function TaskToolbar({
           allLabel="Anyone"
         />
       )}
-      <ChipSelect label="Priority" value={filters.priority} onChange={(v) => onFilter({ priority: v })} options={PRIORITY_OPTIONS} allLabel="Any" />
-      <ChipSelect label="Due" value={filters.due} onChange={(v) => onFilter({ due: v })} options={DUE_OPTIONS} allLabel="Any time" />
+      <ChipSelect icon={Flag} label="Priority" value={filters.priority} onChange={(v) => onFilter({ priority: v })} options={PRIORITY_OPTIONS} allLabel="Any" />
+      <ChipSelect icon={Calendar} label="Due" value={filters.due} onChange={(v) => onFilter({ due: v })} options={DUE_OPTIONS} allLabel="Any time" />
 
     </div>
   );
