@@ -226,7 +226,6 @@ export function TaskPanel() {
   const canEdit = can("editTasks");
   const isAdmin = currentRole === "Owner" || currentRole === "Admin";
   const project = task ? activeWorkspaceProjects.find((p) => p.id === task.projectId) : null;
-  const members = project?.members?.length ? users.filter((u) => project.members.includes(u.id) || u.id === task?.assigneeId) : users;
   const done = task ? isDoneTask(task, taskStatuses) : false;
 
   const commitTitle = () => {
@@ -434,7 +433,7 @@ export function TaskPanel() {
         {/* Fields */}
         <div className="px-1 md:px-0 grid grid-cols-2 gap-3 md:gap-4">
           <StatusField task={task} taskStatuses={taskStatuses} disabled={!canEdit} onChange={(status) => updateTask(task.id, { status })} />
-          <AssigneeField task={task} members={members} users={users} disabled={!canEdit} onChange={(patch) => updateTask(task.id, patch)} />
+          <AssigneeField task={task} members={users} users={users} disabled={!canEdit} onChange={(patch) => updateTask(task.id, patch)} />
           <DatesField task={task} taskStatuses={taskStatuses} disabled={!canEdit} onChange={(patch) => updateTask(task.id, patch)} />
           <PriorityField task={task} disabled={!canEdit} onChange={(priority) => updateTask(task.id, { priority })} />
         </div>
