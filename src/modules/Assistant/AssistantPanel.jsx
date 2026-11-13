@@ -25,8 +25,20 @@ const ACTION_ICONS = {
 const CHIP = "inline-flex items-center gap-1.5 max-w-full min-h-11 lg:min-h-8 px-2.5 py-1.5 rounded-lg text-left text-[13px] lg:text-xs font-semibold leading-snug";
 
 /** One change the assistant made: opens the task (drawer) or the project it touched. */
-function ActionChip({ action, onOpenProject }) {
+function ActionChip({ action, onOpenProject, canConfirm }) {
   const { setActiveTaskId } = useAppState();
+  const { send } = useAssistant();
+  // A drastic step waits for the person: this button sends the one-time code back.
+  if (action.type === "CONFIRM_REQUIRED") {
+    return (
+      <span className="inline-flex flex-wrap items-center gap-2 max-w-full rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1.5 text-[13px] lg:text-xs font-semibold text-amber-900 dark:text-amber-200">
+        <span className="min-w-0 break-words">Needs your OK: {action.label}</span>
+        {canConfirm && action.code && (
+          <button type="button" onClick={() => send(`Confirm ${action.code}`)} className="btn btn-sm btn-primary min-h-9 lg:min-h-7">Confirm</button>
+        )}
+      </span>
+    );
+  }
   const Icon = ACTION_ICONS[action.type] || Sparkles;
   const content = (
     <>
@@ -64,6 +76,7 @@ function Thinking() {
 
 /** Bodies are always rendered as text: line breaks kept, never HTML. */
 function Message({ message, canRetry, onRetry, onOpenProject }) {
+  // canRetry is true only for the newest message while nothing is running: the same rule fits Confirm.
   if (message.role === "USER") {
     return (
       <div className="self-end max-w-[85%] rounded-2xl rounded-br-md px-3.5 py-2 bg-primary/10 dark:bg-primary/20 text-sm leading-relaxed text-zinc-900 dark:text-zinc-50 whitespace-pre-wrap break-words">
@@ -93,7 +106,7 @@ function Message({ message, canRetry, onRetry, onOpenProject }) {
         <ul className="mt-2.5 flex flex-wrap gap-1.5" aria-label="Changes made">
           {message.actions.map((action, i) => (
             // eslint-disable-next-line react/no-array-index-key
-            <li key={i} className="max-w-full"><ActionChip action={action} onOpenProject={onOpenProject} /></li>
+            <li key={i} className="max-w-full"><ActionChip action={action} onOpenProject={onOpenProject} canConfirm={canRetry} /></li>
           ))}
         </ul>
       )}
