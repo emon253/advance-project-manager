@@ -233,7 +233,7 @@ export function ProjectDetailsPage() {
           filters={filters}
           onFilter={(p) => setFilters((f) => ({ ...f, ...p }))}
           statuses={taskStatuses}
-          users={members.length ? members : users}
+          users={users}
           showProjectFilter={false}
         />
       </div>
