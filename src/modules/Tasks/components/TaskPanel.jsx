@@ -50,7 +50,8 @@ function CommentBody({ text, mentionNames }) {
 }
 
 const H2 = "text-[13.5px] md:text-[13px] font-bold tracking-normal text-zinc-900 dark:text-white";
-const ADD_CHIP = "inline-flex items-center gap-1.5 h-10 md:h-[30px] px-3.5 md:px-2.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[13.5px] md:text-[12.5px] font-semibold text-zinc-800 md:text-zinc-700 dark:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-600 cursor-pointer transition-colors";
+// Link-style: quiet text actions, no pill, so the row stays compact.
+const ADD_CHIP = "inline-flex items-center gap-1.5 h-10 md:h-7 rounded-md text-[13.5px] md:text-[12.5px] font-semibold text-primary hover:underline underline-offset-2 dark:text-sky-400 cursor-pointer";
 const MENU_ITEM = "w-full flex items-center gap-2 h-10 md:h-8 px-2 rounded-md text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer";
 const DIVIDER = <div className="h-px bg-zinc-100 dark:bg-zinc-800 mx-1 md:mx-0 shrink-0" />;
 
@@ -444,7 +445,7 @@ export function TaskPanel() {
 
         {canEdit && <input ref={fileRef} type="file" multiple className="hidden" onChange={handleFileInput} />}
         {((canEdit && (!showChecklist || !showFiles)) || evidenceChip) && (
-          <div className="px-1 md:px-0 flex flex-wrap gap-2">
+          <div className="px-1 md:px-0 flex flex-wrap items-center gap-x-5 gap-y-1">
             {canEdit && !showChecklist && (
               <button type="button" onClick={() => reveal("checklist")} className={ADD_CHIP}><Plus className="w-3.5 h-3.5 md:w-[13px] md:h-[13px]" strokeWidth={2.2} />Checklist</button>
             )}
