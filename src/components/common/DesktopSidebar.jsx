@@ -46,10 +46,10 @@ export function DesktopSidebar() {
         key={item.path}
         to={item.path}
         aria-current={active ? "page" : undefined}
-        className={`flex items-center gap-2.5 h-9 px-3 rounded-lg text-[13.5px] transition-colors ${
+        className={`flex items-center gap-2.5 h-9 px-3.5 rounded-full text-[13.5px] transition-colors ${
           active
-            ? "bg-primary/10 text-primary font-bold dark:bg-primary/15"
-            : "font-medium text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-white"
+            ? "bg-[#d3e3fd] text-[#0b3d91] font-bold dark:bg-primary/15 dark:text-sky-200"
+            : "font-medium text-zinc-700 dark:text-zinc-400 hover:bg-[#e3e8f3] dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-white"
         }`}
       >
         <Icon className={`w-4 h-4 shrink-0 ${active ? "text-primary" : "text-zinc-400"}`} />
@@ -67,7 +67,7 @@ export function DesktopSidebar() {
   };
 
   return (
-    <aside className="w-[200px] shrink-0 h-[calc(100vh-3rem-env(safe-area-inset-top))] sticky top-[calc(3rem+env(safe-area-inset-top))] border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col">
+    <aside className="w-[200px] shrink-0 h-[calc(100vh-3rem-env(safe-area-inset-top))] sticky top-[calc(3rem+env(safe-area-inset-top))] dark:border-r dark:border-zinc-800 bg-transparent dark:bg-zinc-950 flex flex-col">
       <nav className="flex-1 overflow-y-auto no-scrollbar px-2 py-3 flex flex-col gap-0.5" aria-label="Primary">
         {items.map(navLink)}
         <div className="h-px bg-zinc-200 dark:bg-zinc-800 my-2 mx-1.5" />

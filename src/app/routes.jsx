@@ -58,7 +58,7 @@ function FullScreen({ children }) {
   if (bootLoading) return <BootSplash />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return (
-    <div className={`min-h-dvh font-sans antialiased text-zinc-900 bg-zinc-50 dark:bg-zinc-950 dark:text-zinc-100 ${theme === "dark" ? "dark" : ""}`}>
+    <div className={`min-h-dvh font-sans antialiased text-zinc-900 bg-[#f3f6fb] dark:bg-zinc-950 dark:text-zinc-100 ${theme === "dark" ? "dark" : ""}`}>
       {children}
     </div>
   );
@@ -88,14 +88,14 @@ function AppLayout({ children }) {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
-    <div className={`min-h-screen font-sans antialiased text-zinc-900 bg-zinc-50 dark:bg-zinc-950 dark:text-zinc-100 ${theme === "dark" ? "dark" : ""}`}>
+    <div className={`min-h-screen font-sans antialiased text-zinc-900 bg-[#f3f6fb] dark:bg-zinc-950 dark:text-zinc-100 ${theme === "dark" ? "dark" : ""}`}>
       <TopBar onOpenQuickAdd={() => setQuickAddTaskOpen(true)} />
 
       <div className="flex pt-[calc(3rem+env(safe-area-inset-top))] min-h-screen">
         {!isMobile && <DesktopSidebar />}
         <main className={`flex-1 min-w-0 flex flex-col ${isMobile ? "pb-nav" : ""} ${isMobile ? "" : sidePadding} transition-[padding] duration-200`}>
           <VerifyEmailBanner />
-          <div className={`flex-1 min-w-0 w-full ${isMobile ? "px-1 pt-3" : "px-7 py-6 2xl:px-10"}`}>
+          <div className={`flex-1 min-w-0 w-full ${isMobile ? "px-1 pt-3" : "px-7 py-6 2xl:px-10 mr-3 mb-3 rounded-[28px] bg-[#e9eef6] dark:bg-zinc-900/40"}`}>
             <div className="w-full h-full">{children}</div>
           </div>
         </main>

@@ -340,3 +340,20 @@
   .card .pl-3, .card .pl-4 { padding-left: 0.25rem; }
   .card .pr-3, .card .pr-4 { padding-right: 0.25rem; }
 }
+
+/* ---- Review branch "soft-surfaces": borderless white cards on a tinted page,
+   large radii and pill controls (the look of the Carbarn leads inbox). Light
+   mode only; dark keeps its hairlines because a border is what separates
+   dark surfaces. ---- */
+:root:not(.dark) .card,
+html:not(.dark) .card { border-color: transparent; border-radius: 16px; }
+.dark .card { border-radius: 16px; }
+html:not(.dark) .dark .card { border-color: #27272a; }
+.chip { border-radius: 9999px; border-color: transparent; }
+.dark .chip { border-color: #3f3f46; }
+.seg { border-radius: 9999px; background: #dfe5f0; }
+.dark .seg { background: #27272a; }
+.seg > button, .seg > a { border-radius: 9999px; }
+.btn { border-radius: 9999px; }
+.btn-secondary { border-color: transparent; }
+.dark .btn-secondary { border-color: #3f3f46; }

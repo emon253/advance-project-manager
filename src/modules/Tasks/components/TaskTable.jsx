@@ -79,8 +79,8 @@ export function TaskTable({ tasks, variant = "my", onAddTask, addLabel = "Add a 
 
   return (
     <div className="@container">
-      <div role="table" aria-label="Tasks" className="border border-zinc-200 dark:border-zinc-800 rounded-[10px] bg-white dark:bg-zinc-900 overflow-hidden">
-        <div role="row" style={{ gridTemplateColumns: template }} className="hidden @[920px]:grid items-center h-9 bg-zinc-50 dark:bg-zinc-800/40 border-b border-zinc-200 dark:border-zinc-800 text-[11.5px] font-bold tracking-[0.04em] uppercase text-zinc-500 dark:text-zinc-400">
+      <div role="table" aria-label="Tasks" className="dark:border dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 overflow-hidden">
+        <div role="row" style={{ gridTemplateColumns: template }} className="hidden @[920px]:grid items-center h-10 bg-white dark:bg-zinc-800/40 border-b border-zinc-100 dark:border-zinc-800 text-[11.5px] font-bold tracking-[0.04em] uppercase text-zinc-500 dark:text-zinc-400">
           <span />
           <span role="columnheader">Task</span>
           {columns.map((c) => <span key={c} role="columnheader">{HEADERS[c]}</span>)}

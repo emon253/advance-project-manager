@@ -30,7 +30,7 @@ export function TopBar({ onOpenQuickAdd }) {
   const onInbox = useLocation().pathname.startsWith("/inbox");
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-30 pt-[env(safe-area-inset-top)] border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+    <header className="fixed top-0 left-0 right-0 z-30 pt-[env(safe-area-inset-top)] dark:border-b dark:border-zinc-800 bg-[#f3f6fb] dark:bg-zinc-950">
       <div className="h-12 flex items-center gap-3 px-3 lg:px-4">
         {/* Brand — matches the 200px sidebar column on desktop */}
         <Link to="/today" className="flex items-center min-w-0 rounded-md lg:w-[184px] shrink-0">

@@ -110,7 +110,7 @@ export function GlobalSearch() {
 
   return (
     <div className="hidden md:block flex-1 max-w-[480px] relative" role="search">
-      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 pointer-events-none" />
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 pointer-events-none" />
       <input
         ref={inputRef}
         type="text"
@@ -126,7 +126,7 @@ export function GlobalSearch() {
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onKeyDown={onKeyDown}
-        className="w-full h-8 text-[13px] bg-zinc-100 dark:bg-zinc-900 border border-transparent focus:bg-white dark:focus:bg-zinc-950 focus:border-primary text-zinc-800 dark:text-zinc-100 rounded-md pl-8 pr-14 outline-none transition-colors placeholder:text-zinc-400 font-medium"
+        className="w-full h-9 text-[13px] bg-[#e3e8f3] dark:bg-zinc-900 border border-transparent focus:bg-white dark:focus:bg-zinc-950 focus:border-primary text-zinc-800 dark:text-zinc-100 rounded-full pl-9 pr-14 outline-none transition-colors placeholder:text-zinc-400 font-medium"
       />
       {value && (
         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setValue("")} className="absolute right-8 top-1/2 -translate-y-1/2 btn-icon h-5 w-5" aria-label="Clear search">
