@@ -346,14 +346,14 @@
    mode only; dark keeps its hairlines because a border is what separates
    dark surfaces. ---- */
 :root:not(.dark) .card,
-html:not(.dark) .card { border-color: transparent; border-radius: 16px; }
-.dark .card { border-radius: 16px; }
+html:not(.dark) .card { border-color: transparent; border-radius: 12px; }
+.dark .card { border-radius: 12px; }
 html:not(.dark) .dark .card { border-color: #27272a; }
-.chip { border-radius: 9999px; border-color: transparent; }
+.chip { border-radius: 10px; border-color: transparent; }
 .dark .chip { border-color: #3f3f46; }
 .seg { border-radius: 9999px; background: #dfe5f0; }
 .dark .seg { background: #27272a; }
 .seg > button, .seg > a { border-radius: 9999px; }
-.btn { border-radius: 9999px; }
+.btn { border-radius: 10px; }
 .btn-secondary { border-color: transparent; }
 .dark .btn-secondary { border-color: #3f3f46; }
